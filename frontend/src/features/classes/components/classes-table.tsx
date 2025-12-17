@@ -87,11 +87,11 @@ export function ClassesTable() {
 
   const getLevelBadge = (level: string) => {
     const colors: Record<string, string> = {
-      BEGINNER: 'bg-green-500/10 text-green-500',
-      INTERMEDIATE: 'bg-yellow-500/10 text-yellow-500',
-      ADVANCED: 'bg-red-500/10 text-red-500',
+      BEGINNER: 'bg-green-100 text-green-700 border-green-200 dark:bg-green-400/20 dark:text-green-400 dark:border-green-400/30',
+      INTERMEDIATE: 'bg-cyan-100 text-cyan-700 border-cyan-200 dark:bg-cyan-400/20 dark:text-cyan-400 dark:border-cyan-400/30',
+      ADVANCED: 'bg-violet-100 text-violet-700 border-violet-200 dark:bg-violet-400/20 dark:text-violet-400 dark:border-violet-400/30',
     };
-    return colors[level] || 'bg-gray-500/10 text-gray-500';
+    return colors[level] || 'bg-gray-100 text-gray-700 border-gray-200 dark:bg-gray-400/20 dark:text-gray-400 dark:border-gray-400/30';
   };
 
   return (
@@ -156,15 +156,19 @@ export function ClassesTable() {
                       : '-'}
                   </TableCell>
                   <TableCell>
-                    <Badge className={getLevelBadge(cls.level)} variant="outline">
+                    <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium border ${getLevelBadge(cls.level)}`}>
                       {cls.level}
-                    </Badge>
+                    </span>
                   </TableCell>
                   <TableCell>{cls.durationMinutes} min</TableCell>
                   <TableCell>
-                    <Badge variant={cls.isPublished ? 'default' : 'secondary'}>
+                    <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium border ${
+                      cls.isPublished
+                        ? 'bg-cyan-100 text-cyan-700 border-cyan-200 dark:bg-cyan-400/20 dark:text-cyan-400 dark:border-cyan-400/30'
+                        : 'bg-pink-100 text-pink-700 border-pink-200 dark:bg-pink-400/20 dark:text-pink-400 dark:border-pink-400/30'
+                    }`}>
                       {cls.isPublished ? 'Published' : 'Draft'}
-                    </Badge>
+                    </span>
                   </TableCell>
                   <TableCell>
                     <DropdownMenu>

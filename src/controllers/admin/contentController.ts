@@ -66,7 +66,15 @@ export async function updateProgram(req: Request, res: Response, next: NextFunct
   try {
     const adminId = req.user!.id;
     const programId = req.params.id!;
-    const program = await contentService.updateProgram(programId, req.body);
+
+    // Map frontend field names to database field names
+    const { coverImageUrl, ...rest } = req.body;
+    const updateData = {
+      ...rest,
+      ...(coverImageUrl !== undefined && { coverUrl: coverImageUrl }),
+    };
+
+    const program = await contentService.updateProgram(programId, updateData);
 
     await auditService.logAdminAction(
       adminId,
@@ -84,7 +92,19 @@ export async function updateProgram(req: Request, res: Response, next: NextFunct
 
 export async function publishProgram(req: Request, res: Response, next: NextFunction) {
   try {
-    res.status(501).json({ success: false, message: 'Publish program not implemented yet' });
+    const adminId = req.user!.id;
+    const programId = req.params.id!;
+    const program = await contentService.updateProgram(programId, { isPublished: true });
+
+    await auditService.logAdminAction(
+      adminId,
+      AdminAction.PROGRAM_UPDATE,
+      'program',
+      programId,
+      { action: 'publish', ipAddress: req.ip, userAgent: req.get('user-agent') },
+    );
+
+    res.json({ success: true, program });
   } catch (error) {
     next(error);
   }
@@ -92,7 +112,19 @@ export async function publishProgram(req: Request, res: Response, next: NextFunc
 
 export async function unpublishProgram(req: Request, res: Response, next: NextFunction) {
   try {
-    res.status(501).json({ success: false, message: 'Unpublish program not implemented yet' });
+    const adminId = req.user!.id;
+    const programId = req.params.id!;
+    const program = await contentService.updateProgram(programId, { isPublished: false });
+
+    await auditService.logAdminAction(
+      adminId,
+      AdminAction.PROGRAM_UPDATE,
+      'program',
+      programId,
+      { action: 'unpublish', ipAddress: req.ip, userAgent: req.get('user-agent') },
+    );
+
+    res.json({ success: true, program });
   } catch (error) {
     next(error);
   }

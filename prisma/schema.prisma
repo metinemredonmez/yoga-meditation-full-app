@@ -19,7 +19,7 @@ model ContentToContentTag {
 }
 
 model achievement_tiers {
-  id           String         @id
+  id           String         @id @default(cuid())
   name         String
   level        Int
   color        String
@@ -30,7 +30,7 @@ model achievement_tiers {
 }
 
 model achievements {
-  id                 String                     @id
+  id                 String                     @id @default(cuid())
   name               String
   slug               String                     @unique
   description        String
@@ -54,7 +54,7 @@ model achievements {
   tierId             String?
   prerequisiteId     String?
   createdAt          DateTime                   @default(now())
-  updatedAt          DateTime
+  updatedAt DateTime @updatedAt
   badges             badges?                    @relation(fields: [badgeId], references: [id])
   achievements       achievements?              @relation("achievementsToachievements", fields: [prerequisiteId], references: [id])
   other_achievements achievements[]             @relation("achievementsToachievements")
@@ -66,7 +66,7 @@ model achievements {
 }
 
 model admin_audit_logs {
-  id           String      @id
+  id           String      @id @default(cuid())
   adminId      String
   action       AdminAction
   entityType   String
@@ -86,7 +86,7 @@ model admin_audit_logs {
 }
 
 model admin_dashboard_preferences {
-  id               String   @id
+  id               String   @id @default(cuid())
   adminId          String   @unique
   widgets          Json
   defaultDateRange String   @default("7d")
@@ -95,26 +95,26 @@ model admin_dashboard_preferences {
   ordersPerPage    Int      @default(25)
   emailAlerts      Json?
   createdAt        DateTime @default(now())
-  updatedAt        DateTime
+  updatedAt DateTime @updatedAt
   users            users    @relation(fields: [adminId], references: [id])
 }
 
 model admin_notes {
-  id         String   @id
+  id         String   @id @default(cuid())
   adminId    String
   entityType String
   entityId   String
   content    String
   isPinned   Boolean  @default(false)
   createdAt  DateTime @default(now())
-  updatedAt  DateTime
+  updatedAt DateTime @updatedAt
   users      users    @relation(fields: [adminId], references: [id])
 
   @@index([entityType, entityId])
 }
 
 model admin_webhook_deliveries {
-  id                String                @id
+  id                String                @id @default(cuid())
   webhookId         String
   event             String
   payload           Json
@@ -131,7 +131,7 @@ model admin_webhook_deliveries {
 }
 
 model ai_configurations {
-  id                String     @id
+  id                String     @id @default(cuid())
   provider          AIProvider
   model             String
   apiEndpoint       String?
@@ -147,13 +147,13 @@ model ai_configurations {
   isActive          Boolean    @default(true)
   isDefault         Boolean    @default(false)
   createdAt         DateTime   @default(now())
-  updatedAt         DateTime
+  updatedAt DateTime @updatedAt
 
   @@unique([provider, model])
 }
 
 model ai_conversations {
-  id          String           @id
+  id          String           @id @default(cuid())
   userId      String
   type        ConversationType
   contextType String?
@@ -162,7 +162,7 @@ model ai_conversations {
   isActive    Boolean          @default(true)
   metadata    Json?
   createdAt   DateTime         @default(now())
-  updatedAt   DateTime
+  updatedAt DateTime @updatedAt
   users       users            @relation(fields: [userId], references: [id])
   ai_messages ai_messages[]
 
@@ -170,7 +170,7 @@ model ai_conversations {
 }
 
 model ai_generated_contents {
-  id                                              String                 @id
+  id                                              String                 @id @default(cuid())
   type                                            GeneratedContentType
   prompt                                          String
   parameters                                      Json?
@@ -198,7 +198,7 @@ model ai_generated_contents {
 }
 
 model ai_messages {
-  id               String           @id
+  id               String           @id @default(cuid())
   conversationId   String
   role             MessageRole
   content          String
@@ -213,7 +213,7 @@ model ai_messages {
 }
 
 model ai_model_performances {
-  id                 String        @id
+  id                 String        @id @default(cuid())
   provider           AIProvider
   model              String
   service            AIServiceType
@@ -235,7 +235,7 @@ model ai_model_performances {
 }
 
 model ai_response_validations {
-  id               String   @id
+  id               String   @id @default(cuid())
   responseId       String
   responseType     String
   content          String
@@ -259,7 +259,7 @@ model ai_response_validations {
 }
 
 model ai_usage_logs {
-  id               String          @id
+  id               String          @id @default(cuid())
   userId           String?
   provider         AIProvider
   model            String
@@ -284,7 +284,7 @@ model ai_usage_logs {
 }
 
 model ai_workflow_edges {
-  id                                                                  String            @id
+  id                                                                  String            @id @default(cuid())
   workflowId                                                          String
   sourceNodeId                                                        String
   targetNodeId                                                        String
@@ -303,7 +303,7 @@ model ai_workflow_edges {
 }
 
 model ai_workflow_executions {
-  id                          String                        @id
+  id                          String                        @id @default(cuid())
   workflowId                  String
   triggeredBy                 String?
   triggerType                 String?
@@ -328,7 +328,7 @@ model ai_workflow_executions {
 }
 
 model ai_workflow_node_executions {
-  id                     String                  @id
+  id                     String                  @id @default(cuid())
   executionId            String
   nodeId                 String
   input                  Json
@@ -350,7 +350,7 @@ model ai_workflow_node_executions {
 }
 
 model ai_workflow_nodes {
-  id                                                                  String                        @id
+  id                                                                  String                        @id @default(cuid())
   workflowId                                                          String
   nodeKey                                                             String
   name                                                                String
@@ -372,7 +372,7 @@ model ai_workflow_nodes {
   retryDelay                                                          Int                           @default(1000)
   timeout                                                             Int?
   createdAt                                                           DateTime                      @default(now())
-  updatedAt                                                           DateTime
+  updatedAt DateTime @updatedAt
   ai_workflow_edges_ai_workflow_edges_sourceNodeIdToai_workflow_nodes ai_workflow_edges[]           @relation("ai_workflow_edges_sourceNodeIdToai_workflow_nodes")
   ai_workflow_edges_ai_workflow_edges_targetNodeIdToai_workflow_nodes ai_workflow_edges[]           @relation("ai_workflow_edges_targetNodeIdToai_workflow_nodes")
   ai_workflow_node_executions                                         ai_workflow_node_executions[]
@@ -383,7 +383,7 @@ model ai_workflow_nodes {
 }
 
 model ai_workflows {
-  id                     String                   @id
+  id                     String                   @id @default(cuid())
   name                   String
   slug                   String                   @unique
   description            String?
@@ -395,7 +395,7 @@ model ai_workflows {
   version                Int                      @default(1)
   createdById            String
   createdAt              DateTime                 @default(now())
-  updatedAt              DateTime
+  updatedAt DateTime @updatedAt
   ai_workflow_edges      ai_workflow_edges[]
   ai_workflow_executions ai_workflow_executions[]
   ai_workflow_nodes      ai_workflow_nodes[]
@@ -405,7 +405,7 @@ model ai_workflows {
 }
 
 model alert_rules {
-  id              String          @id
+  id              String          @id @default(cuid())
   name            String
   description     String?
   metricType      String
@@ -427,13 +427,13 @@ model alert_rules {
   triggerCount    Int             @default(0)
   createdById     String
   createdAt       DateTime        @default(now())
-  updatedAt       DateTime
+  updatedAt DateTime @updatedAt
   users           users           @relation(fields: [createdById], references: [id])
   alerts          alerts[]
 }
 
 model alerts {
-  id                 String      @id
+  id                 String      @id @default(cuid())
   ruleId             String
   metricValue        Float
   threshold          Float
@@ -454,7 +454,7 @@ model alerts {
 }
 
 model analytics_snapshots {
-  id                      String   @id
+  id                      String   @id @default(cuid())
   date                    DateTime @unique
   totalUsers              Int      @default(0)
   newUsers                Int      @default(0)
@@ -489,7 +489,7 @@ model analytics_snapshots {
 }
 
 model announcements {
-  id             String    @id
+  id             String    @id @default(cuid())
   title          String
   message        String
   type           String    @default("info")
@@ -502,13 +502,13 @@ model announcements {
   isActive       Boolean   @default(true)
   createdById    String
   createdAt      DateTime  @default(now())
-  updatedAt      DateTime
+  updatedAt DateTime @updatedAt
 
   @@index([isActive])
 }
 
 model api_keys {
-  id          String    @id
+  id          String    @id @default(cuid())
   userId      String
   name        String
   key         String    @unique
@@ -519,7 +519,7 @@ model api_keys {
   usageCount  Int       @default(0)
   expiresAt   DateTime?
   createdAt   DateTime  @default(now())
-  updatedAt   DateTime
+  updatedAt DateTime @updatedAt
   users       users     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([isActive])
@@ -528,7 +528,7 @@ model api_keys {
 }
 
 model audit_logs {
-  id        String    @id
+  id        String    @id @default(cuid())
   userId    String?
   actorRole UserRole?
   action    String
@@ -541,7 +541,7 @@ model audit_logs {
 }
 
 model avatar_frames {
-  id                 String               @id
+  id                 String               @id @default(cuid())
   name               String
   imageUrl           String
   unlockType         FrameUnlockType
@@ -554,7 +554,7 @@ model avatar_frames {
 }
 
 model badges {
-  id           String         @id
+  id           String         @id @default(cuid())
   name         String
   slug         String         @unique
   description  String
@@ -573,7 +573,7 @@ model badges {
 }
 
 model banners {
-  id             String    @id
+  id             String    @id @default(cuid())
   name           String
   title          String?
   subtitle       String?
@@ -593,14 +593,14 @@ model banners {
   sortOrder      Int       @default(0)
   createdById    String
   createdAt      DateTime  @default(now())
-  updatedAt      DateTime
+  updatedAt DateTime @updatedAt
 
   @@index([isActive])
   @@index([position])
 }
 
 model blocked_ips {
-  id        String    @id
+  id        String    @id @default(cuid())
   ipAddress String    @unique
   reason    String
   blockedBy String?
@@ -608,19 +608,19 @@ model blocked_ips {
   expiresAt DateTime?
   isActive  Boolean   @default(true)
   createdAt DateTime  @default(now())
-  updatedAt DateTime
+  updatedAt DateTime @updatedAt
 
   @@index([ipAddress])
   @@index([isActive])
 }
 
 model bookings {
-  id        String        @id
+  id        String        @id @default(cuid())
   status    BookingStatus @default(PENDING)
   userId    String
   classId   String
   createdAt DateTime      @default(now())
-  updatedAt DateTime
+  updatedAt DateTime @updatedAt
   classes   classes       @relation(fields: [classId], references: [id], onDelete: Cascade)
   users     users         @relation(fields: [userId], references: [id], onDelete: Cascade)
   payments  payments?
@@ -630,7 +630,7 @@ model bookings {
 }
 
 model bulk_action_jobs {
-  id           String           @id
+  id           String           @id @default(cuid())
   adminId      String
   action       String
   entityType   String
@@ -653,7 +653,7 @@ model bulk_action_jobs {
 }
 
 model challenge_enrollments {
-  id          String     @id
+  id          String     @id @default(cuid())
   userId      String
   challengeId String
   joinedAt    DateTime   @default(now())
@@ -664,7 +664,7 @@ model challenge_enrollments {
 }
 
 model challenges {
-  id                    String                  @id
+  id                    String                  @id @default(cuid())
   title                 String
   description           String
   startAt               DateTime
@@ -672,20 +672,20 @@ model challenges {
   targetDays            Int
   coverUrl              String?
   createdAt             DateTime                @default(now())
-  updatedAt             DateTime
+  updatedAt DateTime @updatedAt
   challenge_enrollments challenge_enrollments[]
   daily_checks          daily_checks[]
 }
 
 model classes {
-  id              String            @id
+  id              String            @id @default(cuid())
   title           String
   description     String?
   schedule        DateTime
   instructorId    String
   coInstructorIds String[]
   createdAt       DateTime          @default(now())
-  updatedAt       DateTime
+  updatedAt       DateTime          @updatedAt
   category        String?
   completions     Int               @default(0)
   duration        Int               @default(30)
@@ -698,7 +698,16 @@ model classes {
   status          ClassStatus       @default(DRAFT)
   thumbnailUrl    String?
   totalRating     Float             @default(0)
+
+  // Video alanları
   videoUrl        String?
+  videoSource     VideoSource?      // YouTube, Dailymotion, Vimeo, Upload, External
+  videoQuality    VideoQuality?     // Kalite: 360p, 480p, 720p, 1080p, 1440p, 4K
+  videoFormat     VideoFormat?      // Format: MP4, WEBM, MOV, AVI, MKV
+  videoId         String?           // YouTube/Vimeo/Dailymotion video ID
+  videoDuration   Int?              // Video süresi (saniye)
+  videoFileSize   BigInt?           // Dosya boyutu (byte)
+
   bookings        bookings[]
   users           users             @relation(fields: [instructorId], references: [id], onDelete: Cascade)
   comments        comments[]
@@ -708,10 +717,11 @@ model classes {
   @@index([instructorId])
   @@index([level])
   @@index([status])
+  @@index([videoSource])
 }
 
 model comment_likes {
-  id        String   @id
+  id        String   @id @default(cuid())
   commentId String
   userId    String
   createdAt DateTime @default(now())
@@ -722,7 +732,7 @@ model comment_likes {
 }
 
 model comments {
-  id                 String            @id
+  id                 String            @id @default(cuid())
   content            String
   authorId           String
   targetType         CommentTargetType
@@ -738,7 +748,7 @@ model comments {
   isHidden           Boolean           @default(false)
   hiddenReason       String?
   createdAt          DateTime          @default(now())
-  updatedAt          DateTime
+  updatedAt DateTime @updatedAt
   comment_likes      comment_likes[]
   users              users             @relation(fields: [authorId], references: [id])
   classes            classes?          @relation(fields: [classId], references: [id])
@@ -756,7 +766,7 @@ model comments {
 }
 
 model communication_campaigns {
-  id                String            @id
+  id                String            @id @default(cuid())
   name              String
   description       String?
   templateId        String
@@ -774,7 +784,7 @@ model communication_campaigns {
   clickedCount      Int               @default(0)
   createdById       String
   createdAt         DateTime          @default(now())
-  updatedAt         DateTime
+  updatedAt DateTime @updatedAt
   users             users             @relation(fields: [createdById], references: [id], onDelete: Cascade)
   message_templates message_templates @relation(fields: [templateId], references: [id], onDelete: Cascade)
 
@@ -785,7 +795,7 @@ model communication_campaigns {
 }
 
 model community_groups {
-  id            String          @id
+  id            String          @id @default(cuid())
   name          String
   slug          String          @unique
   description   String?
@@ -794,7 +804,7 @@ model community_groups {
   isOfficial    Boolean         @default(false)
   createdById   String
   createdAt     DateTime        @default(now())
-  updatedAt     DateTime
+  updatedAt DateTime @updatedAt
   users         users           @relation(fields: [createdById], references: [id])
   group_members group_members[]
   group_posts   group_posts[]
@@ -805,7 +815,7 @@ model community_groups {
 }
 
 model content_categories {
-  id                       String               @id
+  id                       String               @id @default(cuid())
   name                     String
   slug                     String               @unique
   description              String?
@@ -813,7 +823,7 @@ model content_categories {
   sortOrder                Int                  @default(0)
   isActive                 Boolean              @default(true)
   createdAt                DateTime             @default(now())
-  updatedAt                DateTime
+  updatedAt DateTime @updatedAt
   content_categories       content_categories?  @relation("content_categoriesTocontent_categories", fields: [parentId], references: [id])
   other_content_categories content_categories[] @relation("content_categoriesTocontent_categories")
   contents                 contents[]
@@ -823,21 +833,21 @@ model content_categories {
 }
 
 model content_embeddings {
-  id         String   @id
+  id         String   @id @default(cuid())
   entityType String
   entityId   String
   embedding  Json
   model      String
   dimensions Int
   textHash   String
-  updatedAt  DateTime
+  updatedAt DateTime @updatedAt
   createdAt  DateTime @default(now())
 
   @@unique([entityType, entityId])
 }
 
 model content_reports {
-  id                                        String           @id
+  id                                        String           @id @default(cuid())
   reporterId                                String
   reason                                    ReportReason
   description                               String?
@@ -851,7 +861,7 @@ model content_reports {
   reviewedAt                                DateTime?
   resolution                                String?
   createdAt                                 DateTime         @default(now())
-  updatedAt                                 DateTime
+  updatedAt DateTime @updatedAt
   comments                                  comments?        @relation(fields: [commentId], references: [id])
   forum_posts                               forum_posts?     @relation(fields: [postId], references: [id])
   users_content_reports_reporterIdTousers   users            @relation("content_reports_reporterIdTousers", fields: [reporterId], references: [id])
@@ -866,7 +876,7 @@ model content_reports {
 }
 
 model content_tags {
-  id                  String                @id
+  id                  String                @id @default(cuid())
   name                String
   slug                String                @unique
   color               String?
@@ -875,7 +885,7 @@ model content_tags {
 }
 
 model content_templates {
-  id           String      @id
+  id           String      @id @default(cuid())
   name         String
   slug         String      @unique
   description  String?
@@ -886,13 +896,13 @@ model content_templates {
   isActive     Boolean     @default(true)
   createdById  String
   createdAt    DateTime    @default(now())
-  updatedAt    DateTime
+  updatedAt DateTime @updatedAt
 
   @@index([type])
 }
 
 model content_translations {
-  id                  String            @id
+  id                  String            @id @default(cuid())
   entityType          ContentEntityType
   entityId            String
   field               String
@@ -903,7 +913,7 @@ model content_translations {
   isMachineTranslated Boolean           @default(false)
   originalLanguageId  String?
   createdAt           DateTime          @default(now())
-  updatedAt           DateTime
+  updatedAt DateTime @updatedAt
   languages           languages         @relation(fields: [languageId], references: [id], onDelete: Cascade)
 
   @@unique([entityType, entityId, field, languageId])
@@ -912,7 +922,7 @@ model content_translations {
 }
 
 model content_versions {
-  id         String   @id
+  id         String   @id @default(cuid())
   contentId  String
   version    Int
   title      String
@@ -928,7 +938,7 @@ model content_versions {
 }
 
 model contents {
-  id                  String                @id
+  id                  String                @id @default(cuid())
   title               String
   slug                String                @unique
   excerpt             String?
@@ -955,7 +965,7 @@ model contents {
   requiredTier        String?
   viewCount           Int                   @default(0)
   createdAt           DateTime              @default(now())
-  updatedAt           DateTime
+  updatedAt DateTime @updatedAt
   ContentToContentTag ContentToContentTag[]
   content_versions    content_versions[]
   content_categories  content_categories?   @relation(fields: [categoryId], references: [id])
@@ -969,7 +979,7 @@ model contents {
 }
 
 model conversations {
-  id                                        String    @id
+  id                                        String    @id @default(cuid())
   participant1Id                            String
   participant2Id                            String
   lastMessageAt                             DateTime?
@@ -977,7 +987,7 @@ model conversations {
   unreadCount1                              Int       @default(0)
   unreadCount2                              Int       @default(0)
   createdAt                                 DateTime  @default(now())
-  updatedAt                                 DateTime
+  updatedAt DateTime @updatedAt
   users_conversations_participant1IdTousers users     @relation("conversations_participant1IdTousers", fields: [participant1Id], references: [id])
   users_conversations_participant2IdTousers users     @relation("conversations_participant2IdTousers", fields: [participant2Id], references: [id])
 
@@ -988,7 +998,7 @@ model conversations {
 }
 
 model coupon_usages {
-  id             String   @id
+  id             String   @id @default(cuid())
   couponId       String
   userId         String
   paymentId      String?
@@ -1003,7 +1013,7 @@ model coupon_usages {
 }
 
 model coupons {
-  id                String          @id
+  id                String          @id @default(cuid())
   code              String          @unique
   type              CouponType
   value             Float
@@ -1017,7 +1027,7 @@ model coupons {
   isActive          Boolean         @default(true)
   createdById       String
   createdAt         DateTime        @default(now())
-  updatedAt         DateTime
+  updatedAt DateTime @updatedAt
   coupon_usages     coupon_usages[]
   users             users           @relation(fields: [createdById], references: [id])
 
@@ -1026,7 +1036,7 @@ model coupons {
 }
 
 model custom_queries {
-  id              String    @id
+  id              String    @id @default(cuid())
   name            String
   description     String?
   queryType       QueryType
@@ -1038,12 +1048,12 @@ model custom_queries {
   isSafe          Boolean   @default(false)
   createdById     String
   createdAt       DateTime  @default(now())
-  updatedAt       DateTime
+  updatedAt DateTime @updatedAt
   users           users     @relation(fields: [createdById], references: [id])
 }
 
 model daily_checks {
-  id               String            @id
+  id               String            @id @default(cuid())
   userId           String
   challengeId      String?
   programSessionId String?
@@ -1058,7 +1068,7 @@ model daily_checks {
 }
 
 model daily_insights {
-  id              String    @id
+  id              String    @id @default(cuid())
   userId          String
   date            DateTime  @db.Date
   summary         String
@@ -1077,7 +1087,7 @@ model daily_insights {
 }
 
 model daily_rewards {
-  id         String          @id
+  id         String          @id @default(cuid())
   day        Int             @unique
   xpReward   Int
   bonusType  DailyBonusType?
@@ -1087,7 +1097,7 @@ model daily_rewards {
 }
 
 model dashboard_widgets {
-  id                     String                   @id
+  id                     String                   @id @default(cuid())
   name                   String
   description            String?
   type                   WidgetType
@@ -1101,19 +1111,19 @@ model dashboard_widgets {
   isActive               Boolean                  @default(true)
   isDefault              Boolean                  @default(false)
   createdAt              DateTime                 @default(now())
-  updatedAt              DateTime
+  updatedAt DateTime @updatedAt
   user_dashboard_widgets user_dashboard_widgets[]
 }
 
 model device_tokens {
-  id         String         @id
+  id         String         @id @default(cuid())
   userId     String
   token      String         @unique
   platform   DevicePlatform
   deviceName String?
   isActive   Boolean        @default(true)
   createdAt  DateTime       @default(now())
-  updatedAt  DateTime
+  updatedAt DateTime @updatedAt
   users      users          @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([token])
@@ -1121,7 +1131,7 @@ model device_tokens {
 }
 
 model direct_messages {
-  id                                      String    @id
+  id                                      String    @id @default(cuid())
   senderId                                String
   receiverId                              String
   content                                 String
@@ -1139,7 +1149,7 @@ model direct_messages {
 }
 
 model elevenlabs_jobs {
-  id                String            @id
+  id                String            @id @default(cuid())
   voiceId           String
   text              String
   modelId           String            @default("eleven_multilingual_v2")
@@ -1168,7 +1178,7 @@ model elevenlabs_jobs {
 }
 
 model elevenlabs_voices {
-  id              String            @id
+  id              String            @id @default(cuid())
   voiceId         String            @unique
   name            String
   description     String?
@@ -1183,12 +1193,12 @@ model elevenlabs_voices {
   isDefault       Boolean           @default(false)
   yogaCategory    String?
   createdAt       DateTime          @default(now())
-  updatedAt       DateTime
+  updatedAt DateTime @updatedAt
   elevenlabs_jobs elevenlabs_jobs[]
 }
 
 model export_jobs {
-  id          String       @id
+  id          String       @id @default(cuid())
   adminId     String
   type        ExportType
   format      ExportFormat
@@ -1210,7 +1220,7 @@ model export_jobs {
 }
 
 model faq_categories {
-  id          String      @id
+  id          String      @id @default(cuid())
   name        String
   slug        String      @unique
   description String?
@@ -1218,12 +1228,12 @@ model faq_categories {
   sortOrder   Int         @default(0)
   isActive    Boolean     @default(true)
   createdAt   DateTime    @default(now())
-  updatedAt   DateTime
+  updatedAt DateTime @updatedAt
   faq_items   faq_items[]
 }
 
 model faq_items {
-  id             String          @id
+  id             String          @id @default(cuid())
   question       String
   answer         String
   categoryId     String?
@@ -1232,14 +1242,14 @@ model faq_items {
   helpfulYes     Int             @default(0)
   helpfulNo      Int             @default(0)
   createdAt      DateTime        @default(now())
-  updatedAt      DateTime
+  updatedAt DateTime @updatedAt
   faq_categories faq_categories? @relation(fields: [categoryId], references: [id])
 
   @@index([categoryId])
 }
 
 model favorites {
-  id        String       @id
+  id        String       @id @default(cuid())
   userId    String
   itemId    String
   itemType  FavoriteType
@@ -1252,7 +1262,7 @@ model favorites {
 }
 
 model feature_flags {
-  id                String   @id
+  id                String   @id @default(cuid())
   key               String   @unique
   name              String
   description       String?
@@ -1264,12 +1274,12 @@ model feature_flags {
   metadata          Json?
   updatedById       String?
   createdAt         DateTime @default(now())
-  updatedAt         DateTime
+  updatedAt DateTime @updatedAt
   users             users?   @relation(fields: [updatedById], references: [id])
 }
 
 model forum_categories {
-  id                     String             @id
+  id                     String             @id @default(cuid())
   name                   String
   slug                   String             @unique
   description            String?
@@ -1279,7 +1289,7 @@ model forum_categories {
   isActive               Boolean            @default(true)
   parentId               String?
   createdAt              DateTime           @default(now())
-  updatedAt              DateTime
+  updatedAt DateTime @updatedAt
   forum_categories       forum_categories?  @relation("forum_categoriesToforum_categories", fields: [parentId], references: [id])
   other_forum_categories forum_categories[] @relation("forum_categoriesToforum_categories")
   forum_topics           forum_topics[]
@@ -1289,7 +1299,7 @@ model forum_categories {
 }
 
 model forum_post_likes {
-  id          String      @id
+  id          String      @id @default(cuid())
   postId      String
   userId      String
   createdAt   DateTime    @default(now())
@@ -1300,7 +1310,7 @@ model forum_post_likes {
 }
 
 model forum_posts {
-  id                String             @id
+  id                String             @id @default(cuid())
   content           String
   topicId           String
   authorId          String
@@ -1309,7 +1319,7 @@ model forum_posts {
   isEdited          Boolean            @default(false)
   editedAt          DateTime?
   createdAt         DateTime           @default(now())
-  updatedAt         DateTime
+  updatedAt DateTime @updatedAt
   content_reports   content_reports[]
   forum_post_likes  forum_post_likes[]
   users             users              @relation(fields: [authorId], references: [id])
@@ -1323,7 +1333,7 @@ model forum_posts {
 }
 
 model forum_tags {
-  id               String             @id
+  id               String             @id @default(cuid())
   name             String             @unique
   slug             String             @unique
   color            String?
@@ -1332,7 +1342,7 @@ model forum_tags {
 }
 
 model forum_topic_followers {
-  id           String       @id
+  id           String       @id @default(cuid())
   topicId      String
   userId       String
   createdAt    DateTime     @default(now())
@@ -1343,7 +1353,7 @@ model forum_topic_followers {
 }
 
 model forum_topic_tags {
-  id           String       @id
+  id           String       @id @default(cuid())
   topicId      String
   tagId        String
   forum_tags   forum_tags   @relation(fields: [tagId], references: [id])
@@ -1353,7 +1363,7 @@ model forum_topic_tags {
 }
 
 model forum_topics {
-  id                                      String                  @id
+  id                                      String                  @id @default(cuid())
   title                                   String
   slug                                    String                  @unique
   content                                 String
@@ -1367,7 +1377,7 @@ model forum_topics {
   lastReplyAt                             DateTime?
   lastReplyById                           String?
   createdAt                               DateTime                @default(now())
-  updatedAt                               DateTime
+  updatedAt DateTime @updatedAt
   content_reports                         content_reports[]
   forum_posts                             forum_posts[]
   forum_topic_followers                   forum_topic_followers[]
@@ -1384,15 +1394,15 @@ model forum_topics {
 }
 
 model gamification_config {
-  id          String   @id
+  id          String   @id @default(cuid())
   key         String   @unique
   value       Json
   description String?
-  updatedAt   DateTime
+  updatedAt DateTime @updatedAt
 }
 
 model glossary {
-  id               String   @id
+  id               String   @id @default(cuid())
   sourceLanguageId String
   targetLanguageId String
   sourceTerm       String
@@ -1402,14 +1412,14 @@ model glossary {
   caseSensitive    Boolean  @default(false)
   category         String?
   createdAt        DateTime @default(now())
-  updatedAt        DateTime
+  updatedAt DateTime @updatedAt
 
   @@unique([sourceLanguageId, targetLanguageId, sourceTerm])
   @@index([sourceTerm])
 }
 
 model grounding_documents {
-  id             String    @id
+  id             String    @id @default(cuid())
   title          String
   content        String
   contentHash    String    @unique
@@ -1422,14 +1432,14 @@ model grounding_documents {
   validUntil     DateTime?
   isActive       Boolean   @default(true)
   createdAt      DateTime  @default(now())
-  updatedAt      DateTime
+  updatedAt DateTime @updatedAt
 
   @@index([isActive])
   @@index([sourceType])
 }
 
 model group_members {
-  id               String           @id
+  id               String           @id @default(cuid())
   groupId          String
   userId           String
   role             GroupRole        @default(MEMBER)
@@ -1443,13 +1453,13 @@ model group_members {
 }
 
 model group_post_comments {
-  id                        String                @id
+  id                        String                @id @default(cuid())
   postId                    String
   authorId                  String
   content                   String
   parentId                  String?
   createdAt                 DateTime              @default(now())
-  updatedAt                 DateTime
+  updatedAt DateTime @updatedAt
   users                     users                 @relation(fields: [authorId], references: [id])
   group_post_comments       group_post_comments?  @relation("group_post_commentsTogroup_post_comments", fields: [parentId], references: [id])
   other_group_post_comments group_post_comments[] @relation("group_post_commentsTogroup_post_comments")
@@ -1460,7 +1470,7 @@ model group_post_comments {
 }
 
 model group_post_likes {
-  id          String      @id
+  id          String      @id @default(cuid())
   postId      String
   userId      String
   createdAt   DateTime    @default(now())
@@ -1471,14 +1481,14 @@ model group_post_likes {
 }
 
 model group_posts {
-  id                  String                @id
+  id                  String                @id @default(cuid())
   groupId             String
   authorId            String
   content             String
   mediaUrls           String[]
   isPinned            Boolean               @default(false)
   createdAt           DateTime              @default(now())
-  updatedAt           DateTime
+  updatedAt DateTime @updatedAt
   group_post_comments group_post_comments[]
   group_post_likes    group_post_likes[]
   users               users                 @relation(fields: [authorId], references: [id])
@@ -1490,7 +1500,7 @@ model group_posts {
 }
 
 model hallucination_checks {
-  id                 String                 @id
+  id                 String                 @id @default(cuid())
   content            String
   contentType        String
   sourceEntityType   String?
@@ -1520,7 +1530,7 @@ model hallucination_checks {
 }
 
 model instructor_analytics {
-  id                  String              @id
+  id                  String              @id @default(cuid())
   instructorId        String
   date                DateTime            @db.Date
   views               Int                 @default(0)
@@ -1543,7 +1553,7 @@ model instructor_analytics {
 }
 
 model instructor_earnings {
-  id                  String              @id
+  id                  String              @id @default(cuid())
   instructorId        String
   type                EarningType
   sourceType          EarningSourceType
@@ -1573,7 +1583,7 @@ model instructor_earnings {
 }
 
 model instructor_followers {
-  id                   String              @id
+  id                   String              @id @default(cuid())
   instructorId         String
   userId               String
   followedAt           DateTime            @default(now())
@@ -1587,7 +1597,7 @@ model instructor_followers {
 }
 
 model instructor_payout_settings {
-  id                     String              @id
+  id                     String              @id @default(cuid())
   instructorId           String              @unique
   preferredMethod        PayoutMethod        @default(BANK_TRANSFER)
   bankDetails            Json?
@@ -1600,14 +1610,14 @@ model instructor_payout_settings {
   autoPayoutEnabled      Boolean             @default(false)
   autoPayoutDay          Int                 @default(1)
   createdAt              DateTime            @default(now())
-  updatedAt              DateTime
+  updatedAt DateTime @updatedAt
   instructor_profiles    instructor_profiles @relation(fields: [instructorId], references: [id], onDelete: Cascade)
 
   @@index([instructorId])
 }
 
 model instructor_payouts {
-  id                  String                @id
+  id                  String                @id @default(cuid())
   instructorId        String
   amount              Decimal               @db.Decimal(10, 2)
   currency            String                @default("TRY")
@@ -1625,7 +1635,7 @@ model instructor_payouts {
   completedAt         DateTime?
   failureReason       String?
   createdAt           DateTime              @default(now())
-  updatedAt           DateTime
+  updatedAt DateTime @updatedAt
   instructor_earnings instructor_earnings[]
   instructor_profiles instructor_profiles   @relation(fields: [instructorId], references: [id], onDelete: Cascade)
 
@@ -1636,7 +1646,7 @@ model instructor_payouts {
 }
 
 model instructor_profiles {
-  id                         String                      @id
+  id                         String                      @id @default(cuid())
   userId                     String                      @unique
   displayName                String
   slug                       String                      @unique
@@ -1669,7 +1679,7 @@ model instructor_profiles {
   rejectionReason            String?
   suspensionReason           String?
   createdAt                  DateTime                    @default(now())
-  updatedAt                  DateTime
+  updatedAt DateTime @updatedAt
   instructor_analytics       instructor_analytics[]
   instructor_earnings        instructor_earnings[]
   instructor_followers       instructor_followers[]
@@ -1690,7 +1700,7 @@ model instructor_profiles {
 }
 
 model instructor_reviews {
-  id                  String              @id
+  id                  String              @id @default(cuid())
   instructorId        String
   studentId           String
   programId           String?
@@ -1705,7 +1715,7 @@ model instructor_reviews {
   repliedAt           DateTime?
   isVerifiedPurchase  Boolean             @default(false)
   createdAt           DateTime            @default(now())
-  updatedAt           DateTime
+  updatedAt DateTime @updatedAt
   instructor_profiles instructor_profiles @relation(fields: [instructorId], references: [id], onDelete: Cascade)
   users               users               @relation(fields: [studentId], references: [id], onDelete: Cascade)
 
@@ -1717,7 +1727,7 @@ model instructor_reviews {
 }
 
 model invoice_items {
-  id          String   @id
+  id          String   @id @default(cuid())
   invoiceId   String
   description String
   quantity    Int      @default(1)
@@ -1731,7 +1741,7 @@ model invoice_items {
 }
 
 model invoices {
-  id              String          @id
+  id              String          @id @default(cuid())
   userId          String
   subscriptionId  String?
   paymentId       String?         @unique
@@ -1760,7 +1770,7 @@ model invoices {
   periodStart     DateTime?
   periodEnd       DateTime?
   createdAt       DateTime        @default(now())
-  updatedAt       DateTime
+  updatedAt DateTime @updatedAt
   invoice_items   invoice_items[]
   payments        payments?       @relation(fields: [paymentId], references: [id])
   subscriptions   subscriptions?  @relation(fields: [subscriptionId], references: [id])
@@ -1774,7 +1784,7 @@ model invoices {
 }
 
 model languages {
-  id                        String                      @id
+  id                        String                      @id @default(cuid())
   code                      String                      @unique
   name                      String
   nativeName                String
@@ -1785,7 +1795,7 @@ model languages {
   flagUrl                   String?
   fallbackId                String?
   createdAt                 DateTime                    @default(now())
-  updatedAt                 DateTime
+  updatedAt DateTime @updatedAt
   content_translations      content_translations[]
   languages                 languages?                  @relation("languagesTolanguages", fields: [fallbackId], references: [id])
   other_languages           languages[]                 @relation("languagesTolanguages")
@@ -1794,7 +1804,7 @@ model languages {
 }
 
 model leaderboard_entries {
-  id            String            @id
+  id            String            @id @default(cuid())
   userId        String
   period        LeaderboardPeriod
   periodStart   DateTime
@@ -1807,7 +1817,7 @@ model leaderboard_entries {
   rank          Int?
   previousRank  Int?
   createdAt     DateTime          @default(now())
-  updatedAt     DateTime
+  updatedAt DateTime @updatedAt
   users         users             @relation(fields: [userId], references: [id])
 
   @@unique([userId, period, periodStart])
@@ -1816,7 +1826,7 @@ model leaderboard_entries {
 }
 
 model live_stream_chats {
-  id                      String              @id
+  id                      String              @id @default(cuid())
   streamId                String
   userId                  String
   message                 String
@@ -1838,7 +1848,7 @@ model live_stream_chats {
 }
 
 model live_stream_participants {
-  id            String          @id
+  id            String          @id @default(cuid())
   streamId      String
   userId        String
   role          ParticipantRole @default(PARTICIPANT)
@@ -1862,7 +1872,7 @@ model live_stream_participants {
 }
 
 model live_stream_reactions {
-  id           String       @id
+  id           String       @id @default(cuid())
   streamId     String
   userId       String
   type         ReactionType
@@ -1875,7 +1885,7 @@ model live_stream_reactions {
 }
 
 model live_stream_recordings {
-  id           String          @id
+  id           String          @id @default(cuid())
   streamId     String
   url          String
   duration     Int
@@ -1893,7 +1903,7 @@ model live_stream_recordings {
 }
 
 model live_stream_registrations {
-  id           String       @id
+  id           String       @id @default(cuid())
   streamId     String
   userId       String
   registeredAt DateTime     @default(now())
@@ -1910,7 +1920,7 @@ model live_stream_registrations {
 }
 
 model live_stream_schedules {
-  id                  String              @id
+  id                  String              @id @default(cuid())
   instructorId        String
   title               String
   description         String?
@@ -1923,7 +1933,7 @@ model live_stream_schedules {
   isActive            Boolean             @default(true)
   nextStreamAt        DateTime?
   createdAt           DateTime            @default(now())
-  updatedAt           DateTime
+  updatedAt DateTime @updatedAt
   instructor_profiles instructor_profiles @relation(fields: [instructorId], references: [id], onDelete: Cascade)
 
   @@index([instructorId])
@@ -1932,7 +1942,7 @@ model live_stream_schedules {
 }
 
 model live_streams {
-  id                        String                      @id
+  id                        String                      @id @default(cuid())
   title                     String
   description               String?
   thumbnailUrl              String?
@@ -1962,7 +1972,7 @@ model live_streams {
   viewCount                 Int                         @default(0)
   likeCount                 Int                         @default(0)
   createdAt                 DateTime                    @default(now())
-  updatedAt                 DateTime
+  updatedAt DateTime @updatedAt
   live_stream_chats         live_stream_chats[]
   live_stream_participants  live_stream_participants[]
   live_stream_reactions     live_stream_reactions[]
@@ -1978,7 +1988,7 @@ model live_streams {
 }
 
 model maintenance_windows {
-  id               String          @id
+  id               String          @id @default(cuid())
   title            String
   description      String?
   startTime        DateTime
@@ -1988,12 +1998,12 @@ model maintenance_windows {
   isActive         Boolean         @default(false)
   createdById      String
   createdAt        DateTime        @default(now())
-  updatedAt        DateTime
+  updatedAt DateTime @updatedAt
   users            users           @relation(fields: [createdById], references: [id])
 }
 
 model media_files {
-  id             String           @id
+  id             String           @id @default(cuid())
   filename       String
   originalName   String
   mimeType       String
@@ -2015,7 +2025,7 @@ model media_files {
   metadata       Json?
   uploadedById   String
   createdAt      DateTime         @default(now())
-  updatedAt      DateTime
+  updatedAt DateTime @updatedAt
   media_folders  media_folders?   @relation(fields: [folderId], references: [id])
   media_usages   media_usages[]
   media_variants media_variants[]
@@ -2027,14 +2037,14 @@ model media_files {
 }
 
 model media_folders {
-  id                  String          @id
+  id                  String          @id @default(cuid())
   name                String
   slug                String          @unique
   description         String?
   parentId            String?
   createdById         String
   createdAt           DateTime        @default(now())
-  updatedAt           DateTime
+  updatedAt DateTime @updatedAt
   media_files         media_files[]
   media_folders       media_folders?  @relation("media_foldersTomedia_folders", fields: [parentId], references: [id])
   other_media_folders media_folders[] @relation("media_foldersTomedia_folders")
@@ -2044,7 +2054,7 @@ model media_folders {
 }
 
 model media_usages {
-  id          String      @id
+  id          String      @id @default(cuid())
   mediaId     String
   entityType  String
   entityId    String
@@ -2058,7 +2068,7 @@ model media_usages {
 }
 
 model media_variants {
-  id          String      @id
+  id          String      @id @default(cuid())
   mediaId     String
   variantType String
   url         String
@@ -2075,7 +2085,7 @@ model media_variants {
 }
 
 model message_logs {
-  id                String             @id
+  id                String             @id @default(cuid())
   userId            String
   templateId        String?
   channel           MessageChannel
@@ -2101,7 +2111,7 @@ model message_logs {
 }
 
 model message_templates {
-  id                      String                    @id
+  id                      String                    @id @default(cuid())
   name                    String
   slug                    String                    @unique
   subject                 String?
@@ -2114,7 +2124,7 @@ model message_templates {
   variables               Json?
   isActive                Boolean                   @default(true)
   createdAt               DateTime                  @default(now())
-  updatedAt               DateTime
+  updatedAt DateTime @updatedAt
   communication_campaigns communication_campaigns[]
   message_logs            message_logs[]
   scheduled_messages      scheduled_messages[]
@@ -2126,7 +2136,7 @@ model message_templates {
 }
 
 model milestones {
-  id           String        @id
+  id           String        @id @default(cuid())
   userId       String
   type         MilestoneType
   value        Int
@@ -2141,7 +2151,7 @@ model milestones {
 }
 
 model navigation_items {
-  id                     String             @id
+  id                     String             @id @default(cuid())
   menuId                 String
   label                  String
   url                    String?
@@ -2152,7 +2162,7 @@ model navigation_items {
   isActive               Boolean            @default(true)
   visibleTo              String[]
   createdAt              DateTime           @default(now())
-  updatedAt              DateTime
+  updatedAt DateTime @updatedAt
   navigation_menus       navigation_menus   @relation(fields: [menuId], references: [id], onDelete: Cascade)
   navigation_items       navigation_items?  @relation("navigation_itemsTonavigation_items", fields: [parentId], references: [id])
   other_navigation_items navigation_items[] @relation("navigation_itemsTonavigation_items")
@@ -2162,18 +2172,18 @@ model navigation_items {
 }
 
 model navigation_menus {
-  id               String             @id
+  id               String             @id @default(cuid())
   name             String
   slug             String             @unique
   description      String?
   isActive         Boolean            @default(true)
   createdAt        DateTime           @default(now())
-  updatedAt        DateTime
+  updatedAt DateTime @updatedAt
   navigation_items navigation_items[]
 }
 
 model notification_logs {
-  id           String             @id
+  id           String             @id @default(cuid())
   userId       String
   title        String
   body         String
@@ -2189,7 +2199,7 @@ model notification_logs {
 }
 
 model notification_preferences {
-  id                 String   @id
+  id                 String   @id @default(cuid())
   userId             String   @unique
   emailEnabled       Boolean  @default(true)
   smsEnabled         Boolean  @default(false)
@@ -2210,21 +2220,21 @@ model notification_preferences {
   quietHoursEnd      String?
   timezone           String   @default("UTC")
   createdAt          DateTime @default(now())
-  updatedAt          DateTime
+  updatedAt DateTime @updatedAt
   users              users    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
 }
 
 model offline_contents {
-  id          String   @id
+  id          String   @id @default(cuid())
   userId      String
   contentId   String
   contentType String
   status      String   @default("pending")
   fileSize    Int?
   createdAt   DateTime @default(now())
-  updatedAt   DateTime
+  updatedAt DateTime @updatedAt
   users       users    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, contentId, contentType])
@@ -2233,7 +2243,7 @@ model offline_contents {
 }
 
 model offline_downloads {
-  id           String   @id
+  id           String   @id @default(cuid())
   userId       String
   contentId    String
   contentType  String
@@ -2251,7 +2261,7 @@ model offline_downloads {
 }
 
 model otp_verifications {
-  id          String     @id
+  id          String     @id @default(cuid())
   phoneNumber String
   code        String
   purpose     OtpPurpose
@@ -2266,7 +2276,7 @@ model otp_verifications {
 }
 
 model password_reset_tokens {
-  id        String    @id
+  id        String    @id @default(cuid())
   userId    String
   token     String    @unique
   expiresAt DateTime
@@ -2279,7 +2289,7 @@ model password_reset_tokens {
 }
 
 model payments {
-  id                    String             @id
+  id                    String             @id @default(cuid())
   userId                String
   subscriptionId        String?
   bookingId             String?            @unique
@@ -2303,7 +2313,7 @@ model payments {
   environment           PaymentEnvironment @default(PRODUCTION)
   paidAt                DateTime?
   createdAt             DateTime           @default(now())
-  updatedAt             DateTime
+  updatedAt DateTime @updatedAt
   invoices              invoices?
   bookings              bookings?          @relation(fields: [bookingId], references: [id])
   subscriptions         subscriptions?     @relation(fields: [subscriptionId], references: [id])
@@ -2319,7 +2329,7 @@ model payments {
 }
 
 model planner_entries {
-  id               String            @id
+  id               String            @id @default(cuid())
   userId           String
   itemType         PlannerItemType
   programSessionId String?
@@ -2334,7 +2344,7 @@ model planner_entries {
 }
 
 model podcast_episodes {
-  id                String            @id
+  id                String            @id @default(cuid())
   podcastId         String
   title             String
   slug              String
@@ -2365,7 +2375,7 @@ model podcast_episodes {
   likeCount         Int               @default(0)
   publishedAt       DateTime?
   createdAt         DateTime          @default(now())
-  updatedAt         DateTime
+  updatedAt DateTime @updatedAt
   podcasts          podcasts          @relation(fields: [podcastId], references: [id], onDelete: Cascade)
   podcast_likes     podcast_likes[]
   podcast_listens   podcast_listens[]
@@ -2377,7 +2387,7 @@ model podcast_episodes {
 }
 
 model podcast_likes {
-  id               String           @id
+  id               String           @id @default(cuid())
   userId           String
   episodeId        String
   createdAt        DateTime         @default(now())
@@ -2389,7 +2399,7 @@ model podcast_likes {
 }
 
 model podcast_listens {
-  id               String           @id
+  id               String           @id @default(cuid())
   userId           String?
   episodeId        String
   progress         Int              @default(0)
@@ -2410,7 +2420,7 @@ model podcast_listens {
 }
 
 model podcast_subscriptions {
-  id                String   @id
+  id                String   @id @default(cuid())
   userId            String
   podcastId         String
   notifyNewEpisodes Boolean  @default(true)
@@ -2423,7 +2433,7 @@ model podcast_subscriptions {
 }
 
 model podcasts {
-  id                    String                  @id
+  id                    String                  @id @default(cuid())
   title                 String
   slug                  String                  @unique
   description           String
@@ -2454,7 +2464,7 @@ model podcasts {
   metaDescription       String?
   publishedAt           DateTime?
   createdAt             DateTime                @default(now())
-  updatedAt             DateTime
+  updatedAt DateTime @updatedAt
   podcast_episodes      podcast_episodes[]
   podcast_subscriptions podcast_subscriptions[]
   users                 users?                  @relation(fields: [hostId], references: [id])
@@ -2466,7 +2476,7 @@ model podcasts {
 }
 
 model poses {
-  id           String         @id
+  id           String         @id @default(cuid())
   sanskritName String?
   englishName  String
   difficulty   PoseDifficulty
@@ -2474,11 +2484,11 @@ model poses {
   description  String
   imageUrl     String?
   createdAt    DateTime       @default(now())
-  updatedAt    DateTime
+  updatedAt DateTime @updatedAt
 }
 
 model program_sessions {
-  id              String            @id
+  id              String            @id @default(cuid())
   programId       String
   order           Int
   title           String
@@ -2486,7 +2496,7 @@ model program_sessions {
   videoUrl        String?
   poseIds         String[]          @default([])
   createdAt       DateTime          @default(now())
-  updatedAt       DateTime
+  updatedAt DateTime @updatedAt
   daily_checks    daily_checks[]
   planner_entries planner_entries[]
   programs        programs          @relation(fields: [programId], references: [id], onDelete: Cascade)
@@ -2495,26 +2505,42 @@ model program_sessions {
 }
 
 model programs {
-  id               String             @id
+  id               String             @id @default(cuid())
   title            String
   description      String
   level            ProgramLevel
   durationMin      Int
   coverUrl         String?
+  thumbnailUrl     String?
   instructorId     String?
   coInstructorIds  String[]
   revenueShare     Json?
+  isPublished      Boolean            @default(false)
+  durationWeeks    Int?
+  // New fields
+  status           ProgramStatus      @default(DRAFT)
+  accessType       ProgramAccessType  @default(FREE)
+  price            Float?
+  currency         String?            @default("TRY")
+  categories       String[]           @default([])
+  promoVideoUrl    String?
+  promoVideoSource VideoSource?
+  promoVideoId     String?
+  instructor       users?             @relation("ProgramInstructor", fields: [instructorId], references: [id])
   createdAt        DateTime           @default(now())
-  updatedAt        DateTime
+  updatedAt DateTime @updatedAt
   comments         comments[]
-  program_sessions program_sessions[]
+  sessions         program_sessions[]
   tags             tags[]             @relation("ProgramToTag")
 
   @@index([instructorId])
+  @@index([isPublished])
+  @@index([status])
+  @@index([accessType])
 }
 
 model purchase_receipts {
-  id                 String                  @id
+  id                 String                  @id @default(cuid())
   userId             String
   subscriptionId     String?
   provider           PaymentProvider
@@ -2536,7 +2562,7 @@ model purchase_receipts {
 }
 
 model quests {
-  id               String               @id
+  id               String               @id @default(cuid())
   name             String
   description      String
   icon             String
@@ -2552,7 +2578,7 @@ model quests {
   startDate        DateTime?
   endDate          DateTime?
   createdAt        DateTime             @default(now())
-  updatedAt        DateTime
+  updatedAt DateTime @updatedAt
   user_quests      user_quests[]
 
   @@index([isActive])
@@ -2560,7 +2586,7 @@ model quests {
 }
 
 model rate_limit_logs {
-  id            String   @id
+  id            String   @id @default(cuid())
   identifier    String
   endpoint      String
   method        String
@@ -2576,7 +2602,7 @@ model rate_limit_logs {
 }
 
 model recommendations {
-  id          String                  @id
+  id          String                  @id @default(cuid())
   userId      String
   type        RecommendationType
   entityType  String
@@ -2602,7 +2628,7 @@ model recommendations {
 }
 
 model referral_codes {
-  id         String    @id
+  id         String    @id @default(cuid())
   userId     String    @unique
   code       String    @unique
   usageCount Int       @default(0)
@@ -2611,12 +2637,12 @@ model referral_codes {
   isActive   Boolean   @default(true)
   expiresAt  DateTime?
   createdAt  DateTime  @default(now())
-  updatedAt  DateTime
+  updatedAt DateTime @updatedAt
   users      users     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model referrals {
-  id                                String         @id
+  id                                String         @id @default(cuid())
   referrerId                        String
   referredId                        String         @unique
   code                              String
@@ -2627,7 +2653,7 @@ model referrals {
   referredXP                        Int?
   convertedAt                       DateTime?
   createdAt                         DateTime       @default(now())
-  updatedAt                         DateTime
+  updatedAt DateTime @updatedAt
   users_referrals_referredIdTousers users          @relation("referrals_referredIdTousers", fields: [referredId], references: [id], onDelete: Cascade)
   users_referrals_referrerIdTousers users          @relation("referrals_referrerIdTousers", fields: [referrerId], references: [id], onDelete: Cascade)
 
@@ -2635,7 +2661,7 @@ model referrals {
 }
 
 model refresh_tokens {
-  id              String    @id
+  id              String    @id @default(cuid())
   userId          String
   token           String    @unique
   familyId        String
@@ -2654,7 +2680,7 @@ model refresh_tokens {
 }
 
 model refunds {
-  id               String          @id
+  id               String          @id @default(cuid())
   paymentId        String
   provider         PaymentProvider
   providerRefundId String          @unique
@@ -2663,7 +2689,7 @@ model refunds {
   status           RefundStatus    @default(PENDING)
   initiatedBy      RefundInitiator @default(ADMIN)
   createdAt        DateTime        @default(now())
-  updatedAt        DateTime
+  updatedAt DateTime @updatedAt
   payments         payments        @relation(fields: [paymentId], references: [id], onDelete: Cascade)
 
   @@index([paymentId])
@@ -2672,7 +2698,7 @@ model refunds {
 }
 
 model report_definitions {
-  id               String             @id
+  id               String             @id @default(cuid())
   name             String
   slug             String             @unique
   description      String?
@@ -2693,13 +2719,13 @@ model report_definitions {
   allowScheduling  Boolean            @default(true)
   isActive         Boolean            @default(true)
   createdAt        DateTime           @default(now())
-  updatedAt        DateTime
+  updatedAt DateTime @updatedAt
   report_instances report_instances[]
   report_schedules report_schedules[]
 }
 
 model report_exports {
-  id               String            @id
+  id               String            @id @default(cuid())
   instanceId       String?
   reportType       String?
   filters          Json?
@@ -2727,7 +2753,7 @@ model report_exports {
 }
 
 model report_instances {
-  id                 String             @id
+  id                 String             @id @default(cuid())
   definitionId       String
   name               String?
   filters            Json
@@ -2747,7 +2773,7 @@ model report_instances {
   executionTime      Int?
   createdById        String
   createdAt          DateTime           @default(now())
-  updatedAt          DateTime
+  updatedAt DateTime @updatedAt
   report_exports     report_exports[]
   users              users              @relation(fields: [createdById], references: [id])
   report_definitions report_definitions @relation(fields: [definitionId], references: [id])
@@ -2757,7 +2783,7 @@ model report_instances {
 }
 
 model report_schedules {
-  id                  String                @id
+  id                  String                @id @default(cuid())
   definitionId        String
   name                String
   description         String?
@@ -2783,7 +2809,7 @@ model report_schedules {
   failureCount        Int                   @default(0)
   createdById         String
   createdAt           DateTime              @default(now())
-  updatedAt           DateTime
+  updatedAt DateTime @updatedAt
   users               users                 @relation(fields: [createdById], references: [id])
   report_definitions  report_definitions    @relation(fields: [definitionId], references: [id])
   schedule_executions schedule_executions[]
@@ -2792,7 +2818,7 @@ model report_schedules {
 }
 
 model revenue_records {
-  id             String                @id
+  id             String                @id @default(cuid())
   userId         String?
   subscriptionId String?
   paymentId      String?
@@ -2819,7 +2845,7 @@ model revenue_records {
 }
 
 model review_helpfuls {
-  id        String   @id
+  id        String   @id @default(cuid())
   reviewId  String
   userId    String
   createdAt DateTime @default(now())
@@ -2829,7 +2855,7 @@ model review_helpfuls {
 }
 
 model review_reports {
-  id        String   @id
+  id        String   @id @default(cuid())
   reviewId  String
   userId    String
   reason    String
@@ -2840,7 +2866,7 @@ model review_reports {
 }
 
 model saved_reports {
-  id          String   @id
+  id          String   @id @default(cuid())
   adminId     String
   name        String
   description String?
@@ -2851,12 +2877,12 @@ model saved_reports {
   sortOrder   String?
   isShared    Boolean  @default(false)
   createdAt   DateTime @default(now())
-  updatedAt   DateTime
+  updatedAt DateTime @updatedAt
   users       users    @relation(fields: [adminId], references: [id])
 }
 
 model schedule_executions {
-  id               String           @id
+  id               String           @id @default(cuid())
   scheduleId       String
   status           ExecutionStatus
   fileUrl          String?
@@ -2876,7 +2902,7 @@ model schedule_executions {
 }
 
 model scheduled_messages {
-  id                String                 @id
+  id                String                 @id @default(cuid())
   templateId        String
   userId            String
   scheduledAt       DateTime
@@ -2897,7 +2923,7 @@ model scheduled_messages {
 }
 
 model search_logs {
-  id          String   @id
+  id          String   @id @default(cuid())
   query       String
   resultCount Int      @default(0)
   userId      String?
@@ -2910,7 +2936,7 @@ model search_logs {
 }
 
 model seasonal_event_participants {
-  id              String          @id
+  id              String          @id @default(cuid())
   eventId         String
   userId          String
   points          Int             @default(0)
@@ -2918,7 +2944,7 @@ model seasonal_event_participants {
   tier            String?
   completedTasks  Json?
   joinedAt        DateTime        @default(now())
-  updatedAt       DateTime
+  updatedAt DateTime @updatedAt
   seasonal_events seasonal_events @relation(fields: [eventId], references: [id], onDelete: Cascade)
   users           users           @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -2926,7 +2952,7 @@ model seasonal_event_participants {
 }
 
 model seasonal_events {
-  id                          String                        @id
+  id                          String                        @id @default(cuid())
   name                        String
   slug                        String                        @unique
   description                 String
@@ -2937,14 +2963,14 @@ model seasonal_events {
   rewards                     Json
   isActive                    Boolean                       @default(true)
   createdAt                   DateTime                      @default(now())
-  updatedAt                   DateTime
+  updatedAt DateTime @updatedAt
   seasonal_event_participants seasonal_event_participants[]
 
   @@index([startDate, endDate])
 }
 
 model shop_items {
-  id              String           @id
+  id              String           @id @default(cuid())
   name            String
   description     String
   imageUrl        String?
@@ -2960,12 +2986,12 @@ model shop_items {
   minLevel        Int?
   requiredBadgeId String?
   createdAt       DateTime         @default(now())
-  updatedAt       DateTime
+  updatedAt DateTime @updatedAt
   shop_purchases  shop_purchases[]
 }
 
 model shop_purchases {
-  id         String     @id
+  id         String     @id @default(cuid())
   userId     String
   itemId     String
   pricePaid  Int
@@ -2980,7 +3006,7 @@ model shop_purchases {
 }
 
 model sms_logs {
-  id           String         @id
+  id           String         @id @default(cuid())
   userId       String?
   phoneNumber  String
   message      String
@@ -3001,7 +3027,7 @@ model sms_logs {
 }
 
 model social_shares {
-  id         String         @id
+  id         String         @id @default(cuid())
   userId     String
   platform   SocialPlatform
   shareType  ShareType
@@ -3018,7 +3044,7 @@ model social_shares {
 }
 
 model streak_freezes {
-  id        String             @id
+  id        String             @id @default(cuid())
   userId    String
   source    StreakFreezeSource
   usedAt    DateTime?
@@ -3030,7 +3056,7 @@ model streak_freezes {
 }
 
 model subscription_plans {
-  id                     String           @id
+  id                     String           @id @default(cuid())
   name                   String
   description            String?
   tier                   SubscriptionTier
@@ -3050,7 +3076,7 @@ model subscription_plans {
   maxDevices             Int              @default(1)
   offlineDownloads       Boolean          @default(false)
   createdAt              DateTime         @default(now())
-  updatedAt              DateTime
+  updatedAt DateTime @updatedAt
   subscriptions          subscriptions[]
 
   @@index([isActive])
@@ -3058,7 +3084,7 @@ model subscription_plans {
 }
 
 model subscriptions {
-  id                         String               @id
+  id                         String               @id @default(cuid())
   userId                     String
   planId                     String
   provider                   PaymentProvider
@@ -3081,10 +3107,10 @@ model subscriptions {
   autoRenew                  Boolean              @default(true)
   lastVerifiedAt             DateTime?
   createdAt                  DateTime             @default(now())
-  updatedAt                  DateTime
+  updatedAt DateTime @updatedAt
   invoices                   invoices[]
   payments                   payments[]
-  subscription_plans         subscription_plans   @relation(fields: [planId], references: [id])
+  plan                       subscription_plans   @relation(fields: [planId], references: [id])
   users                      users                @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([appleOriginalTransactionId])
@@ -3096,7 +3122,7 @@ model subscriptions {
 }
 
 model sync_changes {
-  id         String   @id
+  id         String   @id @default(cuid())
   version    Int      @default(autoincrement())
   entityType String
   entityId   String
@@ -3112,7 +3138,7 @@ model sync_changes {
 }
 
 model sync_logs {
-  id             String   @id
+  id             String   @id @default(cuid())
   userId         String
   clientActionId String
   processedAt    DateTime @default(now())
@@ -3124,7 +3150,7 @@ model sync_logs {
 }
 
 model system_settings {
-  id          String          @id
+  id          String          @id @default(cuid())
   key         String          @unique
   value       Json
   type        SettingType
@@ -3133,23 +3159,23 @@ model system_settings {
   isPublic    Boolean         @default(false)
   updatedById String?
   createdAt   DateTime        @default(now())
-  updatedAt   DateTime
+  updatedAt DateTime @updatedAt
   users       users?          @relation(fields: [updatedById], references: [id])
 }
 
 model tags {
-  id        String     @id
+  id        String     @id @default(cuid())
   kind      TagKind
   name      String
   slug      String     @unique
   createdAt DateTime   @default(now())
-  updatedAt DateTime
+  updatedAt DateTime @updatedAt
   podcasts  podcasts[] @relation("PodcastToTag")
   programs  programs[] @relation("ProgramToTag")
 }
 
 model tax_rates {
-  id          String   @id
+  id          String   @id @default(cuid())
   name        String
   country     String
   state       String?
@@ -3158,7 +3184,7 @@ model tax_rates {
   isActive    Boolean  @default(true)
   isDefault   Boolean  @default(false)
   createdAt   DateTime @default(now())
-  updatedAt   DateTime
+  updatedAt DateTime @updatedAt
 
   @@unique([country, state])
   @@index([country])
@@ -3166,7 +3192,7 @@ model tax_rates {
 }
 
 model titles {
-  id          String          @id
+  id          String          @id @default(cuid())
   name        String
   slug        String          @unique
   description String?
@@ -3180,7 +3206,7 @@ model titles {
 }
 
 model transcription_jobs {
-  id               String              @id
+  id               String              @id @default(cuid())
   audioUrl         String
   audioFormat      String?
   duration         Float?
@@ -3207,7 +3233,7 @@ model transcription_jobs {
 }
 
 model translation_jobs {
-  id               String               @id
+  id               String               @id @default(cuid())
   type             TranslationJobType
   sourceLanguageId String
   targetLanguageId String
@@ -3220,25 +3246,25 @@ model translation_jobs {
   startedAt        DateTime?
   completedAt      DateTime?
   createdAt        DateTime             @default(now())
-  updatedAt        DateTime
+  updatedAt DateTime @updatedAt
 }
 
 model translation_keys {
-  id           String         @id
+  id           String         @id @default(cuid())
   key          String         @unique
   namespace    String         @default("common")
   description  String?
   context      String?
   maxLength    Int?
   createdAt    DateTime       @default(now())
-  updatedAt    DateTime
+  updatedAt DateTime @updatedAt
   translations translations[]
 
   @@index([namespace])
 }
 
 model translation_memory {
-  id               String   @id
+  id               String   @id @default(cuid())
   sourceLanguageId String
   targetLanguageId String
   sourceText       String
@@ -3247,14 +3273,14 @@ model translation_memory {
   namespace        String?
   context          String?
   createdAt        DateTime @default(now())
-  updatedAt        DateTime
+  updatedAt DateTime @updatedAt
 
   @@unique([sourceLanguageId, targetLanguageId, sourceText])
   @@index([sourceText])
 }
 
 model translations {
-  id                  String            @id
+  id                  String            @id @default(cuid())
   keyId               String
   languageId          String
   value               String
@@ -3269,7 +3295,7 @@ model translations {
   verifiedAt          DateTime?
   isMachineTranslated Boolean           @default(false)
   createdAt           DateTime          @default(now())
-  updatedAt           DateTime
+  updatedAt DateTime @updatedAt
   translation_keys    translation_keys  @relation(fields: [keyId], references: [id], onDelete: Cascade)
   languages           languages         @relation(fields: [languageId], references: [id], onDelete: Cascade)
 
@@ -3279,7 +3305,7 @@ model translations {
 }
 
 model unsubscribe_tokens {
-  id               String            @id
+  id               String            @id @default(cuid())
   userId           String
   token            String            @unique
   notificationType NotificationType?
@@ -3293,7 +3319,7 @@ model unsubscribe_tokens {
 }
 
 model user_achievements {
-  id            String       @id
+  id            String       @id @default(cuid())
   userId        String
   achievementId String
   currentValue  Int          @default(0)
@@ -3304,7 +3330,7 @@ model user_achievements {
   claimedAt     DateTime?
   currentTier   Int          @default(0)
   createdAt     DateTime     @default(now())
-  updatedAt     DateTime
+  updatedAt DateTime @updatedAt
   achievements  achievements @relation(fields: [achievementId], references: [id], onDelete: Cascade)
   users         users        @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -3313,7 +3339,7 @@ model user_achievements {
 }
 
 model user_activities {
-  id           String       @id
+  id           String       @id @default(cuid())
   userId       String
   activityType ActivityType
   targetId     String
@@ -3329,7 +3355,7 @@ model user_activities {
 }
 
 model user_ai_preferences {
-  id                      String   @id
+  id                      String   @id @default(cuid())
   userId                  String   @unique
   enableRecommendations   Boolean  @default(true)
   recommendationDiversity Float    @default(0.3)
@@ -3340,12 +3366,12 @@ model user_ai_preferences {
   coachPersonality        String?
   allowDataForTraining    Boolean  @default(false)
   createdAt               DateTime @default(now())
-  updatedAt               DateTime
+  updatedAt DateTime @updatedAt
   users                   users    @relation(fields: [userId], references: [id])
 }
 
 model user_avatar_frames {
-  id            String        @id
+  id            String        @id @default(cuid())
   userId        String
   frameId       String
   isEquipped    Boolean       @default(false)
@@ -3357,7 +3383,7 @@ model user_avatar_frames {
 }
 
 model user_badges {
-  id       String   @id
+  id       String   @id @default(cuid())
   userId   String
   badgeId  String
   earnedAt DateTime @default(now())
@@ -3369,7 +3395,7 @@ model user_badges {
 }
 
 model user_bans {
-  id                                  String    @id
+  id                                  String    @id @default(cuid())
   userId                              String
   bannedById                          String
   reason                              String
@@ -3380,7 +3406,7 @@ model user_bans {
   unbannedAt                          DateTime?
   unbanReason                         String?
   createdAt                           DateTime  @default(now())
-  updatedAt                           DateTime
+  updatedAt DateTime @updatedAt
   users_user_bans_bannedByIdTousers   users     @relation("user_bans_bannedByIdTousers", fields: [bannedById], references: [id])
   users_user_bans_unbannedByIdTousers users?    @relation("user_bans_unbannedByIdTousers", fields: [unbannedById], references: [id])
   users_user_bans_userIdTousers       users     @relation("user_bans_userIdTousers", fields: [userId], references: [id])
@@ -3390,7 +3416,7 @@ model user_bans {
 }
 
 model user_behaviors {
-  id            String            @id
+  id            String            @id @default(cuid())
   userId        String
   eventType     BehaviorEventType
   entityType    String?
@@ -3412,7 +3438,7 @@ model user_behaviors {
 }
 
 model user_blocks {
-  id                                 String   @id
+  id                                 String   @id @default(cuid())
   blockerId                          String
   blockedId                          String
   reason                             String?
@@ -3424,18 +3450,18 @@ model user_blocks {
 }
 
 model user_daily_rewards {
-  id          String    @id
+  id          String    @id @default(cuid())
   userId      String    @unique
   currentDay  Int       @default(1)
   lastClaimAt DateTime?
   cycleStart  DateTime  @default(now())
   createdAt   DateTime  @default(now())
-  updatedAt   DateTime
+  updatedAt DateTime @updatedAt
   users       users     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model user_dashboard_widgets {
-  id                String            @id
+  id                String            @id @default(cuid())
   userId            String
   widgetId          String
   positionX         Int
@@ -3445,7 +3471,7 @@ model user_dashboard_widgets {
   customConfig      Json?
   isVisible         Boolean           @default(true)
   createdAt         DateTime          @default(now())
-  updatedAt         DateTime
+  updatedAt DateTime @updatedAt
   users             users             @relation(fields: [userId], references: [id])
   dashboard_widgets dashboard_widgets @relation(fields: [widgetId], references: [id])
 
@@ -3453,20 +3479,20 @@ model user_dashboard_widgets {
 }
 
 model user_embeddings {
-  id               String   @id
+  id               String   @id @default(cuid())
   userId           String   @unique
   embedding        Json
   model            String
   dimensions       Int
   basedOnClasses   Int
   basedOnBehaviors Int
-  updatedAt        DateTime
+  updatedAt DateTime @updatedAt
   createdAt        DateTime @default(now())
   users            users    @relation(fields: [userId], references: [id])
 }
 
 model user_engagement_stats {
-  id                   String    @id
+  id                   String    @id @default(cuid())
   userId               String    @unique
   lastActiveAt         DateTime?
   lastSessionAt        DateTime?
@@ -3477,7 +3503,7 @@ model user_engagement_stats {
   lastEmailOpenedAt    DateTime?
   lastPushClickedAt    DateTime?
   engagementScore      Int       @default(0)
-  updatedAt            DateTime
+  updatedAt DateTime @updatedAt
   users                users     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([engagementScore])
@@ -3486,7 +3512,7 @@ model user_engagement_stats {
 }
 
 model user_follows {
-  id                                    String   @id
+  id                                    String   @id @default(cuid())
   followerId                            String
   followingId                           String
   createdAt                             DateTime @default(now())
@@ -3499,20 +3525,20 @@ model user_follows {
 }
 
 model user_language_preferences {
-  id                  String    @id
+  id                  String    @id @default(cuid())
   userId              String    @unique
   preferredLanguageId String
   secondaryLanguageId String?
   autoDetect          Boolean   @default(true)
   detectedLocale      String?
   createdAt           DateTime  @default(now())
-  updatedAt           DateTime
+  updatedAt DateTime @updatedAt
   languages           languages @relation(fields: [preferredLanguageId], references: [id])
   users               users     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model user_levels {
-  id                String    @id
+  id                String    @id @default(cuid())
   userId            String    @unique
   currentXP         Int       @default(0)
   totalXP           Int       @default(0)
@@ -3525,12 +3551,12 @@ model user_levels {
   streakFreezeCount Int       @default(0)
   streakFreezeUsed  DateTime?
   createdAt         DateTime  @default(now())
-  updatedAt         DateTime
+  updatedAt DateTime @updatedAt
   users             users     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model user_message_preferences {
-  id                  String         @id
+  id                  String         @id @default(cuid())
   userId              String         @unique
   welcomeEmail        Boolean        @default(true)
   onboardingSequence  Boolean        @default(true)
@@ -3551,28 +3577,28 @@ model user_message_preferences {
   quietHoursEnd       String?
   timezone            String         @default("Europe/Istanbul")
   createdAt           DateTime       @default(now())
-  updatedAt           DateTime
+  updatedAt DateTime @updatedAt
   users               users          @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
 }
 
 model user_notes {
-  id         String   @id
+  id         String   @id @default(cuid())
   userId     String
   entityId   String
   entityType String   @default("class")
   content    String
   timestamp  Int?
   createdAt  DateTime @default(now())
-  updatedAt  DateTime
+  updatedAt DateTime @updatedAt
   users      users    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, entityId])
 }
 
 model user_quests {
-  id           String    @id
+  id           String    @id @default(cuid())
   userId       String
   questId      String
   periodStart  DateTime
@@ -3584,7 +3610,7 @@ model user_quests {
   isClaimed    Boolean   @default(false)
   claimedAt    DateTime?
   createdAt    DateTime  @default(now())
-  updatedAt    DateTime
+  updatedAt DateTime @updatedAt
   quests       quests    @relation(fields: [questId], references: [id], onDelete: Cascade)
   users        users     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -3593,7 +3619,7 @@ model user_quests {
 }
 
 model user_titles {
-  id         String   @id
+  id         String   @id @default(cuid())
   userId     String
   titleId    String
   isEquipped Boolean  @default(false)
@@ -3605,7 +3631,7 @@ model user_titles {
 }
 
 model user_warnings {
-  id                                    String    @id
+  id                                    String    @id @default(cuid())
   userId                                String
   warnedById                            String
   reason                                String
@@ -3618,9 +3644,8 @@ model user_warnings {
   @@index([userId])
 }
 
-model User {
-  @@map("users")
-  id                                                              String                        @id
+model users {
+  id                                                              String                        @id @default(cuid())
   email                                                           String                        @unique
   passwordHash                                                    String
   firstName                                                       String?
@@ -3634,7 +3659,7 @@ model User {
   subscriptionTier                                                SubscriptionTier              @default(FREE)
   subscriptionExpiresAt                                           DateTime?
   createdAt                                                       DateTime                      @default(now())
-  updatedAt                                                       DateTime
+  updatedAt DateTime @updatedAt
   equippedTitleId                                                 String?
   equippedFrameId                                                 String?
   avatarUrl                                                       String?
@@ -3735,7 +3760,7 @@ model User {
   user_badges                                                     user_badges[]
   user_bans_user_bans_bannedByIdTousers                           user_bans[]                   @relation("user_bans_bannedByIdTousers")
   user_bans_user_bans_unbannedByIdTousers                         user_bans[]                   @relation("user_bans_unbannedByIdTousers")
-  user_bans_user_bans_userIdTousers                               user_bans[]                   @relation("user_bans_userIdTousers")
+  bansReceived                                                    user_bans[]                   @relation("user_bans_userIdTousers")
   user_behaviors                                                  user_behaviors[]
   user_blocks_user_blocks_blockedIdTousers                        user_blocks[]                 @relation("user_blocks_blockedIdTousers")
   user_blocks_user_blocks_blockerIdTousers                        user_blocks[]                 @relation("user_blocks_blockerIdTousers")
@@ -3757,12 +3782,13 @@ model User {
   voice_over_jobs                                                 voice_over_jobs[]
   webhook_endpoints                                               webhook_endpoints[]
   xp_transactions                                                 xp_transactions[]
+  instructorPrograms                                              programs[]                    @relation("ProgramInstructor")
 
   @@index([stripeCustomerId])
 }
 
 model video_progress {
-  id            String     @id
+  id            String     @id @default(cuid())
   userId        String
   lessonId      String
   lessonType    LessonType
@@ -3772,7 +3798,7 @@ model video_progress {
   completed     Boolean    @default(false)
   lastWatchedAt DateTime   @default(now())
   createdAt     DateTime   @default(now())
-  updatedAt     DateTime
+  updatedAt DateTime @updatedAt
   users         users      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, lessonId, lessonType])
@@ -3781,7 +3807,7 @@ model video_progress {
 }
 
 model voice_over_jobs {
-  id            String         @id
+  id            String         @id @default(cuid())
   text          String
   languageCode  String         @default("en")
   provider      AIProvider
@@ -3809,7 +3835,7 @@ model voice_over_jobs {
 }
 
 model webhook_deliveries {
-  id                String                @id
+  id                String                @id @default(cuid())
   endpointId        String
   event             WebhookEvent
   payload           Json
@@ -3832,7 +3858,7 @@ model webhook_deliveries {
 }
 
 model webhook_endpoints {
-  id                       String                     @id
+  id                       String                     @id @default(cuid())
   userId                   String
   name                     String
   url                      String
@@ -3843,7 +3869,7 @@ model webhook_endpoints {
   lastFailureAt            DateTime?
   lastSuccessAt            DateTime?
   createdAt                DateTime                   @default(now())
-  updatedAt                DateTime
+  updatedAt DateTime @updatedAt
   admin_webhook_deliveries admin_webhook_deliveries[]
   webhook_deliveries       webhook_deliveries[]
   users                    users                      @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -3853,7 +3879,7 @@ model webhook_endpoints {
 }
 
 model xp_transactions {
-  id            String            @id
+  id            String            @id @default(cuid())
   userId        String
   amount        Int
   type          XPTransactionType
@@ -4102,6 +4128,31 @@ enum ClassStatus {
   DRAFT
   PUBLISHED
   ARCHIVED
+}
+
+enum VideoSource {
+  UPLOAD     // Doğrudan yükleme
+  YOUTUBE    // YouTube
+  DAILYMOTION // Dailymotion
+  VIMEO      // Vimeo
+  EXTERNAL   // Diğer harici kaynaklar
+}
+
+enum VideoQuality {
+  SD_360P
+  SD_480P
+  HD_720P
+  HD_1080P
+  QHD_1440P
+  UHD_4K
+}
+
+enum VideoFormat {
+  MP4
+  WEBM
+  MOV
+  AVI
+  MKV
 }
 
 enum CommentTargetType {
@@ -4578,6 +4629,18 @@ enum ProgramLevel {
   BEGINNER
   INTERMEDIATE
   ADVANCED
+}
+
+enum ProgramStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+enum ProgramAccessType {
+  FREE
+  PREMIUM
+  PAID
 }
 
 enum QueryType {

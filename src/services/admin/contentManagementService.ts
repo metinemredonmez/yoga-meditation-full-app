@@ -67,7 +67,7 @@ export async function getContent(filters: ContentFilters) {
       take: limit,
       orderBy: { [sortBy]: sortOrder },
       include: {
-        instructor: { select: { firstName: true, lastName: true, email: true } },
+        users: { select: { firstName: true, lastName: true, email: true } },
         _count: { select: { bookings: true } },
       },
     });
@@ -106,7 +106,7 @@ export async function getContent(filters: ContentFilters) {
       take: limit,
       orderBy: { [sortBy]: sortOrder },
       include: {
-        _count: { select: { enrollments: true } },
+        _count: { select: { challenge_enrollments: true } },
       },
     });
   }
@@ -201,7 +201,7 @@ export async function getClasses(filters: ContentFilters) {
       take: limit,
       orderBy: { [sortBy]: sortOrder },
       include: {
-        instructor: { select: { id: true, firstName: true, lastName: true, email: true } },
+        users: { select: { id: true, firstName: true, lastName: true, email: true } },
         _count: { select: { bookings: true } },
       },
     }),
@@ -218,7 +218,7 @@ export async function getClass(id: string) {
   const classItem = await prisma.class.findUnique({
     where: { id },
     include: {
-      instructor: { select: { id: true, firstName: true, lastName: true, email: true } },
+      users: { select: { id: true, firstName: true, lastName: true, email: true } },
       _count: { select: { bookings: true } },
     },
   });
@@ -323,7 +323,7 @@ export async function getChallenges(filters: ContentFilters) {
       take: limit,
       orderBy: { [sortBy]: sortOrder },
       include: {
-        _count: { select: { enrollments: true } },
+        _count: { select: { challenge_enrollments: true } },
       },
     }),
     prisma.challenge.count({ where }),
@@ -339,7 +339,7 @@ export async function getChallenge(id: string) {
   const challenge = await prisma.challenge.findUnique({
     where: { id },
     include: {
-      _count: { select: { enrollments: true, checks: true } },
+      _count: { select: { challenge_enrollments: true, daily_checks: true } },
     },
   });
 

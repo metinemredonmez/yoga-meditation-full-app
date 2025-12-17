@@ -282,8 +282,8 @@ export async function getInstructorBySlug(slug: string) {
       },
       _count: {
         select: {
-          followers: true,
-          reviews: { where: { status: 'APPROVED' } },
+          instructor_followers: true,
+          instructor_reviews: { where: { status: 'APPROVED' } },
         },
       },
     },
@@ -394,7 +394,7 @@ export async function getAllInstructors(
       skip: (page - 1) * limit,
       take: limit,
       include: {
-        user: {
+        users: {
           select: {
             id: true,
             firstName: true,
@@ -402,7 +402,7 @@ export async function getAllInstructors(
           },
         },
         _count: {
-          select: { followers: true },
+          select: { instructor_followers: true },
         },
       },
     }),
@@ -956,10 +956,10 @@ export async function getInstructorDetailsForAdmin(instructorId: string) {
       payoutSettings: true,
       _count: {
         select: {
-          earnings: true,
-          payouts: true,
-          reviews: true,
-          followers: true,
+          instructor_earnings: true,
+          instructor_payouts: true,
+          instructor_reviews: true,
+          instructor_followers: true,
         },
       },
     },

@@ -25,9 +25,9 @@ export async function getAllInstructors(req: AuthRequest, res: Response) {
     );
 
     res.json({ success: true, data: instructors });
-  } catch (error) {
-    logger.error({ error }, 'Failed to get all instructors');
-    res.status(500).json({ success: false, error: 'Failed to get all instructors' });
+  } catch (error: any) {
+    logger.error({ error: error.message, stack: error.stack }, 'Failed to get all instructors');
+    res.status(500).json({ success: false, error: 'Failed to get all instructors', details: error.message });
   }
 }
 

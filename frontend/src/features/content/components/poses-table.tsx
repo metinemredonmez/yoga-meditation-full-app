@@ -115,7 +115,7 @@ export function PosesTable() {
         difficulty: difficultyFilter !== 'all' ? difficultyFilter : undefined,
         search: search || undefined,
       });
-      setPoses(data.data || []);
+      setPoses(data.poses || []);
       setPagination(prev => ({ ...prev, total: data.pagination?.total || 0 }));
     } catch (error) {
       console.error('Failed to load poses:', error);
@@ -214,11 +214,23 @@ export function PosesTable() {
   const getDifficultyBadge = (difficulty: string) => {
     switch (difficulty) {
       case 'BEGINNER':
-        return <Badge className="bg-green-500/10 text-green-600">Başlangıç</Badge>;
+        return (
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700 border border-green-200 dark:bg-green-400/20 dark:text-green-400 dark:border-green-400/30 transition-all duration-300">
+            Başlangıç
+          </span>
+        );
       case 'INTERMEDIATE':
-        return <Badge className="bg-yellow-500/10 text-yellow-600">Orta</Badge>;
+        return (
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-cyan-100 text-cyan-700 border border-cyan-200 dark:bg-cyan-400/20 dark:text-cyan-400 dark:border-cyan-400/30 transition-all duration-300">
+            Orta
+          </span>
+        );
       case 'ADVANCED':
-        return <Badge className="bg-red-500/10 text-red-600">İleri</Badge>;
+        return (
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-violet-100 text-violet-700 border border-violet-200 dark:bg-violet-400/20 dark:text-violet-400 dark:border-violet-400/30 transition-all duration-300">
+            İleri
+          </span>
+        );
       default:
         return <Badge variant="outline">{difficulty}</Badge>;
     }
@@ -289,12 +301,20 @@ export function PosesTable() {
                             src={pose.imageUrl}
                             alt={pose.englishName}
                             className="h-10 w-10 rounded object-cover"
+                            onError={(e) => {
+                              const target = e.target as HTMLImageElement;
+                              target.style.display = 'none';
+                              const fallback = target.nextElementSibling as HTMLElement;
+                              if (fallback) fallback.style.display = 'flex';
+                            }}
                           />
-                        ) : (
-                          <div className="h-10 w-10 rounded bg-muted flex items-center justify-center">
-                            <IconStretching className="h-5 w-5 text-muted-foreground" />
-                          </div>
-                        )}
+                        ) : null}
+                        <div
+                          className="h-10 w-10 rounded bg-gradient-to-br from-pink-100 to-pink-200 dark:from-pink-400/20 dark:to-pink-500/20 items-center justify-center border border-pink-200 dark:border-pink-400/30"
+                          style={{ display: pose.imageUrl ? 'none' : 'flex' }}
+                        >
+                          <IconStretching className="h-5 w-5 text-pink-500 dark:text-pink-400" />
+                        </div>
                         <div>
                           <p className="font-medium">{pose.englishName}</p>
                           <p className="text-xs text-muted-foreground line-clamp-1">
@@ -313,30 +333,37 @@ export function PosesTable() {
                     <TableCell>{getDifficultyBadge(pose.difficulty)}</TableCell>
                     <TableCell>
                       <div className="flex flex-wrap gap-1">
-                        {pose.bodyAreas?.slice(0, 2).map(area => (
-                          <Badge key={area} variant="secondary" className="text-xs">
+                        {pose.bodyAreas?.slice(0, 2).map((area, idx) => (
+                          <span
+                            key={area}
+                            className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border transition-all duration-300 ${
+                              idx === 0
+                                ? 'bg-pink-100 text-pink-700 border-pink-200 dark:bg-pink-400/20 dark:text-pink-400 dark:border-pink-400/30'
+                                : 'bg-indigo-100 text-indigo-700 border-indigo-200 dark:bg-indigo-400/20 dark:text-indigo-400 dark:border-indigo-400/30'
+                            }`}
+                          >
                             {area}
-                          </Badge>
+                          </span>
                         ))}
                         {(pose.bodyAreas?.length || 0) > 2 && (
-                          <Badge variant="secondary" className="text-xs">
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-700 border border-slate-200 dark:bg-slate-400/20 dark:text-slate-400 dark:border-slate-400/30 transition-all duration-300">
                             +{pose.bodyAreas!.length - 2}
-                          </Badge>
+                          </span>
                         )}
                       </div>
                     </TableCell>
                     <TableCell>
                       <div className="flex gap-1">
                         {pose.imageUrl && (
-                          <Badge variant="outline" className="text-xs">
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-cyan-100 text-cyan-700 border border-cyan-200 dark:bg-cyan-400/20 dark:text-cyan-400 dark:border-cyan-400/30 transition-all duration-300">
                             <IconPhoto className="h-3 w-3 mr-1" />
                             Resim
-                          </Badge>
+                          </span>
                         )}
                         {pose.videoUrl && (
-                          <Badge variant="outline" className="text-xs">
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-violet-100 text-violet-700 border border-violet-200 dark:bg-violet-400/20 dark:text-violet-400 dark:border-violet-400/30 transition-all duration-300">
                             Video
-                          </Badge>
+                          </span>
                         )}
                       </div>
                     </TableCell>
@@ -459,16 +486,32 @@ export function PosesTable() {
             <div>
               <Label className="mb-2 block">Vücut Bölgeleri</Label>
               <div className="flex flex-wrap gap-2">
-                {BODY_AREAS.map(area => (
-                  <Badge
-                    key={area}
-                    variant={formData.bodyAreas.includes(area) ? 'default' : 'outline'}
-                    className="cursor-pointer"
-                    onClick={() => toggleBodyArea(area)}
-                  >
-                    {area}
-                  </Badge>
-                ))}
+                {BODY_AREAS.map((area, index) => {
+                  const isSelected = formData.bodyAreas.includes(area);
+                  const colors = [
+                    { selected: 'bg-pink-100 text-pink-700 border-pink-300 dark:bg-pink-400/30 dark:text-pink-300 dark:border-pink-400/50', unselected: 'border-pink-200 text-pink-600 hover:bg-pink-50 dark:border-pink-400/30 dark:text-pink-400 dark:hover:bg-pink-400/10' },
+                    { selected: 'bg-violet-100 text-violet-700 border-violet-300 dark:bg-violet-400/30 dark:text-violet-300 dark:border-violet-400/50', unselected: 'border-violet-200 text-violet-600 hover:bg-violet-50 dark:border-violet-400/30 dark:text-violet-400 dark:hover:bg-violet-400/10' },
+                    { selected: 'bg-cyan-100 text-cyan-700 border-cyan-300 dark:bg-cyan-400/30 dark:text-cyan-300 dark:border-cyan-400/50', unselected: 'border-cyan-200 text-cyan-600 hover:bg-cyan-50 dark:border-cyan-400/30 dark:text-cyan-400 dark:hover:bg-cyan-400/10' },
+                    { selected: 'bg-green-100 text-green-700 border-green-300 dark:bg-green-400/30 dark:text-green-300 dark:border-green-400/50', unselected: 'border-green-200 text-green-600 hover:bg-green-50 dark:border-green-400/30 dark:text-green-400 dark:hover:bg-green-400/10' },
+                    { selected: 'bg-indigo-100 text-indigo-700 border-indigo-300 dark:bg-indigo-400/30 dark:text-indigo-300 dark:border-indigo-400/50', unselected: 'border-indigo-200 text-indigo-600 hover:bg-indigo-50 dark:border-indigo-400/30 dark:text-indigo-400 dark:hover:bg-indigo-400/10' },
+                    { selected: 'bg-amber-100 text-amber-700 border-amber-300 dark:bg-amber-400/30 dark:text-amber-300 dark:border-amber-400/50', unselected: 'border-amber-200 text-amber-600 hover:bg-amber-50 dark:border-amber-400/30 dark:text-amber-400 dark:hover:bg-amber-400/10' },
+                    { selected: 'bg-rose-100 text-rose-700 border-rose-300 dark:bg-rose-400/30 dark:text-rose-300 dark:border-rose-400/50', unselected: 'border-rose-200 text-rose-600 hover:bg-rose-50 dark:border-rose-400/30 dark:text-rose-400 dark:hover:bg-rose-400/10' },
+                    { selected: 'bg-teal-100 text-teal-700 border-teal-300 dark:bg-teal-400/30 dark:text-teal-300 dark:border-teal-400/50', unselected: 'border-teal-200 text-teal-600 hover:bg-teal-50 dark:border-teal-400/30 dark:text-teal-400 dark:hover:bg-teal-400/10' },
+                    { selected: 'bg-purple-100 text-purple-700 border-purple-300 dark:bg-purple-400/30 dark:text-purple-300 dark:border-purple-400/50', unselected: 'border-purple-200 text-purple-600 hover:bg-purple-50 dark:border-purple-400/30 dark:text-purple-400 dark:hover:bg-purple-400/10' },
+                  ];
+                  const colorSet = colors[index % colors.length];
+                  return (
+                    <span
+                      key={area}
+                      onClick={() => toggleBodyArea(area)}
+                      className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium border cursor-pointer transition-all duration-200 ${
+                        isSelected ? colorSet.selected : colorSet.unselected
+                      }`}
+                    >
+                      {area}
+                    </span>
+                  );
+                })}
               </div>
             </div>
             <div>

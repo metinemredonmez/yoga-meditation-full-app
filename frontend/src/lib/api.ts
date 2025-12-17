@@ -288,6 +288,7 @@ export async function updateProgram(id: string, payload: Partial<{
   description: string;
   level: string;
   durationWeeks: number;
+  thumbnailUrl: string;
   coverImageUrl: string;
   isPublished: boolean;
 }>) {
@@ -1334,12 +1335,12 @@ export async function getAdminClasses(params?: {
   level?: string;
   search?: string;
 }) {
-  const { data } = await api.get('/api/admin/content/classes', { params });
+  const { data } = await api.get('/api/admin/dashboard/content/classes', { params });
   return data;
 }
 
 export async function getAdminClassById(id: string) {
-  const { data } = await api.get(`/api/admin/content/classes/${id}`);
+  const { data } = await api.get(`/api/admin/dashboard/content/classes/${id}`);
   return data;
 }
 
@@ -1351,12 +1352,12 @@ export async function getAdminPoses(params?: {
   bodyArea?: string;
   search?: string;
 }) {
-  const { data } = await api.get('/api/admin/content/poses', { params });
+  const { data } = await api.get('/api/admin/dashboard/content/poses', { params });
   return data;
 }
 
 export async function getAdminPoseById(id: string) {
-  const { data } = await api.get(`/api/admin/content/poses/${id}`);
+  const { data } = await api.get(`/api/admin/dashboard/content/poses/${id}`);
   return data;
 }
 
@@ -1367,12 +1368,12 @@ export async function getAdminChallenges(params?: {
   status?: string;
   search?: string;
 }) {
-  const { data } = await api.get('/api/admin/content/challenges', { params });
+  const { data } = await api.get('/api/admin/dashboard/content/challenges', { params });
   return data;
 }
 
 export async function getAdminChallengeById(id: string) {
-  const { data } = await api.get(`/api/admin/content/challenges/${id}`);
+  const { data } = await api.get(`/api/admin/dashboard/content/challenges/${id}`);
   return data;
 }
 

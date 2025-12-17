@@ -74,14 +74,12 @@ interface Challenge {
   id: string;
   title: string;
   description: string;
-  startDate: string;
-  endDate: string;
-  goalType: 'DAYS' | 'MINUTES' | 'CLASSES';
-  goalValue: number;
-  thumbnailUrl?: string;
+  startAt: string;
+  endAt: string;
+  targetDays: number;
+  coverUrl?: string;
   _count?: {
-    participants: number;
-    completions: number;
+    challenge_enrollments: number;
   };
   createdAt: string;
 }
@@ -100,11 +98,10 @@ export function ChallengesTable() {
   const [formData, setFormData] = useState({
     title: '',
     description: '',
-    startDate: '',
-    endDate: '',
-    goalType: 'DAYS' as Challenge['goalType'],
-    goalValue: 7,
-    thumbnailUrl: '',
+    startAt: '',
+    endAt: '',
+    targetDays: 7,
+    coverUrl: '',
   });
 
   const loadChallenges = useCallback(async () => {
@@ -116,7 +113,7 @@ export function ChallengesTable() {
         status: statusFilter !== 'all' ? statusFilter : undefined,
         search: search || undefined,
       });
-      setChallenges(data.data || []);
+      setChallenges(data.challenges || []);
       setPagination(prev => ({ ...prev, total: data.pagination?.total || 0 }));
     } catch (error) {
       console.error('Failed to load challenges:', error);
@@ -136,11 +133,10 @@ export function ChallengesTable() {
       setFormData({
         title: challenge.title,
         description: challenge.description,
-        startDate: challenge.startDate.split('T')[0],
-        endDate: challenge.endDate.split('T')[0],
-        goalType: challenge.goalType,
-        goalValue: challenge.goalValue,
-        thumbnailUrl: challenge.thumbnailUrl || '',
+        startAt: challenge.startAt.split('T')[0],
+        endAt: challenge.endAt.split('T')[0],
+        targetDays: challenge.targetDays,
+        coverUrl: challenge.coverUrl || '',
       });
     } else {
       setSelectedChallenge(null);
@@ -149,18 +145,17 @@ export function ChallengesTable() {
       setFormData({
         title: '',
         description: '',
-        startDate: today.toISOString().split('T')[0],
-        endDate: nextWeek.toISOString().split('T')[0],
-        goalType: 'DAYS',
-        goalValue: 7,
-        thumbnailUrl: '',
+        startAt: today.toISOString().split('T')[0],
+        endAt: nextWeek.toISOString().split('T')[0],
+        targetDays: 7,
+        coverUrl: '',
       });
     }
     setEditDialog(true);
   };
 
   const handleSave = async () => {
-    if (!formData.title || !formData.description || !formData.startDate || !formData.endDate) {
+    if (!formData.title || !formData.description || !formData.startAt || !formData.endAt) {
       toast.error('Tüm zorunlu alanları doldurun');
       return;
     }
@@ -169,8 +164,8 @@ export function ChallengesTable() {
     try {
       const payload = {
         ...formData,
-        startDate: new Date(formData.startDate).toISOString(),
-        endDate: new Date(formData.endDate).toISOString(),
+        startAt: new Date(formData.startAt).toISOString(),
+        endAt: new Date(formData.endAt).toISOString(),
       };
 
       if (selectedChallenge) {
@@ -202,9 +197,8 @@ export function ChallengesTable() {
   };
 
   const getStatus = (challenge: Challenge) => {
-    const start = new Date(challenge.startDate);
-    const end = new Date(challenge.endDate);
-    const now = new Date();
+    const start = new Date(challenge.startAt);
+    const end = new Date(challenge.endAt);
 
     if (isFuture(start)) return 'UPCOMING';
     if (isPast(end)) return 'ENDED';
@@ -215,32 +209,31 @@ export function ChallengesTable() {
     const status = getStatus(challenge);
     switch (status) {
       case 'UPCOMING':
-        return <Badge className="bg-blue-500/10 text-blue-600">Yaklaşan</Badge>;
+        return (
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-cyan-100 text-cyan-700 border border-cyan-200 dark:bg-cyan-400/20 dark:text-cyan-400 dark:border-cyan-400/30 transition-all duration-300">
+            Yaklaşan
+          </span>
+        );
       case 'ACTIVE':
-        return <Badge className="bg-green-500/10 text-green-600">Aktif</Badge>;
+        return (
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700 border border-green-200 dark:bg-green-400/20 dark:text-green-400 dark:border-green-400/30 transition-all duration-300">
+            Aktif
+          </span>
+        );
       case 'ENDED':
-        return <Badge variant="outline" className="text-muted-foreground">Bitti</Badge>;
+        return (
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-700 border border-slate-200 dark:bg-slate-400/20 dark:text-slate-400 dark:border-slate-400/30 transition-all duration-300">
+            Bitti
+          </span>
+        );
       default:
         return <Badge variant="outline">{status}</Badge>;
     }
   };
 
-  const getGoalLabel = (type: string, value: number) => {
-    switch (type) {
-      case 'DAYS':
-        return `${value} gün`;
-      case 'MINUTES':
-        return `${value} dakika`;
-      case 'CLASSES':
-        return `${value} ders`;
-      default:
-        return `${value}`;
-    }
-  };
-
   const getProgress = (challenge: Challenge) => {
-    const start = new Date(challenge.startDate);
-    const end = new Date(challenge.endDate);
+    const start = new Date(challenge.startAt);
+    const end = new Date(challenge.endAt);
     const now = new Date();
     const total = differenceInDays(end, start);
     const elapsed = differenceInDays(now, start);
@@ -308,17 +301,22 @@ export function ChallengesTable() {
                   <TableRow key={challenge.id}>
                     <TableCell>
                       <div className="flex items-center gap-3">
-                        {challenge.thumbnailUrl ? (
-                          <img
-                            src={challenge.thumbnailUrl}
-                            alt={challenge.title}
-                            className="h-10 w-16 rounded object-cover"
-                          />
-                        ) : (
-                          <div className="h-10 w-16 rounded bg-muted flex items-center justify-center">
-                            <IconTrophy className="h-5 w-5 text-muted-foreground" />
+                        <div className="relative h-10 w-16 flex-shrink-0">
+                          {challenge.coverUrl ? (
+                            <img
+                              src={challenge.coverUrl}
+                              alt={challenge.title}
+                              className="h-10 w-16 rounded object-cover absolute inset-0"
+                              onError={(e) => {
+                                const target = e.target as HTMLImageElement;
+                                target.style.display = 'none';
+                              }}
+                            />
+                          ) : null}
+                          <div className="h-10 w-16 rounded bg-gradient-to-br from-violet-100 to-violet-200 dark:from-violet-400/30 dark:to-violet-500/40 flex items-center justify-center border border-violet-200 dark:border-violet-400/30">
+                            <IconTrophy className="h-5 w-5 text-violet-500 dark:text-violet-400" />
                           </div>
-                        )}
+                        </div>
                         <div>
                           <p className="font-medium">{challenge.title}</p>
                           <p className="text-xs text-muted-foreground line-clamp-1">
@@ -331,23 +329,23 @@ export function ChallengesTable() {
                       <div className="text-sm">
                         <div className="flex items-center gap-1">
                           <IconCalendar className="h-3 w-3 text-muted-foreground" />
-                          {format(new Date(challenge.startDate), 'dd MMM', { locale: tr })}
+                          {format(new Date(challenge.startAt), 'dd MMM', { locale: tr })}
                         </div>
                         <div className="text-muted-foreground text-xs">
-                          - {format(new Date(challenge.endDate), 'dd MMM yyyy', { locale: tr })}
+                          - {format(new Date(challenge.endAt), 'dd MMM yyyy', { locale: tr })}
                         </div>
                       </div>
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-1 text-sm">
                         <IconTarget className="h-4 w-4 text-muted-foreground" />
-                        {getGoalLabel(challenge.goalType, challenge.goalValue)}
+                        {challenge.targetDays} gün
                       </div>
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-1 text-sm">
                         <IconUsers className="h-4 w-4 text-muted-foreground" />
-                        {challenge._count?.participants || 0}
+                        {challenge._count?.challenge_enrollments || 0}
                       </div>
                     </TableCell>
                     <TableCell>{getStatusBadge(challenge)}</TableCell>
@@ -455,51 +453,34 @@ export function ChallengesTable() {
                 <Label>Başlangıç Tarihi</Label>
                 <Input
                   type="date"
-                  value={formData.startDate}
-                  onChange={(e) => setFormData(prev => ({ ...prev, startDate: e.target.value }))}
+                  value={formData.startAt}
+                  onChange={(e) => setFormData(prev => ({ ...prev, startAt: e.target.value }))}
                 />
               </div>
               <div>
                 <Label>Bitiş Tarihi</Label>
                 <Input
                   type="date"
-                  value={formData.endDate}
-                  onChange={(e) => setFormData(prev => ({ ...prev, endDate: e.target.value }))}
-                />
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label>Hedef Türü</Label>
-                <Select
-                  value={formData.goalType}
-                  onValueChange={(v) => setFormData(prev => ({ ...prev, goalType: v as Challenge['goalType'] }))}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="DAYS">Gün</SelectItem>
-                    <SelectItem value="MINUTES">Dakika</SelectItem>
-                    <SelectItem value="CLASSES">Ders</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label>Hedef Değer</Label>
-                <Input
-                  type="number"
-                  value={formData.goalValue}
-                  onChange={(e) => setFormData(prev => ({ ...prev, goalValue: parseInt(e.target.value) || 1 }))}
-                  min={1}
+                  value={formData.endAt}
+                  onChange={(e) => setFormData(prev => ({ ...prev, endAt: e.target.value }))}
                 />
               </div>
             </div>
             <div>
-              <Label>Thumbnail URL</Label>
+              <Label>Hedef Gün Sayısı</Label>
               <Input
-                value={formData.thumbnailUrl}
-                onChange={(e) => setFormData(prev => ({ ...prev, thumbnailUrl: e.target.value }))}
+                type="number"
+                value={formData.targetDays}
+                onChange={(e) => setFormData(prev => ({ ...prev, targetDays: parseInt(e.target.value) || 1 }))}
+                min={1}
+                placeholder="7"
+              />
+            </div>
+            <div>
+              <Label>Kapak Resmi URL</Label>
+              <Input
+                value={formData.coverUrl}
+                onChange={(e) => setFormData(prev => ({ ...prev, coverUrl: e.target.value }))}
                 placeholder="https://..."
               />
             </div>
