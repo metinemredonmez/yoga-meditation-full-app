@@ -4,7 +4,7 @@
 interface UserSession {
   userId: string;
   email: string;
-  role: 'STUDENT' | 'INSTRUCTOR' | 'ADMIN';
+  role: 'STUDENT' | 'TEACHER' | 'INSTRUCTOR' | 'ADMIN' | 'SUPER_ADMIN';
   firstName?: string;
   lastName?: string;
 }
@@ -22,7 +22,10 @@ export function setSession(user: UserSession) {
   currentSession = user;
   // Set a simple indicator cookie (non-sensitive) for SSR/middleware checks
   if (typeof document !== 'undefined') {
-    document.cookie = `${SESSION_INDICATOR_KEY}=1; path=/; max-age=${30 * 24 * 60 * 60}; secure; samesite=lax`;
+    // Don't use secure flag on localhost
+    const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+    const secureFlag = isLocalhost ? '' : 'secure;';
+    document.cookie = `${SESSION_INDICATOR_KEY}=1; path=/; max-age=${30 * 24 * 60 * 60}; ${secureFlag} samesite=lax`;
   }
 }
 
@@ -78,10 +81,10 @@ export function isAdmin(): boolean {
 }
 
 /**
- * Check if user is instructor
+ * Check if user is instructor/teacher
  */
 export function isInstructor(): boolean {
-  return currentSession?.role === 'INSTRUCTOR' || currentSession?.role === 'ADMIN';
+  return currentSession?.role === 'TEACHER' || currentSession?.role === 'ADMIN' || currentSession?.role === 'SUPER_ADMIN';
 }
 
 // Legacy exports for backwards compatibility during migration

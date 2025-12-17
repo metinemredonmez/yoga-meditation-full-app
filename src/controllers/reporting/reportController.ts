@@ -202,7 +202,7 @@ export const getInstance = async (
     }
 
     // Check ownership
-    if (instance.createdById !== req.user!.id && req.user!.role !== 'ADMIN') {
+    if (instance.createdById !== req.user!.id && req.user!.role !== 'ADMIN' && req.user!.role !== 'SUPER_ADMIN') {
       return res.status(403).json({
         success: false,
         error: 'Access denied',
@@ -238,7 +238,7 @@ export const removeInstance = async (
     }
 
     // Check ownership
-    if (instance.createdById !== userId && req.user!.role !== 'ADMIN') {
+    if (instance.createdById !== userId && req.user!.role !== 'ADMIN' && req.user!.role !== 'SUPER_ADMIN') {
       return res.status(403).json({
         success: false,
         error: 'Access denied',
@@ -275,7 +275,7 @@ export const refresh = async (
     }
 
     // Check ownership
-    if (instance.createdById !== req.user!.id && req.user!.role !== 'ADMIN') {
+    if (instance.createdById !== req.user!.id && req.user!.role !== 'ADMIN' && req.user!.role !== 'SUPER_ADMIN') {
       return res.status(403).json({
         success: false,
         error: 'Access denied',

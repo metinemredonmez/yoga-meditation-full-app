@@ -28,9 +28,10 @@ import {
   SidebarMenuSubItem,
   SidebarRail
 } from '@/components/ui/sidebar';
-import { navItems } from '@/constants/data';
+import { getNavItemsForRole } from '@/config/sidebar';
 import { useMediaQuery } from '@/hooks/use-media-query';
 import { getCurrentUser, clearSession } from '@/lib/auth';
+import { getMe } from '@/lib/api';
 import {
   IconBell,
   IconChevronRight,
@@ -62,10 +63,45 @@ export default function AppSidebar() {
   const { isOpen } = useMediaQuery();
   const router = useRouter();
   const [user, setUser] = React.useState<{ userId: string; email: string; role: string } | null>(null);
+  const [navItems, setNavItems] = React.useState<ReturnType<typeof getNavItemsForRole>>([]);
 
   React.useEffect(() => {
-    const currentUser = getCurrentUser();
-    setUser(currentUser);
+    const loadUser = async () => {
+      let currentUser = getCurrentUser();
+
+      // If no session in memory, try to restore from API (using HttpOnly cookie)
+      if (!currentUser) {
+        try {
+          const response = await getMe();
+          currentUser = response.user ? {
+            userId: response.user.id,
+            email: response.user.email,
+            role: response.user.role,
+            firstName: response.user.firstName,
+            lastName: response.user.lastName,
+          } : null;
+        } catch (error) {
+          // User is not authenticated or token expired
+          console.error('Failed to get user:', error);
+          currentUser = null;
+        }
+      }
+
+      setUser(currentUser);
+
+      // Get role-based nav items - map INSTRUCTOR to TEACHER if needed
+      let effectiveRole = currentUser?.role;
+      if (effectiveRole === 'INSTRUCTOR') {
+        effectiveRole = 'TEACHER';
+      }
+
+      // Always load nav items, use SUPER_ADMIN as fallback for admin panel access
+      const roleToUse = effectiveRole || 'SUPER_ADMIN';
+      const items = getNavItemsForRole(roleToUse);
+      setNavItems(items);
+    };
+
+    loadUser();
   }, []);
 
   const handleSwitchTenant = (_tenantId: string) => {

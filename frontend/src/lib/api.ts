@@ -247,8 +247,142 @@ export async function resetUserPassword(id: string) {
   return data;
 }
 
-export async function getUserActivity(id: string) {
-  const { data } = await api.get(`/api/admin/dashboard/users/${id}/activity`);
+export async function getUserActivity(id: string, params?: { page?: number; limit?: number; filter?: string }) {
+  const { data } = await api.get(`/api/admin/dashboard/users/${id}/activity`, { params });
+  return data;
+}
+
+// ============================================
+// USER DETAILS - TAB ENDPOINTS
+// ============================================
+
+export async function getUserOverview(id: string) {
+  const { data } = await api.get(`/api/admin/dashboard/users/${id}/overview`);
+  return data;
+}
+
+export async function getUserLoginHistory(id: string, params?: { page?: number; limit?: number }) {
+  const { data } = await api.get(`/api/admin/dashboard/users/${id}/login-history`, { params });
+  return data;
+}
+
+export async function getUserActiveSessions(id: string) {
+  const { data } = await api.get(`/api/admin/dashboard/users/${id}/sessions`);
+  return data;
+}
+
+export async function revokeUserSession(userId: string, sessionId: string) {
+  const { data } = await api.delete(`/api/admin/dashboard/users/${userId}/sessions/${sessionId}`);
+  return data;
+}
+
+export async function revokeAllUserSessions(id: string) {
+  const { data } = await api.delete(`/api/admin/dashboard/users/${id}/sessions`);
+  return data;
+}
+
+export async function getUserProgress(id: string) {
+  const { data } = await api.get(`/api/admin/dashboard/users/${id}/progress`);
+  return data;
+}
+
+export async function getUserPayments(id: string, params?: { page?: number; limit?: number }) {
+  const { data } = await api.get(`/api/admin/dashboard/users/${id}/payments`, { params });
+  return data;
+}
+
+export async function extendUserSubscription(id: string, days: number) {
+  const { data } = await api.post(`/api/admin/dashboard/users/${id}/extend-subscription`, { days });
+  return data;
+}
+
+export async function grantUserPremium(id: string, days: number, planId: string) {
+  const { data } = await api.post(`/api/admin/dashboard/users/${id}/grant-premium`, { days, planId });
+  return data;
+}
+
+export async function getUserSupport(id: string) {
+  const { data } = await api.get(`/api/admin/dashboard/users/${id}/support`);
+  return data;
+}
+
+export async function addAdminNote(userId: string, content: string, isPinned?: boolean) {
+  const { data } = await api.post(`/api/admin/dashboard/users/${userId}/notes`, { content, isPinned });
+  return data;
+}
+
+export async function deleteAdminNote(userId: string, noteId: string) {
+  const { data } = await api.delete(`/api/admin/dashboard/users/${userId}/notes/${noteId}`);
+  return data;
+}
+
+export async function toggleNotePin(userId: string, noteId: string) {
+  const { data } = await api.patch(`/api/admin/dashboard/users/${userId}/notes/${noteId}/pin`);
+  return data;
+}
+
+export async function addUserXP(id: string, amount: number, reason: string) {
+  const { data } = await api.post(`/api/admin/dashboard/users/${id}/xp`, { amount, reason });
+  return data;
+}
+
+export async function grantUserBadge(id: string, badgeId: string) {
+  const { data } = await api.post(`/api/admin/dashboard/users/${id}/badges`, { badgeId });
+  return data;
+}
+
+export async function grantUserTitle(id: string, titleId: string) {
+  const { data } = await api.post(`/api/admin/dashboard/users/${id}/titles`, { titleId });
+  return data;
+}
+
+export async function addUserStreakFreeze(id: string) {
+  const { data } = await api.post(`/api/admin/dashboard/users/${id}/streak-freeze`);
+  return data;
+}
+
+export async function verifyUserEmail(id: string) {
+  const { data } = await api.post(`/api/admin/dashboard/users/${id}/verify-email`);
+  return data;
+}
+
+export async function verifyUserPhone(id: string) {
+  const { data } = await api.post(`/api/admin/dashboard/users/${id}/verify-phone`);
+  return data;
+}
+
+export async function exportUserData(id: string) {
+  const { data } = await api.get(`/api/admin/dashboard/users/${id}/export`);
+  return data;
+}
+
+export async function getTeacherProfile(id: string) {
+  const { data } = await api.get(`/api/admin/dashboard/users/${id}/teacher`);
+  return data;
+}
+
+export async function updateInstructorStatus(id: string, status: string) {
+  const { data } = await api.patch(`/api/admin/dashboard/users/${id}/instructor/status`, { status });
+  return data;
+}
+
+export async function updateInstructorTier(id: string, tier: string) {
+  const { data } = await api.patch(`/api/admin/dashboard/users/${id}/instructor/tier`, { tier });
+  return data;
+}
+
+export async function toggleInstructorVerified(id: string) {
+  const { data } = await api.post(`/api/admin/dashboard/users/${id}/instructor/verify`);
+  return data;
+}
+
+export async function toggleInstructorFeatured(id: string) {
+  const { data } = await api.post(`/api/admin/dashboard/users/${id}/instructor/feature`);
+  return data;
+}
+
+export async function updateInstructorCommission(id: string, rate: number) {
+  const { data } = await api.patch(`/api/admin/dashboard/users/${id}/instructor/commission`, { rate });
   return data;
 }
 

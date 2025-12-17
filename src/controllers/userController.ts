@@ -289,7 +289,7 @@ export async function updateProfile(req: Request, res: Response) {
       return res.status(401).json({ error: 'Authentication required' });
     }
 
-    if (req.user.userId !== id && req.user.role !== 'ADMIN') {
+    if (req.user.userId !== id && req.user.role !== 'ADMIN' && req.user.role !== 'SUPER_ADMIN') {
       return res.status(403).json({ error: 'Insufficient permissions' });
     }
 
@@ -561,7 +561,7 @@ export async function deleteUser(req: Request, res: Response) {
       return res.status(401).json({ error: 'Authentication required' });
     }
 
-    if (req.user.userId !== id && req.user.role !== 'ADMIN') {
+    if (req.user.userId !== id && req.user.role !== 'ADMIN' && req.user.role !== 'SUPER_ADMIN') {
       return res.status(403).json({ error: 'Insufficient permissions' });
     }
 

@@ -22,19 +22,34 @@ function mapChallengeSummary(
     include: {
       _count: { select: { enrollments: true } };
       enrollments?: true;
+      badge?: true;
     };
   }> & { enrolled?: boolean },
 ) {
   return {
     id: challenge.id,
     title: challenge.title,
+    slug: challenge.slug,
     description: challenge.description,
+    thumbnailUrl: challenge.thumbnailUrl,
+    difficulty: challenge.difficulty,
+    categories: challenge.categories,
     startAt: challenge.startAt,
     endAt: challenge.endAt,
     targetDays: challenge.targetDays,
+    dailyGoalMinutes: challenge.dailyGoalMinutes,
+    dailyGoalType: challenge.dailyGoalType,
+    xpReward: challenge.xpReward,
+    badgeId: challenge.badgeId,
+    badge: challenge.badge ?? null,
+    maxParticipants: challenge.maxParticipants,
+    showLeaderboard: challenge.showLeaderboard,
+    isActive: challenge.isActive,
     coverUrl: challenge.coverUrl,
     enrollmentCount: challenge._count.enrollments,
     enrolled: Boolean(challenge.enrolled),
+    createdAt: challenge.createdAt,
+    updatedAt: challenge.updatedAt,
   };
 }
 
@@ -47,6 +62,7 @@ export async function listChallenges(userId?: string) {
           enrollments: true,
         },
       },
+      badge: true,
       enrollments: userId
         ? {
             where: {
@@ -75,6 +91,7 @@ export async function getChallengeById(challengeId: string, userId?: string) {
           checks: true,
         },
       },
+      badge: true,
       enrollments: userId
         ? {
             where: { userId },
@@ -116,9 +133,22 @@ export async function createChallenge(data: CreateChallengeInput) {
       endAt: toDate(data.endAt),
       targetDays: data.targetDays,
       coverUrl: data.coverUrl ?? null,
+      // New fields
+      slug: data.slug ?? null,
+      thumbnailUrl: data.thumbnailUrl ?? null,
+      difficulty: data.difficulty ?? 'BEGINNER',
+      categories: data.categories ?? [],
+      dailyGoalMinutes: data.dailyGoalMinutes ?? 15,
+      dailyGoalType: data.dailyGoalType ?? 'DURATION',
+      xpReward: data.xpReward ?? 100,
+      badgeId: data.badgeId ?? null,
+      maxParticipants: data.maxParticipants ?? null,
+      showLeaderboard: data.showLeaderboard ?? true,
+      isActive: data.isActive ?? true,
     },
     include: {
       _count: { select: { enrollments: true } },
+      badge: true,
     },
   });
 
@@ -144,9 +174,22 @@ export async function updateChallenge(challengeId: string, data: UpdateChallenge
       ...(data.endAt ? { endAt: toDate(data.endAt) } : {}),
       ...(typeof data.targetDays === 'number' ? { targetDays: data.targetDays } : {}),
       ...(data.coverUrl !== undefined ? { coverUrl: data.coverUrl } : {}),
+      // New fields
+      ...(data.slug !== undefined ? { slug: data.slug } : {}),
+      ...(data.thumbnailUrl !== undefined ? { thumbnailUrl: data.thumbnailUrl } : {}),
+      ...(data.difficulty !== undefined ? { difficulty: data.difficulty } : {}),
+      ...(data.categories !== undefined ? { categories: data.categories } : {}),
+      ...(typeof data.dailyGoalMinutes === 'number' ? { dailyGoalMinutes: data.dailyGoalMinutes } : {}),
+      ...(data.dailyGoalType !== undefined ? { dailyGoalType: data.dailyGoalType } : {}),
+      ...(typeof data.xpReward === 'number' ? { xpReward: data.xpReward } : {}),
+      ...(data.badgeId !== undefined ? { badgeId: data.badgeId } : {}),
+      ...(data.maxParticipants !== undefined ? { maxParticipants: data.maxParticipants } : {}),
+      ...(typeof data.showLeaderboard === 'boolean' ? { showLeaderboard: data.showLeaderboard } : {}),
+      ...(typeof data.isActive === 'boolean' ? { isActive: data.isActive } : {}),
     },
     include: {
       _count: { select: { enrollments: true } },
+      badge: true,
     },
   });
 

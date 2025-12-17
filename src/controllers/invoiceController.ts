@@ -301,8 +301,8 @@ export async function downloadInvoicePdfHandler(req: Request, res: Response, nex
       });
     }
 
-    // Verify the invoice belongs to the user (unless admin)
-    if (invoice.userId !== userId && req.user!.role !== 'ADMIN') {
+    // Verify the invoice belongs to the user (unless admin or super admin)
+    if (invoice.userId !== userId && req.user!.role !== 'ADMIN' && req.user!.role !== 'SUPER_ADMIN') {
       return res.status(403).json({
         success: false,
         error: 'Access denied',

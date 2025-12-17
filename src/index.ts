@@ -119,6 +119,12 @@ import paymentIntegrationsRoutes from './routes/paymentIntegrations';
 // External Webhooks (Iyzico, Twilio, SendGrid)
 import externalWebhookRoutes from './webhooks/index';
 
+// Sprint 27: Meditation & Breathwork Module Routes
+import meditationRoutes from './routes/meditation';
+import adminMeditationRoutes from './routes/adminMeditation';
+import breathworkRoutes from './routes/breathwork';
+import adminBreathworkRoutes from './routes/adminBreathwork';
+
 import swaggerUi from 'swagger-ui-express';
 import { createServer } from 'http';
 import { swaggerSpec } from './config/swagger';
@@ -173,6 +179,14 @@ swaggerRouter.use(...(swaggerUi.serve as unknown as express.RequestHandler[]));
 swaggerRouter.get('/', swaggerUi.setup(swaggerSpec, { explorer: true }) as unknown as express.RequestHandler);
 
 app.use('/api/docs', swaggerRouter);
+
+// Swagger JSON endpoint - for downloading/importing OpenAPI spec
+app.get('/api/swagger.json', (_req, res) => {
+  res.setHeader('Content-Type', 'application/json');
+  res.setHeader('Content-Disposition', 'attachment; filename="swagger.json"');
+  res.json(swaggerSpec);
+});
+
 app.use('/api/health', healthRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/admin/programs', adminProgramRoutes);
@@ -261,6 +275,12 @@ app.use('/api/offline', offlineSyncRoutes);
 
 // Payment Integrations (Super Admin only)
 app.use('/api/admin/payment-integrations', paymentIntegrationsRoutes);
+
+// Sprint 27: Meditation & Breathwork Module
+app.use('/api/meditations', meditationRoutes);
+app.use('/api/admin/meditations', adminMeditationRoutes);
+app.use('/api/breathworks', breathworkRoutes);
+app.use('/api/admin/breathworks', adminBreathworkRoutes);
 
 // External Webhooks (Iyzico, Twilio, SendGrid) - No auth required
 app.use('/webhooks', externalWebhookRoutes);

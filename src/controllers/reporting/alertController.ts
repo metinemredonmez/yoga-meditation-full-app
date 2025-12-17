@@ -111,7 +111,7 @@ export const getRule = async (
     }
 
     // Check ownership
-    if (rule.createdById !== req.user!.id && req.user!.role !== 'ADMIN') {
+    if (rule.createdById !== req.user!.id && req.user!.role !== 'ADMIN' && req.user!.role !== 'SUPER_ADMIN') {
       return res.status(403).json({
         success: false,
         error: 'Access denied',
@@ -146,7 +146,7 @@ export const updateRule = async (
     }
 
     // Check ownership
-    if (existingRule.createdById !== req.user!.id && req.user!.role !== 'ADMIN') {
+    if (existingRule.createdById !== req.user!.id && req.user!.role !== 'ADMIN' && req.user!.role !== 'SUPER_ADMIN') {
       return res.status(403).json({
         success: false,
         error: 'Access denied',
@@ -183,7 +183,7 @@ export const deleteRule = async (
     }
 
     // Check ownership
-    if (existingRule.createdById !== req.user!.id && req.user!.role !== 'ADMIN') {
+    if (existingRule.createdById !== req.user!.id && req.user!.role !== 'ADMIN' && req.user!.role !== 'SUPER_ADMIN') {
       return res.status(403).json({
         success: false,
         error: 'Access denied',
@@ -221,7 +221,7 @@ export const mute = async (
     }
 
     // Check ownership
-    if (existingRule.createdById !== req.user!.id && req.user!.role !== 'ADMIN') {
+    if (existingRule.createdById !== req.user!.id && req.user!.role !== 'ADMIN' && req.user!.role !== 'SUPER_ADMIN') {
       return res.status(403).json({
         success: false,
         error: 'Access denied',
@@ -258,7 +258,7 @@ export const unmute = async (
     }
 
     // Check ownership
-    if (existingRule.createdById !== req.user!.id && req.user!.role !== 'ADMIN') {
+    if (existingRule.createdById !== req.user!.id && req.user!.role !== 'ADMIN' && req.user!.role !== 'SUPER_ADMIN') {
       return res.status(403).json({
         success: false,
         error: 'Access denied',

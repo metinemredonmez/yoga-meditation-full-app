@@ -5,7 +5,7 @@ import { listUsers, updateUserRole } from '../controllers/adminController';
 const router = Router();
 
 router.use(authenticateToken);
-router.use(requireRoles('ADMIN'));
+router.use(requireRoles('ADMIN', 'SUPER_ADMIN'));
 
 /**
  * @openapi

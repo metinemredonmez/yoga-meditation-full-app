@@ -40,7 +40,7 @@ export async function updateUserRole(req: Request, res: Response) {
     const { id } = idParamSchema.parse(req.params);
     const payload = updateRoleSchema.parse(req.body);
 
-    if (!req.user || req.user.role !== 'ADMIN') {
+    if (!req.user || (req.user.role !== 'ADMIN' && req.user.role !== 'SUPER_ADMIN')) {
       return res.status(403).json({ error: 'Admin privileges required' });
     }
 

@@ -54,7 +54,7 @@ model achievements {
   tierId             String?
   prerequisiteId     String?
   createdAt          DateTime                   @default(now())
-  updatedAt DateTime @updatedAt
+  updatedAt          DateTime                   @updatedAt
   badges             badges?                    @relation(fields: [badgeId], references: [id])
   achievements       achievements?              @relation("achievementsToachievements", fields: [prerequisiteId], references: [id])
   other_achievements achievements[]             @relation("achievementsToachievements")
@@ -95,7 +95,7 @@ model admin_dashboard_preferences {
   ordersPerPage    Int      @default(25)
   emailAlerts      Json?
   createdAt        DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  updatedAt        DateTime @updatedAt
   users            users    @relation(fields: [adminId], references: [id])
 }
 
@@ -107,7 +107,7 @@ model admin_notes {
   content    String
   isPinned   Boolean  @default(false)
   createdAt  DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  updatedAt  DateTime @updatedAt
   users      users    @relation(fields: [adminId], references: [id])
 
   @@index([entityType, entityId])
@@ -147,7 +147,7 @@ model ai_configurations {
   isActive          Boolean    @default(true)
   isDefault         Boolean    @default(false)
   createdAt         DateTime   @default(now())
-  updatedAt DateTime @updatedAt
+  updatedAt         DateTime   @updatedAt
 
   @@unique([provider, model])
 }
@@ -162,7 +162,7 @@ model ai_conversations {
   isActive    Boolean          @default(true)
   metadata    Json?
   createdAt   DateTime         @default(now())
-  updatedAt DateTime @updatedAt
+  updatedAt   DateTime         @updatedAt
   users       users            @relation(fields: [userId], references: [id])
   ai_messages ai_messages[]
 
@@ -372,7 +372,7 @@ model ai_workflow_nodes {
   retryDelay                                                          Int                           @default(1000)
   timeout                                                             Int?
   createdAt                                                           DateTime                      @default(now())
-  updatedAt DateTime @updatedAt
+  updatedAt                                                           DateTime                      @updatedAt
   ai_workflow_edges_ai_workflow_edges_sourceNodeIdToai_workflow_nodes ai_workflow_edges[]           @relation("ai_workflow_edges_sourceNodeIdToai_workflow_nodes")
   ai_workflow_edges_ai_workflow_edges_targetNodeIdToai_workflow_nodes ai_workflow_edges[]           @relation("ai_workflow_edges_targetNodeIdToai_workflow_nodes")
   ai_workflow_node_executions                                         ai_workflow_node_executions[]
@@ -395,7 +395,7 @@ model ai_workflows {
   version                Int                      @default(1)
   createdById            String
   createdAt              DateTime                 @default(now())
-  updatedAt DateTime @updatedAt
+  updatedAt              DateTime                 @updatedAt
   ai_workflow_edges      ai_workflow_edges[]
   ai_workflow_executions ai_workflow_executions[]
   ai_workflow_nodes      ai_workflow_nodes[]
@@ -427,7 +427,7 @@ model alert_rules {
   triggerCount    Int             @default(0)
   createdById     String
   createdAt       DateTime        @default(now())
-  updatedAt DateTime @updatedAt
+  updatedAt       DateTime        @updatedAt
   users           users           @relation(fields: [createdById], references: [id])
   alerts          alerts[]
 }
@@ -502,7 +502,7 @@ model announcements {
   isActive       Boolean   @default(true)
   createdById    String
   createdAt      DateTime  @default(now())
-  updatedAt DateTime @updatedAt
+  updatedAt      DateTime  @updatedAt
 
   @@index([isActive])
 }
@@ -519,7 +519,7 @@ model api_keys {
   usageCount  Int       @default(0)
   expiresAt   DateTime?
   createdAt   DateTime  @default(now())
-  updatedAt DateTime @updatedAt
+  updatedAt   DateTime  @updatedAt
   users       users     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([isActive])
@@ -567,6 +567,7 @@ model badges {
   createdAt    DateTime       @default(now())
   achievements achievements[]
   user_badges  user_badges[]
+  challenges   challenges[]
 
   @@index([category])
   @@index([isActive])
@@ -593,7 +594,7 @@ model banners {
   sortOrder      Int       @default(0)
   createdById    String
   createdAt      DateTime  @default(now())
-  updatedAt DateTime @updatedAt
+  updatedAt      DateTime  @updatedAt
 
   @@index([isActive])
   @@index([position])
@@ -608,7 +609,7 @@ model blocked_ips {
   expiresAt DateTime?
   isActive  Boolean   @default(true)
   createdAt DateTime  @default(now())
-  updatedAt DateTime @updatedAt
+  updatedAt DateTime  @updatedAt
 
   @@index([ipAddress])
   @@index([isActive])
@@ -620,7 +621,7 @@ model bookings {
   userId    String
   classId   String
   createdAt DateTime      @default(now())
-  updatedAt DateTime @updatedAt
+  updatedAt DateTime      @updatedAt
   classes   classes       @relation(fields: [classId], references: [id], onDelete: Cascade)
   users     users         @relation(fields: [userId], references: [id], onDelete: Cascade)
   payments  payments?
@@ -664,49 +665,65 @@ model challenge_enrollments {
 }
 
 model challenges {
-  id                    String                  @id @default(cuid())
-  title                 String
-  description           String
-  startAt               DateTime
-  endAt                 DateTime
-  targetDays            Int
-  coverUrl              String?
-  createdAt             DateTime                @default(now())
-  updatedAt DateTime @updatedAt
+  id               String              @id @default(cuid())
+  title            String
+  slug             String?             @unique
+  description      String
+  thumbnailUrl     String?
+  difficulty       ChallengeDifficulty @default(BEGINNER)
+  categories       String[]
+  startAt          DateTime
+  endAt            DateTime
+  targetDays       Int
+  dailyGoalMinutes Int                 @default(15)
+  dailyGoalType    ChallengeGoalType   @default(DURATION)
+  xpReward         Int                 @default(100)
+  badgeId          String?
+  maxParticipants  Int?
+  showLeaderboard  Boolean             @default(true)
+  isActive         Boolean             @default(true)
+  coverUrl         String?
+  createdAt        DateTime            @default(now())
+  updatedAt        DateTime            @updatedAt
+
+  badge                 badges?                 @relation(fields: [badgeId], references: [id])
   challenge_enrollments challenge_enrollments[]
   daily_checks          daily_checks[]
+
+  @@index([isActive])
+  @@index([difficulty])
 }
 
 model classes {
-  id              String            @id @default(cuid())
+  id              String      @id @default(cuid())
   title           String
   description     String?
   schedule        DateTime
   instructorId    String
   coInstructorIds String[]
-  createdAt       DateTime          @default(now())
-  updatedAt       DateTime          @updatedAt
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
   category        String?
-  completions     Int               @default(0)
-  duration        Int               @default(30)
-  enrollments     Int               @default(0)
-  isFree          Boolean           @default(false)
-  isLive          Boolean           @default(false)
-  level           ClassLevel        @default(BEGINNER)
+  completions     Int         @default(0)
+  duration        Int         @default(30)
+  enrollments     Int         @default(0)
+  isFree          Boolean     @default(false)
+  isLive          Boolean     @default(false)
+  level           ClassLevel  @default(BEGINNER)
   previewUrl      String?
-  ratingCount     Int               @default(0)
-  status          ClassStatus       @default(DRAFT)
+  ratingCount     Int         @default(0)
+  status          ClassStatus @default(DRAFT)
   thumbnailUrl    String?
-  totalRating     Float             @default(0)
+  totalRating     Float       @default(0)
 
   // Video alanları
-  videoUrl        String?
-  videoSource     VideoSource?      // YouTube, Dailymotion, Vimeo, Upload, External
-  videoQuality    VideoQuality?     // Kalite: 360p, 480p, 720p, 1080p, 1440p, 4K
-  videoFormat     VideoFormat?      // Format: MP4, WEBM, MOV, AVI, MKV
-  videoId         String?           // YouTube/Vimeo/Dailymotion video ID
-  videoDuration   Int?              // Video süresi (saniye)
-  videoFileSize   BigInt?           // Dosya boyutu (byte)
+  videoUrl      String?
+  videoSource   VideoSource? // YouTube, Dailymotion, Vimeo, Upload, External
+  videoQuality  VideoQuality? // Kalite: 360p, 480p, 720p, 1080p, 1440p, 4K
+  videoFormat   VideoFormat? // Format: MP4, WEBM, MOV, AVI, MKV
+  videoId       String? // YouTube/Vimeo/Dailymotion video ID
+  videoDuration Int? // Video süresi (saniye)
+  videoFileSize BigInt? // Dosya boyutu (byte)
 
   bookings        bookings[]
   users           users             @relation(fields: [instructorId], references: [id], onDelete: Cascade)
@@ -748,7 +765,7 @@ model comments {
   isHidden           Boolean           @default(false)
   hiddenReason       String?
   createdAt          DateTime          @default(now())
-  updatedAt DateTime @updatedAt
+  updatedAt          DateTime          @updatedAt
   comment_likes      comment_likes[]
   users              users             @relation(fields: [authorId], references: [id])
   classes            classes?          @relation(fields: [classId], references: [id])
@@ -784,7 +801,7 @@ model communication_campaigns {
   clickedCount      Int               @default(0)
   createdById       String
   createdAt         DateTime          @default(now())
-  updatedAt DateTime @updatedAt
+  updatedAt         DateTime          @updatedAt
   users             users             @relation(fields: [createdById], references: [id], onDelete: Cascade)
   message_templates message_templates @relation(fields: [templateId], references: [id], onDelete: Cascade)
 
@@ -804,7 +821,7 @@ model community_groups {
   isOfficial    Boolean         @default(false)
   createdById   String
   createdAt     DateTime        @default(now())
-  updatedAt DateTime @updatedAt
+  updatedAt     DateTime        @updatedAt
   users         users           @relation(fields: [createdById], references: [id])
   group_members group_members[]
   group_posts   group_posts[]
@@ -823,7 +840,7 @@ model content_categories {
   sortOrder                Int                  @default(0)
   isActive                 Boolean              @default(true)
   createdAt                DateTime             @default(now())
-  updatedAt DateTime @updatedAt
+  updatedAt                DateTime             @updatedAt
   content_categories       content_categories?  @relation("content_categoriesTocontent_categories", fields: [parentId], references: [id])
   other_content_categories content_categories[] @relation("content_categoriesTocontent_categories")
   contents                 contents[]
@@ -840,7 +857,7 @@ model content_embeddings {
   model      String
   dimensions Int
   textHash   String
-  updatedAt DateTime @updatedAt
+  updatedAt  DateTime @updatedAt
   createdAt  DateTime @default(now())
 
   @@unique([entityType, entityId])
@@ -861,7 +878,7 @@ model content_reports {
   reviewedAt                                DateTime?
   resolution                                String?
   createdAt                                 DateTime         @default(now())
-  updatedAt DateTime @updatedAt
+  updatedAt                                 DateTime         @updatedAt
   comments                                  comments?        @relation(fields: [commentId], references: [id])
   forum_posts                               forum_posts?     @relation(fields: [postId], references: [id])
   users_content_reports_reporterIdTousers   users            @relation("content_reports_reporterIdTousers", fields: [reporterId], references: [id])
@@ -896,7 +913,7 @@ model content_templates {
   isActive     Boolean     @default(true)
   createdById  String
   createdAt    DateTime    @default(now())
-  updatedAt DateTime @updatedAt
+  updatedAt    DateTime    @updatedAt
 
   @@index([type])
 }
@@ -913,7 +930,7 @@ model content_translations {
   isMachineTranslated Boolean           @default(false)
   originalLanguageId  String?
   createdAt           DateTime          @default(now())
-  updatedAt DateTime @updatedAt
+  updatedAt           DateTime          @updatedAt
   languages           languages         @relation(fields: [languageId], references: [id], onDelete: Cascade)
 
   @@unique([entityType, entityId, field, languageId])
@@ -965,7 +982,7 @@ model contents {
   requiredTier        String?
   viewCount           Int                   @default(0)
   createdAt           DateTime              @default(now())
-  updatedAt DateTime @updatedAt
+  updatedAt           DateTime              @updatedAt
   ContentToContentTag ContentToContentTag[]
   content_versions    content_versions[]
   content_categories  content_categories?   @relation(fields: [categoryId], references: [id])
@@ -987,7 +1004,7 @@ model conversations {
   unreadCount1                              Int       @default(0)
   unreadCount2                              Int       @default(0)
   createdAt                                 DateTime  @default(now())
-  updatedAt DateTime @updatedAt
+  updatedAt                                 DateTime  @updatedAt
   users_conversations_participant1IdTousers users     @relation("conversations_participant1IdTousers", fields: [participant1Id], references: [id])
   users_conversations_participant2IdTousers users     @relation("conversations_participant2IdTousers", fields: [participant2Id], references: [id])
 
@@ -1027,7 +1044,7 @@ model coupons {
   isActive          Boolean         @default(true)
   createdById       String
   createdAt         DateTime        @default(now())
-  updatedAt DateTime @updatedAt
+  updatedAt         DateTime        @updatedAt
   coupon_usages     coupon_usages[]
   users             users           @relation(fields: [createdById], references: [id])
 
@@ -1048,7 +1065,7 @@ model custom_queries {
   isSafe          Boolean   @default(false)
   createdById     String
   createdAt       DateTime  @default(now())
-  updatedAt DateTime @updatedAt
+  updatedAt       DateTime  @updatedAt
   users           users     @relation(fields: [createdById], references: [id])
 }
 
@@ -1111,7 +1128,7 @@ model dashboard_widgets {
   isActive               Boolean                  @default(true)
   isDefault              Boolean                  @default(false)
   createdAt              DateTime                 @default(now())
-  updatedAt DateTime @updatedAt
+  updatedAt              DateTime                 @updatedAt
   user_dashboard_widgets user_dashboard_widgets[]
 }
 
@@ -1123,7 +1140,7 @@ model device_tokens {
   deviceName String?
   isActive   Boolean        @default(true)
   createdAt  DateTime       @default(now())
-  updatedAt DateTime @updatedAt
+  updatedAt  DateTime       @updatedAt
   users      users          @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([token])
@@ -1193,7 +1210,7 @@ model elevenlabs_voices {
   isDefault       Boolean           @default(false)
   yogaCategory    String?
   createdAt       DateTime          @default(now())
-  updatedAt DateTime @updatedAt
+  updatedAt       DateTime          @updatedAt
   elevenlabs_jobs elevenlabs_jobs[]
 }
 
@@ -1228,7 +1245,7 @@ model faq_categories {
   sortOrder   Int         @default(0)
   isActive    Boolean     @default(true)
   createdAt   DateTime    @default(now())
-  updatedAt DateTime @updatedAt
+  updatedAt   DateTime    @updatedAt
   faq_items   faq_items[]
 }
 
@@ -1242,7 +1259,7 @@ model faq_items {
   helpfulYes     Int             @default(0)
   helpfulNo      Int             @default(0)
   createdAt      DateTime        @default(now())
-  updatedAt DateTime @updatedAt
+  updatedAt      DateTime        @updatedAt
   faq_categories faq_categories? @relation(fields: [categoryId], references: [id])
 
   @@index([categoryId])
@@ -1274,7 +1291,7 @@ model feature_flags {
   metadata          Json?
   updatedById       String?
   createdAt         DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  updatedAt         DateTime @updatedAt
   users             users?   @relation(fields: [updatedById], references: [id])
 }
 
@@ -1289,7 +1306,7 @@ model forum_categories {
   isActive               Boolean            @default(true)
   parentId               String?
   createdAt              DateTime           @default(now())
-  updatedAt DateTime @updatedAt
+  updatedAt              DateTime           @updatedAt
   forum_categories       forum_categories?  @relation("forum_categoriesToforum_categories", fields: [parentId], references: [id])
   other_forum_categories forum_categories[] @relation("forum_categoriesToforum_categories")
   forum_topics           forum_topics[]
@@ -1319,7 +1336,7 @@ model forum_posts {
   isEdited          Boolean            @default(false)
   editedAt          DateTime?
   createdAt         DateTime           @default(now())
-  updatedAt DateTime @updatedAt
+  updatedAt         DateTime           @updatedAt
   content_reports   content_reports[]
   forum_post_likes  forum_post_likes[]
   users             users              @relation(fields: [authorId], references: [id])
@@ -1377,7 +1394,7 @@ model forum_topics {
   lastReplyAt                             DateTime?
   lastReplyById                           String?
   createdAt                               DateTime                @default(now())
-  updatedAt DateTime @updatedAt
+  updatedAt                               DateTime                @updatedAt
   content_reports                         content_reports[]
   forum_posts                             forum_posts[]
   forum_topic_followers                   forum_topic_followers[]
@@ -1398,7 +1415,7 @@ model gamification_config {
   key         String   @unique
   value       Json
   description String?
-  updatedAt DateTime @updatedAt
+  updatedAt   DateTime @updatedAt
 }
 
 model glossary {
@@ -1412,7 +1429,7 @@ model glossary {
   caseSensitive    Boolean  @default(false)
   category         String?
   createdAt        DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  updatedAt        DateTime @updatedAt
 
   @@unique([sourceLanguageId, targetLanguageId, sourceTerm])
   @@index([sourceTerm])
@@ -1432,7 +1449,7 @@ model grounding_documents {
   validUntil     DateTime?
   isActive       Boolean   @default(true)
   createdAt      DateTime  @default(now())
-  updatedAt DateTime @updatedAt
+  updatedAt      DateTime  @updatedAt
 
   @@index([isActive])
   @@index([sourceType])
@@ -1459,7 +1476,7 @@ model group_post_comments {
   content                   String
   parentId                  String?
   createdAt                 DateTime              @default(now())
-  updatedAt DateTime @updatedAt
+  updatedAt                 DateTime              @updatedAt
   users                     users                 @relation(fields: [authorId], references: [id])
   group_post_comments       group_post_comments?  @relation("group_post_commentsTogroup_post_comments", fields: [parentId], references: [id])
   other_group_post_comments group_post_comments[] @relation("group_post_commentsTogroup_post_comments")
@@ -1488,7 +1505,7 @@ model group_posts {
   mediaUrls           String[]
   isPinned            Boolean               @default(false)
   createdAt           DateTime              @default(now())
-  updatedAt DateTime @updatedAt
+  updatedAt           DateTime              @updatedAt
   group_post_comments group_post_comments[]
   group_post_likes    group_post_likes[]
   users               users                 @relation(fields: [authorId], references: [id])
@@ -1610,7 +1627,7 @@ model instructor_payout_settings {
   autoPayoutEnabled      Boolean             @default(false)
   autoPayoutDay          Int                 @default(1)
   createdAt              DateTime            @default(now())
-  updatedAt DateTime @updatedAt
+  updatedAt              DateTime            @updatedAt
   instructor_profiles    instructor_profiles @relation(fields: [instructorId], references: [id], onDelete: Cascade)
 
   @@index([instructorId])
@@ -1635,7 +1652,7 @@ model instructor_payouts {
   completedAt         DateTime?
   failureReason       String?
   createdAt           DateTime              @default(now())
-  updatedAt DateTime @updatedAt
+  updatedAt           DateTime              @updatedAt
   instructor_earnings instructor_earnings[]
   instructor_profiles instructor_profiles   @relation(fields: [instructorId], references: [id], onDelete: Cascade)
 
@@ -1679,7 +1696,7 @@ model instructor_profiles {
   rejectionReason            String?
   suspensionReason           String?
   createdAt                  DateTime                    @default(now())
-  updatedAt DateTime @updatedAt
+  updatedAt                  DateTime                    @updatedAt
   instructor_analytics       instructor_analytics[]
   instructor_earnings        instructor_earnings[]
   instructor_followers       instructor_followers[]
@@ -1689,6 +1706,7 @@ model instructor_profiles {
   instructor_reviews         instructor_reviews[]
   live_stream_schedules      live_stream_schedules[]
   live_streams               live_streams[]
+  meditations                meditations[]
 
   @@index([averageRating])
   @@index([isFeatured])
@@ -1715,7 +1733,7 @@ model instructor_reviews {
   repliedAt           DateTime?
   isVerifiedPurchase  Boolean             @default(false)
   createdAt           DateTime            @default(now())
-  updatedAt DateTime @updatedAt
+  updatedAt           DateTime            @updatedAt
   instructor_profiles instructor_profiles @relation(fields: [instructorId], references: [id], onDelete: Cascade)
   users               users               @relation(fields: [studentId], references: [id], onDelete: Cascade)
 
@@ -1770,7 +1788,7 @@ model invoices {
   periodStart     DateTime?
   periodEnd       DateTime?
   createdAt       DateTime        @default(now())
-  updatedAt DateTime @updatedAt
+  updatedAt       DateTime        @updatedAt
   invoice_items   invoice_items[]
   payments        payments?       @relation(fields: [paymentId], references: [id])
   subscriptions   subscriptions?  @relation(fields: [subscriptionId], references: [id])
@@ -1795,7 +1813,7 @@ model languages {
   flagUrl                   String?
   fallbackId                String?
   createdAt                 DateTime                    @default(now())
-  updatedAt DateTime @updatedAt
+  updatedAt                 DateTime                    @updatedAt
   content_translations      content_translations[]
   languages                 languages?                  @relation("languagesTolanguages", fields: [fallbackId], references: [id])
   other_languages           languages[]                 @relation("languagesTolanguages")
@@ -1817,7 +1835,7 @@ model leaderboard_entries {
   rank          Int?
   previousRank  Int?
   createdAt     DateTime          @default(now())
-  updatedAt DateTime @updatedAt
+  updatedAt     DateTime          @updatedAt
   users         users             @relation(fields: [userId], references: [id])
 
   @@unique([userId, period, periodStart])
@@ -1933,7 +1951,7 @@ model live_stream_schedules {
   isActive            Boolean             @default(true)
   nextStreamAt        DateTime?
   createdAt           DateTime            @default(now())
-  updatedAt DateTime @updatedAt
+  updatedAt           DateTime            @updatedAt
   instructor_profiles instructor_profiles @relation(fields: [instructorId], references: [id], onDelete: Cascade)
 
   @@index([instructorId])
@@ -1972,7 +1990,7 @@ model live_streams {
   viewCount                 Int                         @default(0)
   likeCount                 Int                         @default(0)
   createdAt                 DateTime                    @default(now())
-  updatedAt DateTime @updatedAt
+  updatedAt                 DateTime                    @updatedAt
   live_stream_chats         live_stream_chats[]
   live_stream_participants  live_stream_participants[]
   live_stream_reactions     live_stream_reactions[]
@@ -1998,7 +2016,7 @@ model maintenance_windows {
   isActive         Boolean         @default(false)
   createdById      String
   createdAt        DateTime        @default(now())
-  updatedAt DateTime @updatedAt
+  updatedAt        DateTime        @updatedAt
   users            users           @relation(fields: [createdById], references: [id])
 }
 
@@ -2025,7 +2043,7 @@ model media_files {
   metadata       Json?
   uploadedById   String
   createdAt      DateTime         @default(now())
-  updatedAt DateTime @updatedAt
+  updatedAt      DateTime         @updatedAt
   media_folders  media_folders?   @relation(fields: [folderId], references: [id])
   media_usages   media_usages[]
   media_variants media_variants[]
@@ -2044,7 +2062,7 @@ model media_folders {
   parentId            String?
   createdById         String
   createdAt           DateTime        @default(now())
-  updatedAt DateTime @updatedAt
+  updatedAt           DateTime        @updatedAt
   media_files         media_files[]
   media_folders       media_folders?  @relation("media_foldersTomedia_folders", fields: [parentId], references: [id])
   other_media_folders media_folders[] @relation("media_foldersTomedia_folders")
@@ -2124,7 +2142,7 @@ model message_templates {
   variables               Json?
   isActive                Boolean                   @default(true)
   createdAt               DateTime                  @default(now())
-  updatedAt DateTime @updatedAt
+  updatedAt               DateTime                  @updatedAt
   communication_campaigns communication_campaigns[]
   message_logs            message_logs[]
   scheduled_messages      scheduled_messages[]
@@ -2162,7 +2180,7 @@ model navigation_items {
   isActive               Boolean            @default(true)
   visibleTo              String[]
   createdAt              DateTime           @default(now())
-  updatedAt DateTime @updatedAt
+  updatedAt              DateTime           @updatedAt
   navigation_menus       navigation_menus   @relation(fields: [menuId], references: [id], onDelete: Cascade)
   navigation_items       navigation_items?  @relation("navigation_itemsTonavigation_items", fields: [parentId], references: [id])
   other_navigation_items navigation_items[] @relation("navigation_itemsTonavigation_items")
@@ -2178,7 +2196,7 @@ model navigation_menus {
   description      String?
   isActive         Boolean            @default(true)
   createdAt        DateTime           @default(now())
-  updatedAt DateTime @updatedAt
+  updatedAt        DateTime           @updatedAt
   navigation_items navigation_items[]
 }
 
@@ -2220,7 +2238,7 @@ model notification_preferences {
   quietHoursEnd      String?
   timezone           String   @default("UTC")
   createdAt          DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  updatedAt          DateTime @updatedAt
   users              users    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
@@ -2234,7 +2252,7 @@ model offline_contents {
   status      String   @default("pending")
   fileSize    Int?
   createdAt   DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  updatedAt   DateTime @updatedAt
   users       users    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, contentId, contentType])
@@ -2313,7 +2331,7 @@ model payments {
   environment           PaymentEnvironment @default(PRODUCTION)
   paidAt                DateTime?
   createdAt             DateTime           @default(now())
-  updatedAt DateTime @updatedAt
+  updatedAt             DateTime           @updatedAt
   invoices              invoices?
   bookings              bookings?          @relation(fields: [bookingId], references: [id])
   subscriptions         subscriptions?     @relation(fields: [subscriptionId], references: [id])
@@ -2375,7 +2393,7 @@ model podcast_episodes {
   likeCount         Int               @default(0)
   publishedAt       DateTime?
   createdAt         DateTime          @default(now())
-  updatedAt DateTime @updatedAt
+  updatedAt         DateTime          @updatedAt
   podcasts          podcasts          @relation(fields: [podcastId], references: [id], onDelete: Cascade)
   podcast_likes     podcast_likes[]
   podcast_listens   podcast_listens[]
@@ -2464,7 +2482,7 @@ model podcasts {
   metaDescription       String?
   publishedAt           DateTime?
   createdAt             DateTime                @default(now())
-  updatedAt DateTime @updatedAt
+  updatedAt             DateTime                @updatedAt
   podcast_episodes      podcast_episodes[]
   podcast_subscriptions podcast_subscriptions[]
   users                 users?                  @relation(fields: [hostId], references: [id])
@@ -2484,7 +2502,7 @@ model poses {
   description  String
   imageUrl     String?
   createdAt    DateTime       @default(now())
-  updatedAt DateTime @updatedAt
+  updatedAt    DateTime       @updatedAt
 }
 
 model program_sessions {
@@ -2496,7 +2514,7 @@ model program_sessions {
   videoUrl        String?
   poseIds         String[]          @default([])
   createdAt       DateTime          @default(now())
-  updatedAt DateTime @updatedAt
+  updatedAt       DateTime          @updatedAt
   daily_checks    daily_checks[]
   planner_entries planner_entries[]
   programs        programs          @relation(fields: [programId], references: [id], onDelete: Cascade)
@@ -2528,7 +2546,7 @@ model programs {
   promoVideoId     String?
   instructor       users?             @relation("ProgramInstructor", fields: [instructorId], references: [id])
   createdAt        DateTime           @default(now())
-  updatedAt DateTime @updatedAt
+  updatedAt        DateTime           @updatedAt
   comments         comments[]
   sessions         program_sessions[]
   tags             tags[]             @relation("ProgramToTag")
@@ -2578,7 +2596,7 @@ model quests {
   startDate        DateTime?
   endDate          DateTime?
   createdAt        DateTime             @default(now())
-  updatedAt DateTime @updatedAt
+  updatedAt        DateTime             @updatedAt
   user_quests      user_quests[]
 
   @@index([isActive])
@@ -2637,7 +2655,7 @@ model referral_codes {
   isActive   Boolean   @default(true)
   expiresAt  DateTime?
   createdAt  DateTime  @default(now())
-  updatedAt DateTime @updatedAt
+  updatedAt  DateTime  @updatedAt
   users      users     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
@@ -2653,7 +2671,7 @@ model referrals {
   referredXP                        Int?
   convertedAt                       DateTime?
   createdAt                         DateTime       @default(now())
-  updatedAt DateTime @updatedAt
+  updatedAt                         DateTime       @updatedAt
   users_referrals_referredIdTousers users          @relation("referrals_referredIdTousers", fields: [referredId], references: [id], onDelete: Cascade)
   users_referrals_referrerIdTousers users          @relation("referrals_referrerIdTousers", fields: [referrerId], references: [id], onDelete: Cascade)
 
@@ -2689,7 +2707,7 @@ model refunds {
   status           RefundStatus    @default(PENDING)
   initiatedBy      RefundInitiator @default(ADMIN)
   createdAt        DateTime        @default(now())
-  updatedAt DateTime @updatedAt
+  updatedAt        DateTime        @updatedAt
   payments         payments        @relation(fields: [paymentId], references: [id], onDelete: Cascade)
 
   @@index([paymentId])
@@ -2719,7 +2737,7 @@ model report_definitions {
   allowScheduling  Boolean            @default(true)
   isActive         Boolean            @default(true)
   createdAt        DateTime           @default(now())
-  updatedAt DateTime @updatedAt
+  updatedAt        DateTime           @updatedAt
   report_instances report_instances[]
   report_schedules report_schedules[]
 }
@@ -2773,7 +2791,7 @@ model report_instances {
   executionTime      Int?
   createdById        String
   createdAt          DateTime           @default(now())
-  updatedAt DateTime @updatedAt
+  updatedAt          DateTime           @updatedAt
   report_exports     report_exports[]
   users              users              @relation(fields: [createdById], references: [id])
   report_definitions report_definitions @relation(fields: [definitionId], references: [id])
@@ -2809,7 +2827,7 @@ model report_schedules {
   failureCount        Int                   @default(0)
   createdById         String
   createdAt           DateTime              @default(now())
-  updatedAt DateTime @updatedAt
+  updatedAt           DateTime              @updatedAt
   users               users                 @relation(fields: [createdById], references: [id])
   report_definitions  report_definitions    @relation(fields: [definitionId], references: [id])
   schedule_executions schedule_executions[]
@@ -2877,7 +2895,7 @@ model saved_reports {
   sortOrder   String?
   isShared    Boolean  @default(false)
   createdAt   DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  updatedAt   DateTime @updatedAt
   users       users    @relation(fields: [adminId], references: [id])
 }
 
@@ -2944,7 +2962,7 @@ model seasonal_event_participants {
   tier            String?
   completedTasks  Json?
   joinedAt        DateTime        @default(now())
-  updatedAt DateTime @updatedAt
+  updatedAt       DateTime        @updatedAt
   seasonal_events seasonal_events @relation(fields: [eventId], references: [id], onDelete: Cascade)
   users           users           @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -2963,7 +2981,7 @@ model seasonal_events {
   rewards                     Json
   isActive                    Boolean                       @default(true)
   createdAt                   DateTime                      @default(now())
-  updatedAt DateTime @updatedAt
+  updatedAt                   DateTime                      @updatedAt
   seasonal_event_participants seasonal_event_participants[]
 
   @@index([startDate, endDate])
@@ -2986,7 +3004,7 @@ model shop_items {
   minLevel        Int?
   requiredBadgeId String?
   createdAt       DateTime         @default(now())
-  updatedAt DateTime @updatedAt
+  updatedAt       DateTime         @updatedAt
   shop_purchases  shop_purchases[]
 }
 
@@ -3076,7 +3094,7 @@ model subscription_plans {
   maxDevices             Int              @default(1)
   offlineDownloads       Boolean          @default(false)
   createdAt              DateTime         @default(now())
-  updatedAt DateTime @updatedAt
+  updatedAt              DateTime         @updatedAt
   subscriptions          subscriptions[]
 
   @@index([isActive])
@@ -3107,7 +3125,7 @@ model subscriptions {
   autoRenew                  Boolean              @default(true)
   lastVerifiedAt             DateTime?
   createdAt                  DateTime             @default(now())
-  updatedAt DateTime @updatedAt
+  updatedAt                  DateTime             @updatedAt
   invoices                   invoices[]
   payments                   payments[]
   plan                       subscription_plans   @relation(fields: [planId], references: [id])
@@ -3159,7 +3177,7 @@ model system_settings {
   isPublic    Boolean         @default(false)
   updatedById String?
   createdAt   DateTime        @default(now())
-  updatedAt DateTime @updatedAt
+  updatedAt   DateTime        @updatedAt
   users       users?          @relation(fields: [updatedById], references: [id])
 }
 
@@ -3169,7 +3187,7 @@ model tags {
   name      String
   slug      String     @unique
   createdAt DateTime   @default(now())
-  updatedAt DateTime @updatedAt
+  updatedAt DateTime   @updatedAt
   podcasts  podcasts[] @relation("PodcastToTag")
   programs  programs[] @relation("ProgramToTag")
 }
@@ -3184,7 +3202,7 @@ model tax_rates {
   isActive    Boolean  @default(true)
   isDefault   Boolean  @default(false)
   createdAt   DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  updatedAt   DateTime @updatedAt
 
   @@unique([country, state])
   @@index([country])
@@ -3246,7 +3264,7 @@ model translation_jobs {
   startedAt        DateTime?
   completedAt      DateTime?
   createdAt        DateTime             @default(now())
-  updatedAt DateTime @updatedAt
+  updatedAt        DateTime             @updatedAt
 }
 
 model translation_keys {
@@ -3257,7 +3275,7 @@ model translation_keys {
   context      String?
   maxLength    Int?
   createdAt    DateTime       @default(now())
-  updatedAt DateTime @updatedAt
+  updatedAt    DateTime       @updatedAt
   translations translations[]
 
   @@index([namespace])
@@ -3273,7 +3291,7 @@ model translation_memory {
   namespace        String?
   context          String?
   createdAt        DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  updatedAt        DateTime @updatedAt
 
   @@unique([sourceLanguageId, targetLanguageId, sourceText])
   @@index([sourceText])
@@ -3295,7 +3313,7 @@ model translations {
   verifiedAt          DateTime?
   isMachineTranslated Boolean           @default(false)
   createdAt           DateTime          @default(now())
-  updatedAt DateTime @updatedAt
+  updatedAt           DateTime          @updatedAt
   translation_keys    translation_keys  @relation(fields: [keyId], references: [id], onDelete: Cascade)
   languages           languages         @relation(fields: [languageId], references: [id], onDelete: Cascade)
 
@@ -3330,7 +3348,7 @@ model user_achievements {
   claimedAt     DateTime?
   currentTier   Int          @default(0)
   createdAt     DateTime     @default(now())
-  updatedAt DateTime @updatedAt
+  updatedAt     DateTime     @updatedAt
   achievements  achievements @relation(fields: [achievementId], references: [id], onDelete: Cascade)
   users         users        @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -3366,7 +3384,7 @@ model user_ai_preferences {
   coachPersonality        String?
   allowDataForTraining    Boolean  @default(false)
   createdAt               DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  updatedAt               DateTime @updatedAt
   users                   users    @relation(fields: [userId], references: [id])
 }
 
@@ -3406,7 +3424,7 @@ model user_bans {
   unbannedAt                          DateTime?
   unbanReason                         String?
   createdAt                           DateTime  @default(now())
-  updatedAt DateTime @updatedAt
+  updatedAt                           DateTime  @updatedAt
   users_user_bans_bannedByIdTousers   users     @relation("user_bans_bannedByIdTousers", fields: [bannedById], references: [id])
   users_user_bans_unbannedByIdTousers users?    @relation("user_bans_unbannedByIdTousers", fields: [unbannedById], references: [id])
   users_user_bans_userIdTousers       users     @relation("user_bans_userIdTousers", fields: [userId], references: [id])
@@ -3456,7 +3474,7 @@ model user_daily_rewards {
   lastClaimAt DateTime?
   cycleStart  DateTime  @default(now())
   createdAt   DateTime  @default(now())
-  updatedAt DateTime @updatedAt
+  updatedAt   DateTime  @updatedAt
   users       users     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
@@ -3471,7 +3489,7 @@ model user_dashboard_widgets {
   customConfig      Json?
   isVisible         Boolean           @default(true)
   createdAt         DateTime          @default(now())
-  updatedAt DateTime @updatedAt
+  updatedAt         DateTime          @updatedAt
   users             users             @relation(fields: [userId], references: [id])
   dashboard_widgets dashboard_widgets @relation(fields: [widgetId], references: [id])
 
@@ -3486,7 +3504,7 @@ model user_embeddings {
   dimensions       Int
   basedOnClasses   Int
   basedOnBehaviors Int
-  updatedAt DateTime @updatedAt
+  updatedAt        DateTime @updatedAt
   createdAt        DateTime @default(now())
   users            users    @relation(fields: [userId], references: [id])
 }
@@ -3503,7 +3521,7 @@ model user_engagement_stats {
   lastEmailOpenedAt    DateTime?
   lastPushClickedAt    DateTime?
   engagementScore      Int       @default(0)
-  updatedAt DateTime @updatedAt
+  updatedAt            DateTime  @updatedAt
   users                users     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([engagementScore])
@@ -3532,7 +3550,7 @@ model user_language_preferences {
   autoDetect          Boolean   @default(true)
   detectedLocale      String?
   createdAt           DateTime  @default(now())
-  updatedAt DateTime @updatedAt
+  updatedAt           DateTime  @updatedAt
   languages           languages @relation(fields: [preferredLanguageId], references: [id])
   users               users     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
@@ -3551,7 +3569,7 @@ model user_levels {
   streakFreezeCount Int       @default(0)
   streakFreezeUsed  DateTime?
   createdAt         DateTime  @default(now())
-  updatedAt DateTime @updatedAt
+  updatedAt         DateTime  @updatedAt
   users             users     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
@@ -3577,7 +3595,7 @@ model user_message_preferences {
   quietHoursEnd       String?
   timezone            String         @default("Europe/Istanbul")
   createdAt           DateTime       @default(now())
-  updatedAt DateTime @updatedAt
+  updatedAt           DateTime       @updatedAt
   users               users          @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
@@ -3591,7 +3609,7 @@ model user_notes {
   content    String
   timestamp  Int?
   createdAt  DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  updatedAt  DateTime @updatedAt
   users      users    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, entityId])
@@ -3610,7 +3628,7 @@ model user_quests {
   isClaimed    Boolean   @default(false)
   claimedAt    DateTime?
   createdAt    DateTime  @default(now())
-  updatedAt DateTime @updatedAt
+  updatedAt    DateTime  @updatedAt
   quests       quests    @relation(fields: [questId], references: [id], onDelete: Cascade)
   users        users     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -3659,10 +3677,17 @@ model users {
   subscriptionTier                                                SubscriptionTier              @default(FREE)
   subscriptionExpiresAt                                           DateTime?
   createdAt                                                       DateTime                      @default(now())
-  updatedAt DateTime @updatedAt
+  updatedAt                                                       DateTime                      @updatedAt
   equippedTitleId                                                 String?
   equippedFrameId                                                 String?
   avatarUrl                                                       String?
+  // New fields for admin dashboard
+  emailVerified                                                   Boolean                       @default(false)
+  twoFactorEnabled                                                Boolean                       @default(false)
+  lastLoginAt                                                     DateTime?
+  lastLoginIp                                                     String?
+  location                                                        String?
+  timezone                                                        String                        @default("Europe/Istanbul")
   admin_audit_logs                                                admin_audit_logs[]
   admin_dashboard_preferences                                     admin_dashboard_preferences?
   admin_notes                                                     admin_notes[]
@@ -3784,6 +3809,23 @@ model users {
   xp_transactions                                                 xp_transactions[]
   instructorPrograms                                              programs[]                    @relation("ProgramInstructor")
 
+  // Sprint 1: Meditation & Breathwork relations
+  meditation_progress  meditation_progress[]
+  meditation_favorites meditation_favorites[]
+  meditation_ratings   meditation_ratings[]
+  meditation_sessions  meditation_sessions[]
+  breathwork_progress  breathwork_progress[]
+  breathwork_sessions  breathwork_sessions[]
+  soundscape_favorites soundscape_favorites[]
+  user_sound_mixes     user_sound_mixes[]
+  sleep_story_progress sleep_story_progress[]
+  sleep_story_ratings  sleep_story_ratings[]
+  mood_entries         mood_entries[]
+  journal_entries      journal_entries[]
+  user_onboarding      user_onboarding?
+  user_goals           user_goals[]
+  user_reminders       user_reminders[]
+
   @@index([stripeCustomerId])
 }
 
@@ -3798,7 +3840,7 @@ model video_progress {
   completed     Boolean    @default(false)
   lastWatchedAt DateTime   @default(now())
   createdAt     DateTime   @default(now())
-  updatedAt DateTime @updatedAt
+  updatedAt     DateTime   @updatedAt
   users         users      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, lessonId, lessonType])
@@ -3869,7 +3911,7 @@ model webhook_endpoints {
   lastFailureAt            DateTime?
   lastSuccessAt            DateTime?
   createdAt                DateTime                   @default(now())
-  updatedAt DateTime @updatedAt
+  updatedAt                DateTime                   @updatedAt
   admin_webhook_deliveries admin_webhook_deliveries[]
   webhook_deliveries       webhook_deliveries[]
   users                    users                      @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -4131,11 +4173,11 @@ enum ClassStatus {
 }
 
 enum VideoSource {
-  UPLOAD     // Doğrudan yükleme
-  YOUTUBE    // YouTube
+  UPLOAD // Doğrudan yükleme
+  YOUTUBE // YouTube
   DAILYMOTION // Dailymotion
-  VIMEO      // Vimeo
-  EXTERNAL   // Diğer harici kaynaklar
+  VIMEO // Vimeo
+  EXTERNAL // Diğer harici kaynaklar
 }
 
 enum VideoQuality {
@@ -5125,4 +5167,775 @@ enum XPTransactionType {
   REFERRAL_BONUS
   ADMIN_ADJUSTMENT
   EXPIRED
+}
+
+enum ChallengeDifficulty {
+  BEGINNER
+  INTERMEDIATE
+  ADVANCED
+}
+
+enum ChallengeGoalType {
+  DURATION
+  SESSIONS
+  FREE
+}
+
+enum ChallengeParticipantStatus {
+  ACTIVE
+  COMPLETED
+  ABANDONED
+}
+
+// ============================================
+// SPRINT 1: MEDITATION & BREATHWORK MODELS
+// ============================================
+
+// Meditation Category
+model meditation_categories {
+  id          String   @id @default(cuid())
+  slug        String   @unique
+  name        String // Türkçe
+  nameEn      String? // İngilizce
+  description String?
+  icon        String? // emoji veya icon name
+  color       String? // hex color
+  coverImage  String?
+  sortOrder   Int      @default(0)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  meditations meditations[]
+}
+
+// Meditation
+model meditations {
+  id            String  @id @default(cuid())
+  slug          String  @unique
+  title         String
+  titleEn       String?
+  description   String?
+  descriptionEn String?
+
+  // Media
+  audioUrl   String
+  audioUrlEn String?
+  coverImage String?
+  duration   Int // saniye
+
+  // Kategorileme
+  categoryId String
+  category   meditation_categories @relation(fields: [categoryId], references: [id])
+  difficulty MeditationDifficulty  @default(BEGINNER)
+
+  // Instructor
+  instructorId String?
+  instructor   instructor_profiles? @relation(fields: [instructorId], references: [id])
+
+  // Meta
+  isPremium   Boolean   @default(false)
+  isFeatured  Boolean   @default(false)
+  isPublished Boolean   @default(false)
+  publishedAt DateTime?
+
+  // Stats
+  playCount     Int   @default(0)
+  totalMinutes  Int   @default(0)
+  averageRating Float @default(0)
+  ratingCount   Int   @default(0)
+
+  // İçerik
+  tags     String[] // ["stres", "uyku", "sabah"]
+  benefits String[] // ["Stresi azaltır", "Odaklanmayı artırır"]
+
+  // Background sound
+  backgroundSoundId String?
+  backgroundSound   soundscapes? @relation(fields: [backgroundSoundId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  progress  meditation_progress[]
+  favorites meditation_favorites[]
+  ratings   meditation_ratings[]
+  sessions  meditation_sessions[]
+
+  @@index([categoryId])
+  @@index([instructorId])
+  @@index([isPremium])
+  @@index([isPublished])
+}
+
+// Meditation Progress
+model meditation_progress {
+  id String @id @default(cuid())
+
+  meditationId String
+  meditation   meditations @relation(fields: [meditationId], references: [id], onDelete: Cascade)
+
+  userId String
+  user   users  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // İlerleme
+  currentTime Int     @default(0) // saniye
+  duration    Int // toplam süre
+  percentage  Float   @default(0)
+  completed   Boolean @default(false)
+
+  // Stats
+  playCount     Int @default(1)
+  totalListened Int @default(0) // toplam dinlenen saniye
+
+  lastPlayedAt DateTime  @default(now())
+  completedAt  DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@unique([meditationId, userId])
+  @@index([userId])
+}
+
+// Meditation Favorite
+model meditation_favorites {
+  id String @id @default(cuid())
+
+  meditationId String
+  meditation   meditations @relation(fields: [meditationId], references: [id], onDelete: Cascade)
+
+  userId String
+  user   users  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@unique([meditationId, userId])
+  @@index([userId])
+}
+
+// Meditation Rating
+model meditation_ratings {
+  id String @id @default(cuid())
+
+  meditationId String
+  meditation   meditations @relation(fields: [meditationId], references: [id], onDelete: Cascade)
+
+  userId String
+  user   users  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  rating Int // 1-5
+  review String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([meditationId, userId])
+  @@index([userId])
+}
+
+// Meditation Session (her dinleme kaydı)
+model meditation_sessions {
+  id String @id @default(cuid())
+
+  meditationId String
+  meditation   meditations @relation(fields: [meditationId], references: [id], onDelete: Cascade)
+
+  userId String
+  user   users  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  duration  Int     @default(0) // dinlenen saniye
+  completed Boolean @default(false)
+
+  startedAt DateTime  @default(now())
+  endedAt   DateTime?
+
+  @@index([userId])
+  @@index([meditationId])
+}
+
+// Breathwork
+model breathworks {
+  id            String  @id @default(cuid())
+  slug          String  @unique
+  title         String
+  titleEn       String?
+  description   String?
+  descriptionEn String?
+
+  // Pattern
+  pattern BreathworkPattern
+  inhale  Int // saniye
+  hold1   Int // nefes tutma 1 (inhale sonrası)
+  exhale  Int // saniye
+  hold2   Int // nefes tutma 2 (exhale sonrası)
+  cycles  Int // tekrar sayısı
+
+  // Media
+  audioUrl   String? // sesli rehber
+  coverImage String?
+
+  // Hesaplanan
+  totalDuration Int // toplam süre (saniye)
+
+  // Kategorileme
+  category   BreathworkCategory   @default(CALM)
+  difficulty MeditationDifficulty @default(BEGINNER)
+
+  // Meta
+  isPremium   Boolean @default(false)
+  isFeatured  Boolean @default(false)
+  isPublished Boolean @default(true)
+
+  // İçerik
+  benefits String[]
+  tags     String[]
+
+  // Görsel
+  animationType  BreathworkAnimation @default(CIRCLE)
+  primaryColor   String? // hex
+  secondaryColor String? // hex
+
+  // Stats
+  playCount Int @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  progress breathwork_progress[]
+  sessions breathwork_sessions[]
+}
+
+// Breathwork Progress
+model breathwork_progress {
+  id String @id @default(cuid())
+
+  breathworkId String
+  breathwork   breathworks @relation(fields: [breathworkId], references: [id], onDelete: Cascade)
+
+  userId String
+  user   users  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Stats
+  totalSessions Int @default(0)
+  totalCycles   Int @default(0)
+  totalSeconds  Int @default(0)
+
+  lastPracticedAt DateTime @default(now())
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([breathworkId, userId])
+  @@index([userId])
+}
+
+// Breathwork Session
+model breathwork_sessions {
+  id String @id @default(cuid())
+
+  breathworkId String?
+  breathwork   breathworks? @relation(fields: [breathworkId], references: [id])
+
+  userId String
+  user   users  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Custom pattern (breathworkId null ise)
+  customPattern Json? // {inhale, hold1, exhale, hold2}
+
+  // Session data
+  cyclesCompleted Int     @default(0)
+  duration        Int     @default(0) // saniye
+  completed       Boolean @default(false)
+
+  // Context
+  mood  MoodLevel?
+  notes String?
+
+  startedAt DateTime  @default(now())
+  endedAt   DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
+  @@index([breathworkId])
+}
+
+// Soundscapes (Ambient sesler)
+model soundscapes {
+  id      String  @id @default(cuid())
+  slug    String  @unique
+  title   String
+  titleEn String?
+
+  audioUrl   String
+  coverImage String?
+  duration   Int? // null = loop
+  isLoop     Boolean @default(true)
+
+  category      SoundscapeCategory
+  isPremium     Boolean            @default(false)
+  isMixable     Boolean            @default(true) // Mixer'da kullanılabilir
+  defaultVolume Int                @default(50) // 0-100
+
+  tags      String[]
+  playCount Int      @default(0)
+
+  isPublished Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  meditations  meditations[]
+  sleepStories sleep_stories[]
+  mixItems     sound_mix_items[]
+  favorites    soundscape_favorites[]
+}
+
+// Soundscape Favorites
+model soundscape_favorites {
+  id String @id @default(cuid())
+
+  soundscapeId String
+  soundscape   soundscapes @relation(fields: [soundscapeId], references: [id], onDelete: Cascade)
+
+  userId String
+  user   users  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@unique([soundscapeId, userId])
+  @@index([userId])
+}
+
+// User Sound Mix
+model user_sound_mixes {
+  id String @id @default(cuid())
+
+  userId String
+  user   users  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  name        String
+  description String?
+  isPublic    Boolean @default(false)
+
+  playCount Int @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  items sound_mix_items[]
+
+  @@index([userId])
+  @@index([isPublic])
+}
+
+// Sound Mix Items
+model sound_mix_items {
+  id String @id @default(cuid())
+
+  mixId String
+  mix   user_sound_mixes @relation(fields: [mixId], references: [id], onDelete: Cascade)
+
+  soundscapeId String
+  soundscape   soundscapes @relation(fields: [soundscapeId], references: [id], onDelete: Cascade)
+
+  volume Int @default(50) // 0-100
+
+  createdAt DateTime @default(now())
+
+  @@unique([mixId, soundscapeId])
+}
+
+// Sleep Stories
+model sleep_stories {
+  id            String  @id @default(cuid())
+  slug          String  @unique
+  title         String
+  titleEn       String?
+  description   String?
+  descriptionEn String?
+
+  audioUrl      String
+  coverImageUrl String?
+  duration      Int // saniye
+
+  category     SleepStoryCategory
+  narratorName String?
+
+  // Background sound
+  backgroundSoundId String?
+  backgroundSound   soundscapes? @relation(fields: [backgroundSoundId], references: [id])
+
+  isPremium   Boolean @default(false)
+  isFeatured  Boolean @default(false)
+  isPublished Boolean @default(true)
+
+  tags          String[]
+  playCount     Int      @default(0)
+  averageRating Float    @default(0)
+  ratingCount   Int      @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  progress sleep_story_progress[]
+  ratings  sleep_story_ratings[]
+
+  @@index([category])
+  @@index([isPremium])
+}
+
+// Sleep Story Progress
+model sleep_story_progress {
+  id String @id @default(cuid())
+
+  storyId String
+  story   sleep_stories @relation(fields: [storyId], references: [id], onDelete: Cascade)
+
+  userId String
+  user   users  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  currentTime Int     @default(0)
+  duration    Int
+  completed   Boolean @default(false)
+  playCount   Int     @default(1)
+
+  lastPlayedAt DateTime  @default(now())
+  completedAt  DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@unique([storyId, userId])
+  @@index([userId])
+}
+
+// Sleep Story Ratings
+model sleep_story_ratings {
+  id String @id @default(cuid())
+
+  storyId String
+  story   sleep_stories @relation(fields: [storyId], references: [id], onDelete: Cascade)
+
+  userId String
+  user   users  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  rating Int // 1-5
+  review String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([storyId, userId])
+  @@index([userId])
+}
+
+// Daily Quote
+model daily_quotes {
+  id String @id @default(cuid())
+
+  text   String
+  textEn String?
+  author String?
+
+  category QuoteCategory @default(MOTIVATION)
+  language String        @default("tr")
+
+  scheduledDate DateTime? // Belirli bir tarih için
+  isActive      Boolean   @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([scheduledDate])
+  @@index([isActive])
+}
+
+// Mood Entry
+model mood_entries {
+  id String @id @default(cuid())
+
+  userId String
+  user   users  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  mood      MoodLevel
+  moodScore Int // 1-5
+  energy    Int? // 1-5
+  stress    Int? // 1-5
+
+  notes String?
+  tags  String[] // mood tag id'leri
+
+  date      DateTime @default(now()) // Gün bazlı
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([date])
+}
+
+// Mood Tags
+model mood_tags {
+  id String @id @default(cuid())
+
+  name     String
+  nameEn   String?
+  category MoodTagCategory
+  icon     String?
+  color    String?
+
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+}
+
+// Journal Entry
+model journal_entries {
+  id String @id @default(cuid())
+
+  userId String
+  user   users  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  type     JournalType      @default(FREE_WRITE)
+  promptId String?
+  prompt   journal_prompts? @relation(fields: [promptId], references: [id])
+
+  content String
+  mood    MoodLevel?
+
+  isPrivate Boolean @default(true)
+
+  date      DateTime @default(now())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([date])
+}
+
+// Journal Prompts
+model journal_prompts {
+  id String @id @default(cuid())
+
+  type     JournalType
+  prompt   String
+  promptEn String?
+  category String? // daily, weekly, gratitude, reflection
+
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  entries journal_entries[]
+}
+
+// User Onboarding
+model user_onboarding {
+  id String @id @default(cuid())
+
+  userId String @unique
+  user   users  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  isCompleted Boolean   @default(false)
+  completedAt DateTime?
+
+  // Cevaplar
+  experienceLevel   String? // BEGINNER, INTERMEDIATE, ADVANCED
+  goals             String[] // STRESS_RELIEF, BETTER_SLEEP, FLEXIBILITY, etc
+  interests         String[] // YOGA, MEDITATION, PILATES, BREATHWORK
+  practiceFrequency String? // DAILY, FEW_TIMES_WEEK, WEEKLY, OCCASIONALLY
+  preferredDuration Int? // dakika (5, 10, 15, 20, 30)
+  preferredTime     String? // MORNING, AFTERNOON, EVENING, ANYTIME
+
+  currentStep Int @default(0)
+  totalSteps  Int @default(5)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// User Goals
+model user_goals {
+  id String @id @default(cuid())
+
+  userId String
+  user   users  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  type         GoalType
+  title        String
+  targetValue  Int
+  currentValue Int      @default(0)
+  unit         String? // dakika, gün, vs
+
+  period   GoalPeriod @default(DAILY)
+  isActive Boolean    @default(true)
+
+  startDate   DateTime  @default(now())
+  endDate     DateTime?
+  completedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([isActive])
+}
+
+// User Reminders
+model user_reminders {
+  id String @id @default(cuid())
+
+  userId String
+  user   users  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  type    ReminderType
+  title   String
+  message String?
+
+  time     String // HH:mm format
+  days     String[] // MONDAY, TUESDAY, etc
+  timezone String   @default("Europe/Istanbul")
+
+  isEnabled Boolean @default(true)
+
+  lastTriggeredAt DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([userId])
+  @@index([isEnabled])
+}
+
+// ============================================
+// SPRINT 1 ENUMS
+// ============================================
+
+enum MeditationDifficulty {
+  BEGINNER
+  INTERMEDIATE
+  ADVANCED
+}
+
+enum BreathworkPattern {
+  BOX_BREATHING // 4-4-4-4
+  FOUR_SEVEN_EIGHT // 4-7-8
+  RELAXING_BREATH // 4-2-6
+  ENERGIZING_BREATH // Kapalabhati benzeri
+  CUSTOM
+  PRANAYAMA_UJJAYI
+  PRANAYAMA_NADI_SHODHANA
+  PRANAYAMA_KAPALABHATI
+}
+
+enum BreathworkCategory {
+  CALM
+  ENERGY
+  FOCUS
+  SLEEP
+  ANXIETY
+  MORNING
+  EVENING
+  QUICK // 1-2 dakika
+  YOGA
+}
+
+enum BreathworkAnimation {
+  CIRCLE
+  WAVE
+  LUNGS
+  SQUARE
+  FLOWER
+  PULSE
+}
+
+enum MoodLevel {
+  GREAT
+  GOOD
+  OKAY
+  LOW
+  BAD
+}
+
+enum MoodTagCategory {
+  ACTIVITY
+  SOCIAL
+  HEALTH
+  WEATHER
+  OTHER
+}
+
+enum SoundscapeCategory {
+  RAIN
+  THUNDER
+  OCEAN
+  FOREST
+  BIRDS
+  FIRE
+  WHITE_NOISE
+  PINK_NOISE
+  BROWN_NOISE
+  CAFE
+  CITY
+  WIND
+  WATER
+  TIBETAN_BOWLS
+  MUSIC
+  OTHER
+}
+
+enum SleepStoryCategory {
+  NATURE
+  FANTASY
+  TRAVEL
+  HISTORY
+  SCIENCE
+  MEDITATION
+  AMBIENT
+  CITY
+  TURKISH // Türk hikayeleri
+}
+
+enum QuoteCategory {
+  MOTIVATION
+  MINDFULNESS
+  HAPPINESS
+  PEACE
+  SELF_LOVE
+  YOGA
+  SUFI
+  GRATITUDE
+}
+
+enum JournalType {
+  FREE_WRITE
+  GRATITUDE
+  REFLECTION
+  MORNING_PAGES
+  EVENING_REVIEW
+  PRACTICE_NOTES
+}
+
+enum GoalType {
+  PRACTICE_DAYS
+  PRACTICE_MINUTES
+  MEDITATION_MINUTES
+  BREATHWORK_SESSIONS
+  STREAK_DAYS
+  WEIGHT_LOSS
+  FLEXIBILITY
+  CUSTOM
+}
+
+enum GoalPeriod {
+  DAILY
+  WEEKLY
+  MONTHLY
+  CUSTOM
+}
+
+enum ReminderType {
+  MORNING
+  EVENING
+  PRACTICE
+  MEDITATION
+  BREATHWORK
+  WATER
+  CUSTOM
 }

@@ -162,22 +162,34 @@ export async function getUserDetails(userId: string) {
       },
       bansReceived: {
         orderBy: { createdAt: 'desc' },
-        include: { bannedBy: { select: { firstName: true, lastName: true, email: true } } },
+        include: {
+          users_user_bans_bannedByIdTousers: {
+            select: { firstName: true, lastName: true, email: true },
+          },
+        },
       },
-      warningsReceived: {
+      bookings: {
         orderBy: { createdAt: 'desc' },
-        include: { warnedBy: { select: { firstName: true, lastName: true, email: true } } },
-      },
-      challengeEnrollments: {
-        take: 5,
-        orderBy: { joinedAt: 'desc' },
-        include: { challenge: { select: { title: true } } },
+        take: 20,
+        include: {
+          classes: {
+            select: {
+              id: true,
+              title: true,
+              schedule: true,
+              duration: true,
+              users: {
+                select: { firstName: true, lastName: true },
+              },
+            },
+          },
+        },
       },
       _count: {
         select: {
           payments: true,
           bookings: true,
-          challengeEnrollments: true,
+          challenge_enrollments: true,
         },
       },
     },
@@ -272,8 +284,8 @@ export async function banUser(
       isActive: true,
     },
     include: {
-      user: { select: { firstName: true, lastName: true, email: true } },
-      bannedBy: { select: { firstName: true, lastName: true, email: true } },
+      users_user_bans_userIdTousers: { select: { firstName: true, lastName: true, email: true } },
+      users_user_bans_bannedByIdTousers: { select: { firstName: true, lastName: true, email: true } },
     },
   });
 }
@@ -301,8 +313,8 @@ export async function unbanUser(userId: string, adminId: string, reason?: string
       unbanReason: reason,
     },
     include: {
-      user: { select: { firstName: true, lastName: true, email: true } },
-      unbannedBy: { select: { firstName: true, lastName: true, email: true } },
+      users_user_bans_userIdTousers: { select: { firstName: true, lastName: true, email: true } },
+      users_user_bans_unbannedByIdTousers: { select: { firstName: true, lastName: true, email: true } },
     },
   });
 }
@@ -330,8 +342,8 @@ export async function warnUser(
       severity: severityLevel,
     },
     include: {
-      user: { select: { firstName: true, lastName: true, email: true } },
-      warnedBy: { select: { firstName: true, lastName: true, email: true } },
+      users_user_warnings_userIdTousers: { select: { firstName: true, lastName: true, email: true } },
+      users_user_warnings_warnedByIdTousers: { select: { firstName: true, lastName: true, email: true } },
     },
   });
 }
@@ -456,8 +468,8 @@ export async function getBannedUsers(page = 1, limit = 20) {
       take: limit,
       orderBy: { createdAt: 'desc' },
       include: {
-        user: { select: { id: true, firstName: true, lastName: true, email: true } },
-        bannedBy: { select: { firstName: true, lastName: true, email: true } },
+        users_user_bans_userIdTousers: { select: { id: true, firstName: true, lastName: true, email: true } },
+        users_user_bans_bannedByIdTousers: { select: { firstName: true, lastName: true, email: true } },
       },
     }),
     prisma.userBan.count({
@@ -490,8 +502,8 @@ export async function getWarnings(userId?: string, page = 1, limit = 20) {
       take: limit,
       orderBy: { createdAt: 'desc' },
       include: {
-        user: { select: { id: true, firstName: true, lastName: true, email: true } },
-        warnedBy: { select: { firstName: true, lastName: true, email: true } },
+        users_user_warnings_userIdTousers: { select: { id: true, firstName: true, lastName: true, email: true } },
+        users_user_warnings_warnedByIdTousers: { select: { firstName: true, lastName: true, email: true } },
       },
     }),
     prisma.userWarning.count({ where }),

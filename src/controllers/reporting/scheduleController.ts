@@ -116,7 +116,7 @@ export const get = async (
     }
 
     // Check ownership
-    if (schedule.createdById !== req.user!.id && req.user!.role !== 'ADMIN') {
+    if (schedule.createdById !== req.user!.id && req.user!.role !== 'ADMIN' && req.user!.role !== 'SUPER_ADMIN') {
       return res.status(403).json({
         success: false,
         error: 'Access denied',
@@ -153,7 +153,8 @@ export const update = async (
     // Check ownership
     if (
       existingSchedule.createdById !== req.user!.id &&
-      req.user!.role !== 'ADMIN'
+      req.user!.role !== 'ADMIN' &&
+      req.user!.role !== 'SUPER_ADMIN'
     ) {
       return res.status(403).json({
         success: false,
@@ -193,7 +194,8 @@ export const remove = async (
     // Check ownership
     if (
       existingSchedule.createdById !== req.user!.id &&
-      req.user!.role !== 'ADMIN'
+      req.user!.role !== 'ADMIN' &&
+      req.user!.role !== 'SUPER_ADMIN'
     ) {
       return res.status(403).json({
         success: false,
@@ -233,7 +235,8 @@ export const pause = async (
     // Check ownership
     if (
       existingSchedule.createdById !== req.user!.id &&
-      req.user!.role !== 'ADMIN'
+      req.user!.role !== 'ADMIN' &&
+      req.user!.role !== 'SUPER_ADMIN'
     ) {
       return res.status(403).json({
         success: false,
@@ -273,7 +276,8 @@ export const resume = async (
     // Check ownership
     if (
       existingSchedule.createdById !== req.user!.id &&
-      req.user!.role !== 'ADMIN'
+      req.user!.role !== 'ADMIN' &&
+      req.user!.role !== 'SUPER_ADMIN'
     ) {
       return res.status(403).json({
         success: false,
@@ -314,7 +318,8 @@ export const getHistory = async (
     // Check ownership
     if (
       existingSchedule.createdById !== req.user!.id &&
-      req.user!.role !== 'ADMIN'
+      req.user!.role !== 'ADMIN' &&
+      req.user!.role !== 'SUPER_ADMIN'
     ) {
       return res.status(403).json({
         success: false,
@@ -354,7 +359,8 @@ export const runNow = async (
     // Check ownership
     if (
       existingSchedule.createdById !== req.user!.id &&
-      req.user!.role !== 'ADMIN'
+      req.user!.role !== 'ADMIN' &&
+      req.user!.role !== 'SUPER_ADMIN'
     ) {
       return res.status(403).json({
         success: false,

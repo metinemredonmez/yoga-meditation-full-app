@@ -8,12 +8,6 @@ const SESSION_INDICATOR_COOKIE = 'yoga_session_active';
 // Routes that require authentication
 const protectedRoutes = ['/dashboard', '/instructor'];
 
-// Routes that require ADMIN role
-const adminRoutes = ['/dashboard'];
-
-// Routes that require INSTRUCTOR role
-const instructorRoutes = ['/instructor'];
-
 // Routes that should redirect to dashboard if already logged in
 const authRoutes = ['/auth/sign-in', '/auth/sign-up'];
 
@@ -47,52 +41,34 @@ export function middleware(request: NextRequest) {
 
   const { pathname } = request.nextUrl;
 
-  // Check if the route is protected
+  // Check if the route is protected or auth
   const isProtectedRoute = protectedRoutes.some(route => pathname.startsWith(route));
   const isAuthRoute = authRoutes.some(route => pathname.startsWith(route));
-  const isAdminRoute = adminRoutes.some(route => pathname.startsWith(route));
-  const isInstructorRoute = instructorRoutes.some(route => pathname.startsWith(route));
 
-  // If trying to access protected route without token, redirect to login
-  if (isProtectedRoute && !token && !hasSession) {
+  // Determine if user is authenticated (has token OR session indicator)
+  const isAuthenticated = !!token || hasSession;
+
+  // If trying to access protected route without authentication, redirect to login
+  if (isProtectedRoute && !isAuthenticated) {
     const loginUrl = new URL('/auth/sign-in', request.url);
     loginUrl.searchParams.set('callbackUrl', pathname);
     return NextResponse.redirect(loginUrl);
   }
 
-  // Role-based access control (only if we can read the token)
-  if (token) {
-    const role = parseTokenRole(token);
+  // If authenticated and trying to access auth routes, redirect to dashboard
+  if (isAuthRoute && isAuthenticated) {
+    // Try to get role from token for role-based redirect
+    const role = token ? parseTokenRole(token) : null;
+    const adminAllowedRoles = ['ADMIN', 'SUPER_ADMIN', 'TEACHER'];
 
-    // Admin routes - only ADMIN can access
-    if (isAdminRoute && role !== 'ADMIN') {
-      // If instructor trying to access admin, redirect to instructor portal
-      if (role === 'INSTRUCTOR') {
-        return NextResponse.redirect(new URL('/instructor', request.url));
-      }
-      // Students and others redirect to home
-      return NextResponse.redirect(new URL('/', request.url));
+    if (role && adminAllowedRoles.includes(role)) {
+      return NextResponse.redirect(new URL('/dashboard/overview', request.url));
+    } else if (role === 'INSTRUCTOR') {
+      return NextResponse.redirect(new URL('/instructor', request.url));
+    } else {
+      // Default redirect for authenticated users
+      return NextResponse.redirect(new URL('/dashboard/overview', request.url));
     }
-
-    // Instructor routes - ADMIN and INSTRUCTOR can access
-    if (isInstructorRoute && role !== 'ADMIN' && role !== 'INSTRUCTOR') {
-      return NextResponse.redirect(new URL('/', request.url));
-    }
-
-    // If trying to access auth route with token, redirect based on role
-    if (isAuthRoute) {
-      if (role === 'ADMIN') {
-        return NextResponse.redirect(new URL('/dashboard/overview', request.url));
-      } else if (role === 'INSTRUCTOR') {
-        return NextResponse.redirect(new URL('/instructor', request.url));
-      } else {
-        return NextResponse.redirect(new URL('/', request.url));
-      }
-    }
-  } else if (hasSession && isAuthRoute) {
-    // Has session indicator but can't read token - redirect to home
-    // The actual auth check will happen on page load via API call
-    return NextResponse.redirect(new URL('/', request.url));
   }
 
   return NextResponse.next();

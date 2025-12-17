@@ -185,11 +185,11 @@ export function UsersTable() {
     if (!role) return 'bg-gray-500/10 text-gray-500';
     switch (role.toUpperCase()) {
       case 'ADMIN':
-        return 'bg-purple-500/10 text-purple-500';
+        return 'bg-[#8b5cf6]/10 text-[#8b5cf6]'; // Violet - donut chart palette
       case 'TEACHER':
-        return 'bg-blue-500/10 text-blue-500';
+        return 'bg-[#f97316]/10 text-[#f97316]'; // Orange - donut chart palette
       case 'STUDENT':
-        return 'bg-green-500/10 text-green-500';
+        return 'bg-[#06b6d4]/10 text-[#06b6d4]'; // Cyan - donut chart palette
       default:
         return 'bg-gray-500/10 text-gray-500';
     }

@@ -148,7 +148,7 @@ export async function cancelBooking(req: Request, res: Response) {
       return res.status(404).json({ error: 'Booking not found' });
     }
 
-    if (booking.userId !== req.user.userId && req.user.role !== 'ADMIN') {
+    if (booking.userId !== req.user.userId && req.user.role !== 'ADMIN' && req.user.role !== 'SUPER_ADMIN') {
       return res.status(403).json({ error: 'Insufficient permissions' });
     }
 
@@ -200,7 +200,7 @@ export async function updateBooking(req: Request, res: Response) {
     }
 
     const isOwner = booking.userId === req.user.userId;
-    const isPrivileged = ['ADMIN', 'TEACHER'].includes(req.user.role);
+    const isPrivileged = ['ADMIN', 'SUPER_ADMIN', 'TEACHER'].includes(req.user.role);
 
     if (!isOwner && !isPrivileged) {
       return res.status(403).json({ error: 'Insufficient permissions' });
