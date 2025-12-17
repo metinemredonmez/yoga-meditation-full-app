@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Aboneliğiniz Sona Eriyor</title>
+  <style>
+    body { margin: 0; padding: 0; background-color: #f4f4f4; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+    .container { max-width: 600px; margin: 0 auto; background: #fff; }
+    .header { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); padding: 40px; text-align: center; }
+    .header img { max-width: 120px; }
+    .header h1 { color: #fff; margin: 20px 0 0; font-size: 24px; }
+    .content { padding: 40px; }
+    .warning-box { background: #fff3cd; border: 2px solid #ffc107; border-radius: 12px; padding: 25px; text-align: center; margin: 20px 0; }
+    .warning-icon { font-size: 48px; margin-bottom: 15px; }
+    .warning-title { font-size: 22px; color: #856404; font-weight: 600; margin: 0 0 10px; }
+    .warning-text { color: #856404; margin: 0; }
+    .expire-date { font-size: 36px; font-weight: 700; color: #f5576c; text-align: center; margin: 20px 0; }
+    .expire-label { text-align: center; color: #666; margin-bottom: 30px; }
+    .benefits-section { background: #f8f9fa; border-radius: 12px; padding: 25px; margin: 20px 0; }
+    .benefits-title { color: #333; margin: 0 0 20px; font-size: 18px; }
+    .benefit-item { display: flex; align-items: center; margin: 12px 0; }
+    .benefit-icon { color: #28a745; margin-right: 12px; font-size: 18px; }
+    .benefit-text { color: #333; }
+    .lose-section { background: #f8d7da; border-radius: 12px; padding: 25px; margin: 20px 0; }
+    .lose-title { color: #721c24; margin: 0 0 20px; font-size: 18px; }
+    .lose-item { display: flex; align-items: center; margin: 12px 0; }
+    .lose-icon { color: #dc3545; margin-right: 12px; font-size: 18px; }
+    .lose-text { color: #721c24; }
+    .offer-box { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 16px; padding: 30px; text-align: center; margin: 30px 0; }
+    .offer-badge { background: #ffc107; color: #333; display: inline-block; padding: 8px 20px; border-radius: 50px; font-weight: 600; font-size: 14px; margin-bottom: 15px; }
+    .offer-title { color: #fff; font-size: 24px; margin: 0 0 10px; }
+    .offer-text { color: rgba(255,255,255,0.9); margin: 0 0 20px; }
+    .offer-price { color: #fff; margin-bottom: 20px; }
+    .offer-price .old { text-decoration: line-through; opacity: 0.7; font-size: 18px; }
+    .offer-price .new { font-size: 36px; font-weight: 700; }
+    .button { display: inline-block; padding: 16px 50px; background: #fff; color: #667eea !important; text-decoration: none; border-radius: 50px; font-weight: 600; font-size: 18px; }
+    .button-secondary { background: transparent; border: 2px solid #fff; color: #fff !important; margin-left: 10px; }
+    .footer { background: #333; padding: 30px; text-align: center; }
+    .footer p { color: #999; font-size: 14px; margin: 10px 0; }
+    .footer a { color: #667eea; text-decoration: none; }
+  </style>
+</head>
+<body>
+  <center>
+    <table cellspacing="0" cellpadding="0" border="0" width="100%" style="padding: 20px 0;">
+      <tr>
+        <td>
+          <table class="container" cellspacing="0" cellpadding="0" border="0" width="600" align="center">
+            <!-- Header -->
+            <tr>
+              <td class="header">
+                <img src="{{logoUrl}}" alt="Yoga App">
+                <h1>Aboneliğiniz Sona Eriyor</h1>
+              </td>
+            </tr>
+
+            <!-- Content -->
+            <tr>
+              <td class="content">
+                <p style="font-size: 16px; color: #333;">Merhaba <strong>{{firstName}}</strong>,</p>
+
+                <!-- Warning Box -->
+                <div class="warning-box">
+                  <div class="warning-icon">⚠️</div>
+                  <h2 class="warning-title">Premium Üyeliğiniz Bitiyor</h2>
+                  <p class="warning-text">Yenilemezseniz premium özelliklerinizi kaybedeceksiniz</p>
+                </div>
+
+                <div class="expire-date">{{daysRemaining}} Gün</div>
+                <p class="expire-label">{{expirationDate}} tarihinde sona eriyor</p>
+
+                <!-- Benefits You'll Lose -->
+                <div class="lose-section">
+                  <h3 class="lose-title">❌ Kaybedeceğiniz Özellikler</h3>
+                  <div class="lose-item">
+                    <span class="lose-icon">✕</span>
+                    <span class="lose-text">500+ premium derse erişim</span>
+                  </div>
+                  <div class="lose-item">
+                    <span class="lose-icon">✕</span>
+                    <span class="lose-text">Canlı derslere katılım</span>
+                  </div>
+                  <div class="lose-item">
+                    <span class="lose-icon">✕</span>
+                    <span class="lose-text">Offline indirme özelliği</span>
+                  </div>
+                  <div class="lose-item">
+                    <span class="lose-icon">✕</span>
+                    <span class="lose-text">Kişiselleştirilmiş programlar</span>
+                  </div>
+                </div>
+
+                <!-- Benefits to Keep -->
+                <div class="benefits-section">
+                  <h3 class="benefits-title">✅ Yenileyerek Koruyacağınız Özellikler</h3>
+                  <div class="benefit-item">
+                    <span class="benefit-icon">✓</span>
+                    <span class="benefit-text">Tüm premium derslere sınırsız erişim</span>
+                  </div>
+                  <div class="benefit-item">
+                    <span class="benefit-icon">✓</span>
+                    <span class="benefit-text">Uzman eğitmenlerle canlı dersler</span>
+                  </div>
+                  <div class="benefit-item">
+                    <span class="benefit-icon">✓</span>
+                    <span class="benefit-text">İlerleme takibi ve rozetler</span>
+                  </div>
+                  <div class="benefit-item">
+                    <span class="benefit-icon">✓</span>
+                    <span class="benefit-text">Reklamsız deneyim</span>
+                  </div>
+                </div>
+
+                <!-- Special Offer -->
+                <div class="offer-box">
+                  <span class="offer-badge">🎁 ÖZEL TEKLİF</span>
+                  <h3 class="offer-title">Şimdi Yenileyin, %20 İndirim Kazanın!</h3>
+                  <p class="offer-text">Sadece bugün geçerli özel indirim fırsatı</p>
+                  <div class="offer-price">
+                    <span class="old">{{originalPrice}}</span>
+                    <span class="new">{{discountedPrice}}/ay</span>
+                  </div>
+                  <a href="{{renewUrl}}" class="button">Şimdi Yenile</a>
+                </div>
+
+                <p style="text-align: center; color: #666; font-size: 14px;">
+                  Otomatik yenilemeyi açmak için <a href="{{settingsUrl}}" style="color: #667eea;">hesap ayarlarınızı</a> ziyaret edin.
+                </p>
+              </td>
+            </tr>
+
+            <!-- Footer -->
+            <tr>
+              <td class="footer">
+                <p>Sorularınız için: <a href="mailto:{{supportEmail}}">{{supportEmail}}</a></p>
+                <p>&copy; {{year}} Yoga App. Tüm hakları saklıdır.</p>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </center>
+</body>
+</html>

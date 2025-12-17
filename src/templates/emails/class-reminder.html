@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ders Hatırlatması</title>
+  <style>
+    body { margin: 0; padding: 0; background-color: #f4f4f4; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+    .container { max-width: 600px; margin: 0 auto; background: #fff; }
+    .header { background: linear-gradient(135deg, #ff6b6b 0%, #feca57 100%); padding: 40px; text-align: center; }
+    .header img { max-width: 120px; }
+    .header h1 { color: #fff; margin: 20px 0 0; font-size: 24px; }
+    .countdown { background: #fff; margin: -30px 40px 0; border-radius: 12px; padding: 20px; text-align: center; box-shadow: 0 4px 20px rgba(0,0,0,0.1); position: relative; }
+    .countdown-number { font-size: 48px; font-weight: 700; color: #ff6b6b; }
+    .countdown-label { font-size: 16px; color: #666; }
+    .content { padding: 40px; }
+    .class-card { background: #f8f9fa; border-radius: 16px; padding: 25px; margin: 20px 0; }
+    .class-name { font-size: 22px; font-weight: 600; color: #333; margin: 0 0 15px; }
+    .class-detail { display: flex; align-items: center; margin: 12px 0; color: #666; }
+    .class-detail-icon { margin-right: 12px; font-size: 18px; }
+    .checklist { margin: 30px 0; }
+    .checklist h3 { color: #667eea; margin-bottom: 15px; }
+    .checklist-item { display: flex; align-items: center; margin: 12px 0; padding: 12px; background: #f0f0ff; border-radius: 8px; }
+    .checklist-icon { margin-right: 12px; font-size: 18px; }
+    .checklist-text { color: #333; }
+    .join-section { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 16px; padding: 30px; text-align: center; margin: 20px 0; }
+    .join-section h3 { color: #fff; margin: 0 0 15px; }
+    .join-section p { color: rgba(255,255,255,0.9); margin: 0 0 20px; }
+    .button { display: inline-block; padding: 16px 50px; background: #fff; color: #667eea !important; text-decoration: none; border-radius: 50px; font-weight: 600; font-size: 18px; }
+    .footer { background: #333; padding: 30px; text-align: center; }
+    .footer p { color: #999; font-size: 14px; margin: 10px 0; }
+    .footer a { color: #667eea; text-decoration: none; }
+  </style>
+</head>
+<body>
+  <center>
+    <table cellspacing="0" cellpadding="0" border="0" width="100%" style="padding: 20px 0;">
+      <tr>
+        <td>
+          <table class="container" cellspacing="0" cellpadding="0" border="0" width="600" align="center">
+            <!-- Header -->
+            <tr>
+              <td class="header">
+                <img src="{{logoUrl}}" alt="Yoga App">
+                <h1>Dersiniz Yaklaşıyor! ⏰</h1>
+              </td>
+            </tr>
+
+            <!-- Countdown -->
+            <tr>
+              <td style="padding: 0 40px;">
+                <div class="countdown">
+                  <div class="countdown-number">{{minutesRemaining}}</div>
+                  <div class="countdown-label">dakika kaldı</div>
+                </div>
+              </td>
+            </tr>
+
+            <!-- Content -->
+            <tr>
+              <td class="content">
+                <p style="font-size: 16px; color: #666; text-align: center;">
+                  Merhaba <strong>{{firstName}}</strong>, dersiniz az sonra başlıyor!
+                </p>
+
+                <!-- Class Card -->
+                <div class="class-card">
+                  <div class="class-name">{{className}}</div>
+                  <div class="class-detail">
+                    <span class="class-detail-icon">👤</span>
+                    <span>{{instructorName}}</span>
+                  </div>
+                  <div class="class-detail">
+                    <span class="class-detail-icon">📅</span>
+                    <span>{{classDate}}</span>
+                  </div>
+                  <div class="class-detail">
+                    <span class="class-detail-icon">🕐</span>
+                    <span>{{classTime}}</span>
+                  </div>
+                  <div class="class-detail">
+                    <span class="class-detail-icon">⏱️</span>
+                    <span>{{duration}} dakika</span>
+                  </div>
+                </div>
+
+                <!-- Checklist -->
+                <div class="checklist">
+                  <h3>✅ Hazırlık Listesi</h3>
+                  <div class="checklist-item">
+                    <span class="checklist-icon">🧘</span>
+                    <span class="checklist-text">Yoga matınızı hazırlayın</span>
+                  </div>
+                  <div class="checklist-item">
+                    <span class="checklist-icon">👕</span>
+                    <span class="checklist-text">Rahat kıyafetler giyin</span>
+                  </div>
+                  <div class="checklist-item">
+                    <span class="checklist-icon">💧</span>
+                    <span class="checklist-text">Yanınıza su alın</span>
+                  </div>
+                  <div class="checklist-item">
+                    <span class="checklist-icon">🔕</span>
+                    <span class="checklist-text">Telefonunuzu sessize alın</span>
+                  </div>
+                  <div class="checklist-item">
+                    <span class="checklist-icon">🏠</span>
+                    <span class="checklist-text">Sessiz bir alan hazırlayın</span>
+                  </div>
+                </div>
+
+                <!-- Join Section -->
+                <div class="join-section">
+                  <h3>Hazır mısınız?</h3>
+                  <p>Dersinize katılmak için aşağıdaki butona tıklayın</p>
+                  <a href="{{joinUrl}}" class="button">Derse Katıl</a>
+                </div>
+              </td>
+            </tr>
+
+            <!-- Footer -->
+            <tr>
+              <td class="footer">
+                <p>İptal etmek için <a href="{{cancelUrl}}">buraya tıklayın</a></p>
+                <p>&copy; {{year}} Yoga App. Tüm hakları saklıdır.</p>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </center>
+</body>
+</html>

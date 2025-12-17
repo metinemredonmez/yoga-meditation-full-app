@@ -1,0 +1,33 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: yoga-app-backend
+  labels:
+    app: yoga-app-backend
+    component: api
+spec:
+  type: ClusterIP
+  ports:
+    - name: http
+      port: 80
+      targetPort: http
+      protocol: TCP
+  selector:
+    app: yoga-app-backend
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: yoga-app-backend-headless
+  labels:
+    app: yoga-app-backend
+spec:
+  type: ClusterIP
+  clusterIP: None
+  ports:
+    - name: http
+      port: 3000
+      targetPort: http
+  selector:
+    app: yoga-app-backend

@@ -1,0 +1,146 @@
+{
+  "name": "Yoga App - Mindful Practice",
+  "short_name": "Yoga App",
+  "description": "Transform your yoga practice with personalized classes, guided meditations, and expert instruction",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#6366f1",
+  "orientation": "portrait-primary",
+  "scope": "/",
+  "lang": "tr",
+  "dir": "ltr",
+  "categories": ["health", "fitness", "lifestyle"],
+  "icons": [
+    {
+      "src": "/icons/icon-72x72.png",
+      "sizes": "72x72",
+      "type": "image/png",
+      "purpose": "maskable any"
+    },
+    {
+      "src": "/icons/icon-96x96.png",
+      "sizes": "96x96",
+      "type": "image/png",
+      "purpose": "maskable any"
+    },
+    {
+      "src": "/icons/icon-128x128.png",
+      "sizes": "128x128",
+      "type": "image/png",
+      "purpose": "maskable any"
+    },
+    {
+      "src": "/icons/icon-144x144.png",
+      "sizes": "144x144",
+      "type": "image/png",
+      "purpose": "maskable any"
+    },
+    {
+      "src": "/icons/icon-152x152.png",
+      "sizes": "152x152",
+      "type": "image/png",
+      "purpose": "maskable any"
+    },
+    {
+      "src": "/icons/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable any"
+    },
+    {
+      "src": "/icons/icon-384x384.png",
+      "sizes": "384x384",
+      "type": "image/png",
+      "purpose": "maskable any"
+    },
+    {
+      "src": "/icons/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable any"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/screenshots/home.png",
+      "sizes": "1080x1920",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Home Screen"
+    },
+    {
+      "src": "/screenshots/class.png",
+      "sizes": "1080x1920",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Class View"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Bugünkü Dersler",
+      "short_name": "Dersler",
+      "description": "Bugün için önerilen yoga dersleri",
+      "url": "/classes/today",
+      "icons": [
+        {
+          "src": "/icons/shortcut-classes.png",
+          "sizes": "96x96"
+        }
+      ]
+    },
+    {
+      "name": "Hızlı Meditasyon",
+      "short_name": "Meditasyon",
+      "description": "5 dakikalık hızlı meditasyon",
+      "url": "/meditation/quick",
+      "icons": [
+        {
+          "src": "/icons/shortcut-meditation.png",
+          "sizes": "96x96"
+        }
+      ]
+    },
+    {
+      "name": "İlerleme",
+      "short_name": "İlerleme",
+      "description": "Yoga ilerlemenizi görün",
+      "url": "/profile/progress",
+      "icons": [
+        {
+          "src": "/icons/shortcut-progress.png",
+          "sizes": "96x96"
+        }
+      ]
+    }
+  ],
+  "related_applications": [
+    {
+      "platform": "play",
+      "url": "https://play.google.com/store/apps/details?id=com.yogaapp",
+      "id": "com.yogaapp"
+    },
+    {
+      "platform": "itunes",
+      "url": "https://apps.apple.com/app/yoga-app/id123456789"
+    }
+  ],
+  "prefer_related_applications": false,
+  "share_target": {
+    "action": "/share",
+    "method": "POST",
+    "enctype": "multipart/form-data",
+    "params": {
+      "title": "title",
+      "text": "text",
+      "url": "url"
+    }
+  },
+  "protocol_handlers": [
+    {
+      "protocol": "web+yoga",
+      "url": "/class/%s"
+    }
+  ]
+}

@@ -1,0 +1,584 @@
+import { ReviewStatus, Prisma } from '@prisma/client';
+import { prisma } from '../utils/database';
+import { logger } from '../utils/logger';
+
+// ============================================
+// Types
+// ============================================
+
+interface CreateReviewInput {
+  instructorId: string;
+  rating: number;
+  title?: string;
+  content?: string;
+  programId?: string;
+  classId?: string;
+}
+
+interface UpdateReviewInput {
+  rating?: number;
+  title?: string;
+  content?: string;
+}
+
+interface ReviewFilters {
+  status?: ReviewStatus;
+  rating?: number;
+  minRating?: number;
+  hasReply?: boolean;
+}
+
+// ============================================
+// Review Management
+// ============================================
+
+/**
+ * Create a review for an instructor
+ */
+export async function createReview(
+  studentId: string,
+  input: CreateReviewInput,
+) {
+  // Check if student already reviewed this instructor
+  const existingReview = await prisma.instructorReview.findFirst({
+    where: {
+      instructorId: input.instructorId,
+      studentId,
+    },
+  });
+
+  if (existingReview) {
+    throw new Error('You have already reviewed this instructor');
+  }
+
+  // Check if rating is valid
+  if (input.rating < 1 || input.rating > 5) {
+    throw new Error('Rating must be between 1 and 5');
+  }
+
+  // Check if student has purchased/booked from this instructor
+  const instructor = await prisma.instructorProfile.findUnique({
+    where: { id: input.instructorId },
+  });
+
+  if (!instructor) {
+    throw new Error('Instructor not found');
+  }
+
+  // Check for verified purchase
+  let isVerifiedPurchase = false;
+
+  if (input.programId) {
+    // Check video progress or payment for program
+    const progress = await prisma.videoProgress.findFirst({
+      where: {
+        userId: studentId,
+        lessonType: 'PROGRAM_SESSION',
+      },
+    });
+    isVerifiedPurchase = !!progress;
+  }
+
+  if (input.classId) {
+    // Check booking for class
+    const booking = await prisma.booking.findFirst({
+      where: {
+        userId: studentId,
+        classId: input.classId,
+        status: 'CONFIRMED',
+      },
+    });
+    isVerifiedPurchase = !!booking;
+  }
+
+  const review = await prisma.instructorReview.create({
+    data: {
+      instructorId: input.instructorId,
+      studentId,
+      rating: input.rating,
+      title: input.title,
+      content: input.content,
+      programId: input.programId,
+      classId: input.classId,
+      isVerifiedPurchase,
+      status: 'PENDING', // Reviews need moderation
+    },
+    include: {
+      student: {
+        select: { id: true, firstName: true, lastName: true },
+      },
+    },
+  });
+
+  logger.info(
+    { reviewId: review.id, instructorId: input.instructorId, studentId },
+    'Review created',
+  );
+
+  return review;
+}
+
+/**
+ * Update a review
+ */
+export async function updateReview(
+  reviewId: string,
+  studentId: string,
+  input: UpdateReviewInput,
+) {
+  const review = await prisma.instructorReview.findUnique({
+    where: { id: reviewId },
+  });
+
+  if (!review) {
+    throw new Error('Review not found');
+  }
+
+  if (review.studentId !== studentId) {
+    throw new Error('You can only edit your own reviews');
+  }
+
+  if (input.rating && (input.rating < 1 || input.rating > 5)) {
+    throw new Error('Rating must be between 1 and 5');
+  }
+
+  const updatedReview = await prisma.instructorReview.update({
+    where: { id: reviewId },
+    data: {
+      rating: input.rating,
+      title: input.title,
+      content: input.content,
+      status: 'PENDING', // Re-moderation after edit
+    },
+    include: {
+      student: {
+        select: { id: true, firstName: true, lastName: true },
+      },
+    },
+  });
+
+  logger.info({ reviewId, studentId }, 'Review updated');
+
+  return updatedReview;
+}
+
+/**
+ * Delete a review
+ */
+export async function deleteReview(reviewId: string, studentId: string) {
+  const review = await prisma.instructorReview.findUnique({
+    where: { id: reviewId },
+  });
+
+  if (!review) {
+    throw new Error('Review not found');
+  }
+
+  if (review.studentId !== studentId) {
+    throw new Error('You can only delete your own reviews');
+  }
+
+  await prisma.instructorReview.delete({
+    where: { id: reviewId },
+  });
+
+  // Recalculate instructor rating
+  await calculateAverageRating(review.instructorId);
+
+  logger.info({ reviewId, studentId }, 'Review deleted');
+}
+
+/**
+ * Reply to a review (instructor)
+ */
+export async function replyToReview(
+  reviewId: string,
+  instructorId: string,
+  reply: string,
+) {
+  const review = await prisma.instructorReview.findUnique({
+    where: { id: reviewId },
+  });
+
+  if (!review) {
+    throw new Error('Review not found');
+  }
+
+  if (review.instructorId !== instructorId) {
+    throw new Error('You can only reply to reviews on your profile');
+  }
+
+  const updatedReview = await prisma.instructorReview.update({
+    where: { id: reviewId },
+    data: {
+      instructorReply: reply,
+      repliedAt: new Date(),
+    },
+  });
+
+  logger.info({ reviewId, instructorId }, 'Review reply added');
+
+  return updatedReview;
+}
+
+// ============================================
+// Moderation
+// ============================================
+
+/**
+ * Moderate a review (admin)
+ */
+export async function moderateReview(
+  reviewId: string,
+  adminId: string,
+  status: ReviewStatus,
+  reason?: string,
+) {
+  const review = await prisma.instructorReview.findUnique({
+    where: { id: reviewId },
+  });
+
+  if (!review) {
+    throw new Error('Review not found');
+  }
+
+  const updatedReview = await prisma.instructorReview.update({
+    where: { id: reviewId },
+    data: { status },
+  });
+
+  // Create audit log
+  await prisma.auditLog.create({
+    data: {
+      userId: adminId,
+      action: 'REVIEW_MODERATED',
+      metadata: { reviewId, status, reason },
+    },
+  });
+
+  // Recalculate rating if status changed
+  await calculateAverageRating(review.instructorId);
+
+  logger.info({ reviewId, adminId, status }, 'Review moderated');
+
+  return updatedReview;
+}
+
+/**
+ * Report a review
+ */
+export async function reportReview(
+  reviewId: string,
+  userId: string,
+  reason: string,
+) {
+  // Check if already reported
+  const existing = await prisma.reviewReport.findUnique({
+    where: {
+      reviewId_userId: {
+        reviewId,
+        userId,
+      },
+    },
+  });
+
+  if (existing) {
+    throw new Error('You have already reported this review');
+  }
+
+  await prisma.reviewReport.create({
+    data: {
+      reviewId,
+      userId,
+      reason,
+    },
+  });
+
+  // Increment report count
+  const review = await prisma.instructorReview.update({
+    where: { id: reviewId },
+    data: {
+      reportCount: { increment: 1 },
+    },
+  });
+
+  // Auto-flag if too many reports
+  if (review.reportCount >= 5 && review.status !== 'FLAGGED') {
+    await prisma.instructorReview.update({
+      where: { id: reviewId },
+      data: { status: 'FLAGGED' },
+    });
+  }
+
+  logger.info({ reviewId, userId, reason }, 'Review reported');
+}
+
+/**
+ * Mark review as helpful
+ */
+export async function markHelpful(reviewId: string, userId: string) {
+  // Check if already marked
+  const existing = await prisma.reviewHelpful.findUnique({
+    where: {
+      reviewId_userId: {
+        reviewId,
+        userId,
+      },
+    },
+  });
+
+  if (existing) {
+    // Remove helpful mark
+    await prisma.reviewHelpful.delete({
+      where: {
+        reviewId_userId: {
+          reviewId,
+          userId,
+        },
+      },
+    });
+
+    await prisma.instructorReview.update({
+      where: { id: reviewId },
+      data: {
+        helpfulCount: { decrement: 1 },
+      },
+    });
+
+    return { marked: false };
+  }
+
+  await prisma.reviewHelpful.create({
+    data: {
+      reviewId,
+      userId,
+    },
+  });
+
+  await prisma.instructorReview.update({
+    where: { id: reviewId },
+    data: {
+      helpfulCount: { increment: 1 },
+    },
+  });
+
+  return { marked: true };
+}
+
+// ============================================
+// Review Queries
+// ============================================
+
+/**
+ * Get reviews for an instructor
+ */
+export async function getInstructorReviews(
+  instructorId: string,
+  filters: ReviewFilters = {},
+  pagination: { page?: number; limit?: number } = {},
+) {
+  const { page = 1, limit = 20 } = pagination;
+
+  const where: Prisma.InstructorReviewWhereInput = {
+    instructorId,
+    status: filters.status || 'APPROVED', // Default to approved reviews only
+  };
+
+  if (filters.rating) {
+    where.rating = filters.rating;
+  }
+
+  if (filters.minRating) {
+    where.rating = { gte: filters.minRating };
+  }
+
+  if (filters.hasReply !== undefined) {
+    if (filters.hasReply) {
+      where.instructorReply = { not: null };
+    } else {
+      where.instructorReply = null;
+    }
+  }
+
+  const [items, total] = await Promise.all([
+    prisma.instructorReview.findMany({
+      where,
+      orderBy: { createdAt: 'desc' },
+      skip: (page - 1) * limit,
+      take: limit,
+      include: {
+        student: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+          },
+        },
+      },
+    }),
+    prisma.instructorReview.count({ where }),
+  ]);
+
+  return {
+    items,
+    total,
+    page,
+    limit,
+    totalPages: Math.ceil(total / limit),
+  };
+}
+
+/**
+ * Get pending reviews for moderation (admin)
+ */
+export async function getPendingReviews(
+  pagination: { page?: number; limit?: number } = {},
+) {
+  const { page = 1, limit = 20 } = pagination;
+
+  const where: Prisma.InstructorReviewWhereInput = {
+    status: { in: ['PENDING', 'FLAGGED'] },
+  };
+
+  const [items, total] = await Promise.all([
+    prisma.instructorReview.findMany({
+      where,
+      orderBy: [
+        { status: 'asc' }, // FLAGGED first
+        { createdAt: 'asc' },
+      ],
+      skip: (page - 1) * limit,
+      take: limit,
+      include: {
+        student: {
+          select: { id: true, firstName: true, lastName: true, email: true },
+        },
+        instructor: {
+          select: { id: true, displayName: true, slug: true },
+        },
+      },
+    }),
+    prisma.instructorReview.count({ where }),
+  ]);
+
+  return {
+    items,
+    total,
+    page,
+    limit,
+    totalPages: Math.ceil(total / limit),
+  };
+}
+
+/**
+ * Get review by ID
+ */
+export async function getReviewById(reviewId: string) {
+  return prisma.instructorReview.findUnique({
+    where: { id: reviewId },
+    include: {
+      student: {
+        select: { id: true, firstName: true, lastName: true },
+      },
+      instructor: {
+        select: { id: true, displayName: true, slug: true },
+      },
+    },
+  });
+}
+
+// ============================================
+// Rating Calculation
+// ============================================
+
+/**
+ * Calculate and update average rating for instructor
+ */
+export async function calculateAverageRating(instructorId: string) {
+  const stats = await prisma.instructorReview.aggregate({
+    where: {
+      instructorId,
+      status: 'APPROVED',
+    },
+    _avg: { rating: true },
+    _count: true,
+  });
+
+  await prisma.instructorProfile.update({
+    where: { id: instructorId },
+    data: {
+      averageRating: stats._avg.rating || 0,
+      totalReviews: stats._count,
+    },
+  });
+
+  logger.debug(
+    { instructorId, avgRating: stats._avg.rating, count: stats._count },
+    'Average rating calculated',
+  );
+
+  return {
+    averageRating: stats._avg.rating || 0,
+    totalReviews: stats._count,
+  };
+}
+
+/**
+ * Get rating distribution for instructor
+ */
+export async function getRatingDistribution(instructorId: string) {
+  const distribution = await prisma.instructorReview.groupBy({
+    by: ['rating'],
+    where: {
+      instructorId,
+      status: 'APPROVED',
+    },
+    _count: true,
+  });
+
+  const result: Record<number, number> = {
+    1: 0,
+    2: 0,
+    3: 0,
+    4: 0,
+    5: 0,
+  };
+
+  for (const item of distribution) {
+    result[item.rating] = item._count;
+  }
+
+  return result;
+}
+
+// ============================================
+// Review Stats
+// ============================================
+
+/**
+ * Get review statistics for instructor
+ */
+export async function getReviewStats(instructorId: string) {
+  const [total, approved, pending, avgRating, distribution] = await Promise.all([
+    prisma.instructorReview.count({ where: { instructorId } }),
+    prisma.instructorReview.count({
+      where: { instructorId, status: 'APPROVED' },
+    }),
+    prisma.instructorReview.count({
+      where: { instructorId, status: 'PENDING' },
+    }),
+    prisma.instructorReview.aggregate({
+      where: { instructorId, status: 'APPROVED' },
+      _avg: { rating: true },
+    }),
+    getRatingDistribution(instructorId),
+  ]);
+
+  return {
+    total,
+    approved,
+    pending,
+    averageRating: avgRating._avg.rating || 0,
+    distribution,
+  };
+}

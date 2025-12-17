@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#6366f1">
+  <title>Çevrimdışı - Yoga App</title>
+  <link rel="manifest" href="/manifest.json">
+  <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192x192.png">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .container {
+      background: white;
+      border-radius: 24px;
+      padding: 48px;
+      max-width: 420px;
+      width: 100%;
+      text-align: center;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+    }
+
+    .icon {
+      width: 120px;
+      height: 120px;
+      margin: 0 auto 24px;
+      background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .icon svg {
+      width: 64px;
+      height: 64px;
+      color: #6366f1;
+    }
+
+    h1 {
+      font-size: 24px;
+      color: #1f2937;
+      margin-bottom: 12px;
+      font-weight: 700;
+    }
+
+    p {
+      color: #6b7280;
+      font-size: 16px;
+      line-height: 1.6;
+      margin-bottom: 32px;
+    }
+
+    .actions {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 14px 24px;
+      border-radius: 12px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      text-decoration: none;
+      border: none;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+      color: white;
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 20px rgba(99, 102, 241, 0.3);
+    }
+
+    .btn-secondary {
+      background: #f3f4f6;
+      color: #374151;
+    }
+
+    .btn-secondary:hover {
+      background: #e5e7eb;
+    }
+
+    .offline-features {
+      margin-top: 32px;
+      padding-top: 32px;
+      border-top: 1px solid #e5e7eb;
+    }
+
+    .offline-features h2 {
+      font-size: 14px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: #9ca3af;
+      margin-bottom: 16px;
+    }
+
+    .feature-list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .feature-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px;
+      background: #f9fafb;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: background 0.2s ease;
+    }
+
+    .feature-item:hover {
+      background: #f3f4f6;
+    }
+
+    .feature-icon {
+      width: 40px;
+      height: 40px;
+      background: white;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    }
+
+    .feature-icon svg {
+      width: 20px;
+      height: 20px;
+      color: #6366f1;
+    }
+
+    .feature-text {
+      text-align: left;
+    }
+
+    .feature-text h3 {
+      font-size: 14px;
+      font-weight: 600;
+      color: #1f2937;
+    }
+
+    .feature-text span {
+      font-size: 12px;
+      color: #9ca3af;
+    }
+
+    .status {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      margin-top: 24px;
+      font-size: 14px;
+      color: #ef4444;
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      background: #ef4444;
+      border-radius: 50%;
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+
+    .status.online {
+      color: #10b981;
+    }
+
+    .status.online .status-dot {
+      background: #10b981;
+      animation: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="icon">
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 5.636a9 9 0 010 12.728m0 0l-2.829-2.829m2.829 2.829L21 21M15.536 8.464a5 5 0 010 7.072m0 0l-2.829-2.829m-4.243 2.829a4.978 4.978 0 01-1.414-2.83m-1.414 5.658a9 9 0 01-2.167-9.238m7.824 2.167a1 1 0 111.414 1.414m-1.414-1.414L3 3" />
+      </svg>
+    </div>
+
+    <h1>Çevrimdışısınız</h1>
+    <p>
+      Internet bağlantınız yok gibi görünüyor.
+      Endişelenmeyin, indirdiğiniz içeriklere hala erişebilirsiniz.
+    </p>
+
+    <div class="actions">
+      <button class="btn btn-primary" onclick="tryReconnect()">
+        <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+        </svg>
+        Tekrar Dene
+      </button>
+      <a href="/" class="btn btn-secondary">
+        <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+        </svg>
+        Ana Sayfaya Git
+      </a>
+    </div>
+
+    <div class="offline-features">
+      <h2>Çevrimdışı Kullanılabilir</h2>
+      <div class="feature-list">
+        <div class="feature-item" onclick="openOfflineContent('classes')">
+          <div class="feature-icon">
+            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </div>
+          <div class="feature-text">
+            <h3>İndirilen Dersler</h3>
+            <span>Offline izlemeye hazır</span>
+          </div>
+        </div>
+
+        <div class="feature-item" onclick="openOfflineContent('poses')">
+          <div class="feature-icon">
+            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            </svg>
+          </div>
+          <div class="feature-text">
+            <h3>Poz Kütüphanesi</h3>
+            <span>Tüm pozlar önbelleğe alındı</span>
+          </div>
+        </div>
+
+        <div class="feature-item" onclick="openOfflineContent('progress')">
+          <div class="feature-icon">
+            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+            </svg>
+          </div>
+          <div class="feature-text">
+            <h3>İlerlemeniz</h3>
+            <span>Son senkronizasyon verileri</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="status" id="connectionStatus">
+      <span class="status-dot"></span>
+      <span>Çevrimdışı</span>
+    </div>
+  </div>
+
+  <script>
+    // Check connection status
+    function updateConnectionStatus() {
+      const statusEl = document.getElementById('connectionStatus');
+      if (navigator.onLine) {
+        statusEl.classList.add('online');
+        statusEl.innerHTML = `
+          <span class="status-dot"></span>
+          <span>Çevrimiçi - Yönlendiriliyor...</span>
+        `;
+        // Redirect to home after a short delay
+        setTimeout(() => {
+          window.location.href = '/';
+        }, 1500);
+      } else {
+        statusEl.classList.remove('online');
+        statusEl.innerHTML = `
+          <span class="status-dot"></span>
+          <span>Çevrimdışı</span>
+        `;
+      }
+    }
+
+    // Listen for online/offline events
+    window.addEventListener('online', updateConnectionStatus);
+    window.addEventListener('offline', updateConnectionStatus);
+
+    // Try to reconnect
+    function tryReconnect() {
+      const btn = event.target.closest('button');
+      btn.disabled = true;
+      btn.innerHTML = `
+        <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" class="animate-spin">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+        </svg>
+        Kontrol ediliyor...
+      `;
+
+      // Check connection
+      fetch('/api/health', { method: 'HEAD', cache: 'no-store' })
+        .then(response => {
+          if (response.ok) {
+            window.location.reload();
+          } else {
+            throw new Error('Still offline');
+          }
+        })
+        .catch(() => {
+          btn.disabled = false;
+          btn.innerHTML = `
+            <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+            Tekrar Dene
+          `;
+          alert('Hala çevrimdışısınız. Lütfen internet bağlantınızı kontrol edin.');
+        });
+    }
+
+    // Open offline content
+    function openOfflineContent(type) {
+      // Try to open cached pages
+      const urls = {
+        classes: '/offline/classes',
+        poses: '/offline/poses',
+        progress: '/offline/progress'
+      };
+
+      const url = urls[type] || '/';
+
+      // Check if cached
+      if ('caches' in window) {
+        caches.match(url).then(response => {
+          if (response) {
+            window.location.href = url;
+          } else {
+            alert('Bu içerik henüz önbelleğe alınmamış. Çevrimiçi olduğunuzda tekrar deneyin.');
+          }
+        });
+      }
+    }
+
+    // Initial check
+    updateConnectionStatus();
+
+    // Add spin animation
+    const style = document.createElement('style');
+    style.textContent = `
+      @keyframes spin {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
+      }
+      .animate-spin {
+        animation: spin 1s linear infinite;
+      }
+    `;
+    document.head.appendChild(style);
+  </script>
+</body>
+</html>

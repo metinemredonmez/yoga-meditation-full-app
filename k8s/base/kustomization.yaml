@@ -1,0 +1,20 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+metadata:
+  name: yoga-app-backend
+
+resources:
+  - deployment.yaml
+  - service.yaml
+  - ingress.yaml
+  - hpa.yaml
+
+commonLabels:
+  app.kubernetes.io/name: yoga-app-backend
+  app.kubernetes.io/part-of: yoga-app
+  app.kubernetes.io/managed-by: kustomize
+
+images:
+  - name: ghcr.io/yoga-app/backend
+    newTag: latest

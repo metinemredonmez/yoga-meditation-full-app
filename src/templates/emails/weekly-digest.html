@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Haftalık Özet</title>
+  <style>
+    body { margin: 0; padding: 0; background-color: #f4f4f4; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+    .container { max-width: 600px; margin: 0 auto; background: #fff; }
+    .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 40px; text-align: center; }
+    .header img { max-width: 120px; }
+    .header h1 { color: #fff; margin: 20px 0 0; font-size: 24px; }
+    .header p { color: rgba(255,255,255,0.9); margin: 10px 0 0; }
+    .content { padding: 40px; }
+    .greeting { font-size: 18px; color: #333; margin-bottom: 20px; }
+    .stats-grid { margin: 30px 0; }
+    .stats-row { display: flex; justify-content: space-between; margin-bottom: 15px; }
+    .stat-box { flex: 1; background: #f8f9fa; border-radius: 12px; padding: 20px; text-align: center; margin: 0 8px; }
+    .stat-box:first-child { margin-left: 0; }
+    .stat-box:last-child { margin-right: 0; }
+    .stat-number { font-size: 36px; font-weight: 700; color: #667eea; }
+    .stat-label { font-size: 14px; color: #666; margin-top: 5px; }
+    .progress-section { margin: 30px 0; }
+    .progress-title { color: #333; font-size: 18px; margin-bottom: 15px; }
+    .progress-bar-bg { background: #e9ecef; border-radius: 50px; height: 20px; overflow: hidden; }
+    .progress-bar { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); height: 100%; border-radius: 50px; }
+    .progress-text { display: flex; justify-content: space-between; margin-top: 10px; font-size: 14px; color: #666; }
+    .achievements-section { margin: 30px 0; }
+    .section-title { color: #667eea; font-size: 20px; margin-bottom: 20px; border-bottom: 2px solid #667eea; padding-bottom: 10px; }
+    .achievement-item { display: flex; align-items: center; background: #f8f9fa; border-radius: 12px; padding: 15px; margin: 10px 0; }
+    .achievement-icon { font-size: 32px; margin-right: 15px; }
+    .achievement-info h4 { margin: 0 0 5px; color: #333; }
+    .achievement-info p { margin: 0; color: #666; font-size: 14px; }
+    .recommendations-section { margin: 30px 0; }
+    .class-card { background: #f8f9fa; border-radius: 12px; padding: 20px; margin: 15px 0; display: flex; }
+    .class-thumbnail { width: 100px; height: 70px; border-radius: 8px; margin-right: 20px; object-fit: cover; }
+    .class-info { flex: 1; }
+    .class-info h4 { margin: 0 0 8px; color: #333; }
+    .class-info p { margin: 0 0 10px; color: #666; font-size: 14px; }
+    .class-meta { font-size: 12px; color: #999; }
+    .motivation-box { background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%); border-radius: 16px; padding: 30px; text-align: center; margin: 30px 0; }
+    .motivation-quote { font-size: 20px; color: #333; font-style: italic; margin: 0 0 15px; }
+    .motivation-author { color: #666; font-size: 14px; }
+    .button-container { text-align: center; margin: 30px 0; }
+    .button { display: inline-block; padding: 14px 40px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #fff !important; text-decoration: none; border-radius: 50px; font-weight: 600; font-size: 16px; }
+    .footer { background: #333; padding: 30px; text-align: center; }
+    .footer p { color: #999; font-size: 14px; margin: 10px 0; }
+    .footer a { color: #667eea; text-decoration: none; }
+  </style>
+</head>
+<body>
+  <center>
+    <table cellspacing="0" cellpadding="0" border="0" width="100%" style="padding: 20px 0;">
+      <tr>
+        <td>
+          <table class="container" cellspacing="0" cellpadding="0" border="0" width="600" align="center">
+            <!-- Header -->
+            <tr>
+              <td class="header">
+                <img src="{{logoUrl}}" alt="Yoga App">
+                <h1>Haftalık Özetiniz 📊</h1>
+                <p>{{weekRange}}</p>
+              </td>
+            </tr>
+
+            <!-- Content -->
+            <tr>
+              <td class="content">
+                <p class="greeting">Merhaba <strong>{{firstName}}</strong>! 👋</p>
+                <p style="color: #666;">Bu hafta harika bir iş çıkardınız! İşte özet:</p>
+
+                <!-- Stats Grid -->
+                <table class="stats-grid" width="100%">
+                  <tr>
+                    <td class="stat-box" style="background: #f8f9fa; border-radius: 12px; padding: 20px; text-align: center;">
+                      <div class="stat-number" style="font-size: 36px; font-weight: 700; color: #667eea;">{{completedClasses}}</div>
+                      <div class="stat-label" style="font-size: 14px; color: #666; margin-top: 5px;">Tamamlanan Ders</div>
+                    </td>
+                    <td class="stat-box" style="background: #f8f9fa; border-radius: 12px; padding: 20px; text-align: center;">
+                      <div class="stat-number" style="font-size: 36px; font-weight: 700; color: #28a745;">{{totalMinutes}}</div>
+                      <div class="stat-label" style="font-size: 14px; color: #666; margin-top: 5px;">Dakika</div>
+                    </td>
+                    <td class="stat-box" style="background: #f8f9fa; border-radius: 12px; padding: 20px; text-align: center;">
+                      <div class="stat-number" style="font-size: 36px; font-weight: 700; color: #ffc107;">{{streak}}</div>
+                      <div class="stat-label" style="font-size: 14px; color: #666; margin-top: 5px;">Gün Serisi</div>
+                    </td>
+                  </tr>
+                </table>
+
+                <!-- Progress -->
+                <div class="progress-section">
+                  <h3 class="progress-title">Haftalık Hedefiniz</h3>
+                  <div class="progress-bar-bg">
+                    <div class="progress-bar" style="width: {{progressPercent}}%;"></div>
+                  </div>
+                  <div class="progress-text">
+                    <span>{{completedClasses}} / {{weeklyGoal}} ders</span>
+                    <span>{{progressPercent}}%</span>
+                  </div>
+                </div>
+
+                <!-- Achievements -->
+                {{#if newAchievements}}
+                <div class="achievements-section">
+                  <h3 class="section-title">🏆 Yeni Başarılar</h3>
+                  {{#each newAchievements}}
+                  <div class="achievement-item">
+                    <span class="achievement-icon">{{this.icon}}</span>
+                    <div class="achievement-info">
+                      <h4>{{this.title}}</h4>
+                      <p>{{this.description}}</p>
+                    </div>
+                  </div>
+                  {{/each}}
+                </div>
+                {{/if}}
+
+                <!-- Recommendations -->
+                <div class="recommendations-section">
+                  <h3 class="section-title">🎯 Size Özel Öneriler</h3>
+                  {{#each recommendations}}
+                  <div class="class-card">
+                    <img src="{{this.thumbnail}}" alt="{{this.title}}" class="class-thumbnail">
+                    <div class="class-info">
+                      <h4>{{this.title}}</h4>
+                      <p>{{this.instructor}}</p>
+                      <span class="class-meta">{{this.duration}} dk • {{this.level}}</span>
+                    </div>
+                  </div>
+                  {{/each}}
+                </div>
+
+                <!-- Motivation -->
+                <div class="motivation-box">
+                  <p class="motivation-quote">"{{motivationQuote}}"</p>
+                  <p class="motivation-author">— {{quoteAuthor}}</p>
+                </div>
+
+                <div class="button-container">
+                  <a href="{{dashboardUrl}}" class="button">Bu Haftayı Görüntüle</a>
+                </div>
+              </td>
+            </tr>
+
+            <!-- Footer -->
+            <tr>
+              <td class="footer">
+                <p>E-posta tercihlerini değiştirmek için <a href="{{preferencesUrl}}">buraya tıklayın</a></p>
+                <p>&copy; {{year}} Yoga App. Tüm hakları saklıdır.</p>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </center>
+</body>
+</html>

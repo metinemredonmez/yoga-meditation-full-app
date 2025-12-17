@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ödeme Onayı</title>
+  <style>
+    body { margin: 0; padding: 0; background-color: #f4f4f4; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+    .container { max-width: 600px; margin: 0 auto; background: #fff; }
+    .header { background: linear-gradient(135deg, #28a745 0%, #20c997 100%); padding: 40px; text-align: center; }
+    .header img { max-width: 120px; }
+    .header h1 { color: #fff; margin: 20px 0 0; font-size: 24px; }
+    .success-icon { width: 80px; height: 80px; margin: 20px auto; display: block; }
+    .content { padding: 40px; }
+    .greeting { font-size: 18px; color: #333; margin-bottom: 20px; }
+    .success-message { background: #d4edda; border-radius: 12px; padding: 25px; text-align: center; margin-bottom: 30px; }
+    .success-message h2 { color: #28a745; margin: 0; font-size: 22px; }
+    .success-message p { color: #155724; margin: 10px 0 0; }
+    .invoice-box { background: #f8f9fa; border-radius: 12px; padding: 25px; margin-bottom: 30px; }
+    .invoice-header { display: flex; justify-content: space-between; margin-bottom: 20px; border-bottom: 2px solid #eee; padding-bottom: 15px; }
+    .invoice-title { font-size: 18px; font-weight: 600; color: #333; }
+    .invoice-number { color: #666; font-size: 14px; }
+    .invoice-row { display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #eee; }
+    .invoice-row:last-child { border-bottom: none; }
+    .invoice-label { color: #666; }
+    .invoice-value { color: #333; font-weight: 500; }
+    .invoice-total { display: flex; justify-content: space-between; padding: 15px 0; margin-top: 15px; border-top: 2px solid #667eea; font-size: 18px; }
+    .invoice-total .label { color: #333; font-weight: 600; }
+    .invoice-total .value { color: #667eea; font-weight: 700; }
+    .subscription-info { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 12px; padding: 25px; color: #fff; margin-bottom: 30px; }
+    .subscription-info h3 { margin: 0 0 15px; }
+    .subscription-details { display: flex; justify-content: space-between; }
+    .subscription-item { text-align: center; }
+    .subscription-item .label { font-size: 12px; opacity: 0.8; }
+    .subscription-item .value { font-size: 18px; font-weight: 600; margin-top: 5px; }
+    .next-steps { margin-top: 30px; }
+    .next-steps h3 { color: #667eea; margin-bottom: 15px; }
+    .step-item { display: flex; align-items: center; margin: 15px 0; }
+    .step-icon { width: 40px; height: 40px; background: #f0f0ff; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-right: 15px; }
+    .step-text { color: #333; }
+    .button { display: inline-block; padding: 14px 40px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #fff !important; text-decoration: none; border-radius: 50px; font-weight: 600; font-size: 16px; }
+    .button-container { text-align: center; margin: 30px 0; }
+    .footer { background: #333; padding: 30px; text-align: center; }
+    .footer p { color: #999; font-size: 14px; margin: 10px 0; }
+    .footer a { color: #667eea; text-decoration: none; }
+  </style>
+</head>
+<body>
+  <center>
+    <table cellspacing="0" cellpadding="0" border="0" width="100%" style="padding: 20px 0;">
+      <tr>
+        <td>
+          <table class="container" cellspacing="0" cellpadding="0" border="0" width="600" align="center">
+            <!-- Header -->
+            <tr>
+              <td class="header">
+                <img src="{{logoUrl}}" alt="Yoga App">
+                <h1>Ödeme Başarılı! ✅</h1>
+              </td>
+            </tr>
+
+            <!-- Content -->
+            <tr>
+              <td class="content">
+                <p class="greeting">Merhaba <strong>{{firstName}}</strong>,</p>
+
+                <div class="success-message">
+                  <h2>🎉 Ödemeniz Alındı!</h2>
+                  <p>Premium üyeliğiniz aktif edildi</p>
+                </div>
+
+                <!-- Invoice -->
+                <div class="invoice-box">
+                  <table width="100%">
+                    <tr>
+                      <td class="invoice-title">Fatura Detayları</td>
+                      <td class="invoice-number" style="text-align: right;">Fatura #{{invoiceNumber}}</td>
+                    </tr>
+                  </table>
+
+                  <table width="100%" style="margin-top: 20px;">
+                    <tr class="invoice-row">
+                      <td class="invoice-label">Ürün</td>
+                      <td class="invoice-value" style="text-align: right;">{{productName}}</td>
+                    </tr>
+                    <tr class="invoice-row">
+                      <td class="invoice-label">Dönem</td>
+                      <td class="invoice-value" style="text-align: right;">{{billingPeriod}}</td>
+                    </tr>
+                    <tr class="invoice-row">
+                      <td class="invoice-label">Ödeme Tarihi</td>
+                      <td class="invoice-value" style="text-align: right;">{{paymentDate}}</td>
+                    </tr>
+                    <tr class="invoice-row">
+                      <td class="invoice-label">Ödeme Yöntemi</td>
+                      <td class="invoice-value" style="text-align: right;">{{paymentMethod}}</td>
+                    </tr>
+                  </table>
+
+                  <table width="100%" class="invoice-total">
+                    <tr>
+                      <td class="label">Toplam</td>
+                      <td class="value" style="text-align: right;">{{totalAmount}}</td>
+                    </tr>
+                  </table>
+                </div>
+
+                <!-- Subscription Info -->
+                <div class="subscription-info">
+                  <h3>Abonelik Bilgileri</h3>
+                  <table width="100%">
+                    <tr>
+                      <td style="text-align: center; padding: 10px;">
+                        <div style="font-size: 12px; opacity: 0.8;">Plan</div>
+                        <div style="font-size: 18px; font-weight: 600; margin-top: 5px;">{{planName}}</div>
+                      </td>
+                      <td style="text-align: center; padding: 10px;">
+                        <div style="font-size: 12px; opacity: 0.8;">Başlangıç</div>
+                        <div style="font-size: 18px; font-weight: 600; margin-top: 5px;">{{startDate}}</div>
+                      </td>
+                      <td style="text-align: center; padding: 10px;">
+                        <div style="font-size: 12px; opacity: 0.8;">Yenileme</div>
+                        <div style="font-size: 18px; font-weight: 600; margin-top: 5px;">{{renewalDate}}</div>
+                      </td>
+                    </tr>
+                  </table>
+                </div>
+
+                <!-- Next Steps -->
+                <div class="next-steps">
+                  <h3>🚀 Şimdi Ne Yapabilirsiniz?</h3>
+                  <div class="step-item">
+                    <div class="step-icon">📚</div>
+                    <div class="step-text">Tüm premium derslere sınırsız erişin</div>
+                  </div>
+                  <div class="step-item">
+                    <div class="step-icon">🎯</div>
+                    <div class="step-text">Özel programlara katılın</div>
+                  </div>
+                  <div class="step-item">
+                    <div class="step-icon">📺</div>
+                    <div class="step-text">Canlı derslere katılın</div>
+                  </div>
+                  <div class="step-item">
+                    <div class="step-icon">📥</div>
+                    <div class="step-text">Dersleri offline izlemek için indirin</div>
+                  </div>
+                </div>
+
+                <div class="button-container">
+                  <a href="{{dashboardUrl}}" class="button">Premium Derslere Git</a>
+                </div>
+
+                <p style="text-align: center; color: #666; font-size: 14px;">
+                  Faturanızı görüntülemek veya indirmek için <a href="{{invoiceUrl}}" style="color: #667eea;">buraya tıklayın</a>
+                </p>
+              </td>
+            </tr>
+
+            <!-- Footer -->
+            <tr>
+              <td class="footer">
+                <p>Sorularınız için: <a href="mailto:{{supportEmail}}">{{supportEmail}}</a></p>
+                <p>&copy; {{year}} Yoga App. Tüm hakları saklıdır.</p>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </center>
+</body>
+</html>

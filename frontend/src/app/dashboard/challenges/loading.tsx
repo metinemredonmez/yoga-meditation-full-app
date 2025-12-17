@@ -1,0 +1,9 @@
+import { TableSkeleton } from '@/components/ui/skeleton';
+
+export default function ChallengesLoading() {
+  return (
+    <div className='flex flex-1 flex-col gap-4 p-4 md:p-6'>
+      <TableSkeleton columns={5} rows={10} />
+    </div>
+  );
+}

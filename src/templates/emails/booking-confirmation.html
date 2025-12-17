@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Rezervasyon Onayı</title>
+  <style>
+    body { margin: 0; padding: 0; background-color: #f4f4f4; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+    .container { max-width: 600px; margin: 0 auto; background: #fff; }
+    .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 40px; text-align: center; }
+    .header img { max-width: 120px; }
+    .header h1 { color: #fff; margin: 20px 0 0; font-size: 24px; }
+    .content { padding: 40px; }
+    .greeting { font-size: 18px; color: #333; margin-bottom: 20px; }
+    .booking-card { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 16px; padding: 30px; color: #fff; margin: 20px 0; }
+    .booking-card h2 { margin: 0 0 20px; font-size: 24px; }
+    .booking-detail { display: flex; align-items: center; margin: 15px 0; }
+    .booking-icon { width: 24px; height: 24px; margin-right: 15px; }
+    .booking-text { font-size: 16px; }
+    .booking-label { opacity: 0.8; font-size: 12px; display: block; margin-bottom: 2px; }
+    .instructor-section { display: flex; align-items: center; background: #f8f9fa; border-radius: 12px; padding: 20px; margin: 20px 0; }
+    .instructor-avatar { width: 60px; height: 60px; border-radius: 50%; margin-right: 20px; }
+    .instructor-info h4 { margin: 0 0 5px; color: #333; }
+    .instructor-info p { margin: 0; color: #666; font-size: 14px; }
+    .class-info { background: #f8f9fa; border-radius: 12px; padding: 25px; margin: 20px 0; }
+    .class-info h3 { color: #667eea; margin: 0 0 15px; }
+    .class-info-row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #eee; }
+    .class-info-row:last-child { border-bottom: none; }
+    .class-info-label { color: #666; }
+    .class-info-value { color: #333; font-weight: 500; }
+    .calendar-add { background: #e8f5e9; border-radius: 12px; padding: 20px; margin: 20px 0; text-align: center; }
+    .calendar-add h4 { color: #28a745; margin: 0 0 15px; }
+    .calendar-buttons a { display: inline-block; margin: 5px; padding: 10px 20px; background: #fff; border: 1px solid #ddd; border-radius: 8px; color: #333; text-decoration: none; font-size: 14px; }
+    .calendar-buttons a:hover { background: #f4f4f4; }
+    .reminder-box { background: #fff3cd; border-left: 4px solid #ffc107; padding: 20px; margin: 20px 0; border-radius: 0 8px 8px 0; }
+    .reminder-box h4 { color: #856404; margin: 0 0 10px; }
+    .reminder-box p { color: #856404; margin: 0; font-size: 14px; }
+    .button-container { text-align: center; margin: 30px 0; }
+    .button { display: inline-block; padding: 14px 40px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #fff !important; text-decoration: none; border-radius: 50px; font-weight: 600; font-size: 16px; }
+    .button-secondary { background: #fff; color: #667eea !important; border: 2px solid #667eea; }
+    .cancel-link { text-align: center; margin-top: 20px; }
+    .cancel-link a { color: #dc3545; font-size: 14px; }
+    .footer { background: #333; padding: 30px; text-align: center; }
+    .footer p { color: #999; font-size: 14px; margin: 10px 0; }
+    .footer a { color: #667eea; text-decoration: none; }
+  </style>
+</head>
+<body>
+  <center>
+    <table cellspacing="0" cellpadding="0" border="0" width="100%" style="padding: 20px 0;">
+      <tr>
+        <td>
+          <table class="container" cellspacing="0" cellpadding="0" border="0" width="600" align="center">
+            <!-- Header -->
+            <tr>
+              <td class="header">
+                <img src="{{logoUrl}}" alt="Yoga App">
+                <h1>Rezervasyon Onaylandı! 🎉</h1>
+              </td>
+            </tr>
+
+            <!-- Content -->
+            <tr>
+              <td class="content">
+                <p class="greeting">Merhaba <strong>{{firstName}}</strong>,</p>
+                <p style="color: #666;">Aşağıdaki ders için rezervasyonunuz onaylandı.</p>
+
+                <!-- Booking Card -->
+                <div class="booking-card">
+                  <h2>{{className}}</h2>
+                  <div class="booking-detail">
+                    <span class="booking-icon">📅</span>
+                    <span class="booking-text">
+                      <span class="booking-label">Tarih</span>
+                      {{classDate}}
+                    </span>
+                  </div>
+                  <div class="booking-detail">
+                    <span class="booking-icon">🕐</span>
+                    <span class="booking-text">
+                      <span class="booking-label">Saat</span>
+                      {{classTime}}
+                    </span>
+                  </div>
+                  <div class="booking-detail">
+                    <span class="booking-icon">⏱️</span>
+                    <span class="booking-text">
+                      <span class="booking-label">Süre</span>
+                      {{duration}} dakika
+                    </span>
+                  </div>
+                  <div class="booking-detail">
+                    <span class="booking-icon">📍</span>
+                    <span class="booking-text">
+                      <span class="booking-label">Konum</span>
+                      {{location}}
+                    </span>
+                  </div>
+                </div>
+
+                <!-- Instructor -->
+                <div class="instructor-section">
+                  <img src="{{instructorAvatar}}" alt="{{instructorName}}" class="instructor-avatar">
+                  <div class="instructor-info">
+                    <h4>{{instructorName}}</h4>
+                    <p>{{instructorTitle}}</p>
+                  </div>
+                </div>
+
+                <!-- Class Info -->
+                <div class="class-info">
+                  <h3>Ders Detayları</h3>
+                  <table width="100%">
+                    <tr class="class-info-row">
+                      <td class="class-info-label">Seviye</td>
+                      <td class="class-info-value" style="text-align: right;">{{level}}</td>
+                    </tr>
+                    <tr class="class-info-row">
+                      <td class="class-info-label">Kategori</td>
+                      <td class="class-info-value" style="text-align: right;">{{category}}</td>
+                    </tr>
+                    <tr class="class-info-row">
+                      <td class="class-info-label">Rezervasyon No</td>
+                      <td class="class-info-value" style="text-align: right;">#{{bookingId}}</td>
+                    </tr>
+                  </table>
+                </div>
+
+                <!-- Calendar Add -->
+                <div class="calendar-add">
+                  <h4>📅 Takviminize Ekleyin</h4>
+                  <div class="calendar-buttons">
+                    <a href="{{googleCalendarUrl}}">Google Takvim</a>
+                    <a href="{{icsUrl}}">Apple / Outlook</a>
+                  </div>
+                </div>
+
+                <!-- Reminder -->
+                <div class="reminder-box">
+                  <h4>⏰ Hatırlatma</h4>
+                  <p>Dersten <strong>15 dakika önce</strong> hazır olmanızı öneririz. Rahat kıyafetler giymeyi ve yanınızda su bulundurmayı unutmayın!</p>
+                </div>
+
+                <div class="button-container">
+                  <a href="{{classUrl}}" class="button">Ders Detaylarını Gör</a>
+                </div>
+
+                <div class="cancel-link">
+                  <a href="{{cancelUrl}}">Rezervasyonu İptal Et</a>
+                </div>
+              </td>
+            </tr>
+
+            <!-- Footer -->
+            <tr>
+              <td class="footer">
+                <p>Sorularınız için: <a href="mailto:{{supportEmail}}">{{supportEmail}}</a></p>
+                <p>&copy; {{year}} Yoga App. Tüm hakları saklıdır.</p>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </center>
+</body>
+</html>

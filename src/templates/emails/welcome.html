@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Yoga App'e Hoş Geldiniz!</title>
+  <style>
+    body { margin: 0; padding: 0; background-color: #f4f4f4; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+    .container { max-width: 600px; margin: 0 auto; background: #fff; }
+    .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 40px; text-align: center; }
+    .header img { max-width: 120px; }
+    .header h1 { color: #fff; margin: 20px 0 0; font-size: 28px; }
+    .content { padding: 40px; }
+    .welcome-text { font-size: 18px; color: #333; line-height: 1.8; }
+    .user-name { color: #667eea; font-weight: 600; }
+    .feature-grid { margin: 30px 0; }
+    .feature-item { display: inline-block; width: 48%; vertical-align: top; padding: 20px; box-sizing: border-box; text-align: center; }
+    .feature-icon { width: 60px; height: 60px; margin-bottom: 15px; }
+    .feature-title { font-size: 16px; font-weight: 600; color: #333; margin-bottom: 8px; }
+    .feature-desc { font-size: 14px; color: #666; }
+    .cta-section { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; text-align: center; margin: 20px 0; border-radius: 12px; }
+    .cta-section h2 { color: #fff; margin: 0 0 15px; }
+    .cta-section p { color: rgba(255,255,255,0.9); margin: 0 0 20px; }
+    .button { display: inline-block; padding: 14px 40px; background: #fff; color: #667eea !important; text-decoration: none; border-radius: 50px; font-weight: 600; font-size: 16px; }
+    .tips-section { background: #f8f9fa; padding: 30px; margin: 20px 0; border-radius: 12px; }
+    .tips-section h3 { color: #667eea; margin-top: 0; }
+    .tip-item { display: flex; align-items: flex-start; margin: 15px 0; }
+    .tip-number { background: #667eea; color: #fff; width: 28px; height: 28px; border-radius: 50%; text-align: center; line-height: 28px; margin-right: 15px; flex-shrink: 0; }
+    .tip-text { color: #333; font-size: 15px; }
+    .footer { background: #333; padding: 30px; text-align: center; }
+    .footer p { color: #999; font-size: 14px; margin: 10px 0; }
+    .footer a { color: #667eea; text-decoration: none; }
+    .social-links a { display: inline-block; margin: 0 8px; }
+    .social-icon { width: 28px; height: 28px; }
+  </style>
+</head>
+<body>
+  <center>
+    <table cellspacing="0" cellpadding="0" border="0" width="100%" style="padding: 20px 0;">
+      <tr>
+        <td>
+          <table class="container" cellspacing="0" cellpadding="0" border="0" width="600" align="center">
+            <!-- Header -->
+            <tr>
+              <td class="header">
+                <img src="{{logoUrl}}" alt="Yoga App">
+                <h1>Hoş Geldiniz! 🧘</h1>
+              </td>
+            </tr>
+
+            <!-- Welcome Message -->
+            <tr>
+              <td class="content">
+                <p class="welcome-text">
+                  Merhaba <span class="user-name">{{firstName}}</span>,
+                </p>
+                <p class="welcome-text">
+                  Yoga App ailesine katıldığınız için çok mutluyuz! Sağlıklı bir yaşam yolculuğuna ilk adımı attınız.
+                </p>
+
+                <!-- Features -->
+                <table class="feature-grid" width="100%">
+                  <tr>
+                    <td class="feature-item">
+                      <img src="{{classesIcon}}" alt="Dersler" class="feature-icon">
+                      <div class="feature-title">500+ Ders</div>
+                      <div class="feature-desc">Her seviyeye uygun yoga dersleri</div>
+                    </td>
+                    <td class="feature-item">
+                      <img src="{{instructorsIcon}}" alt="Eğitmenler" class="feature-icon">
+                      <div class="feature-title">Uzman Eğitmenler</div>
+                      <div class="feature-desc">Sertifikalı yoga eğitmenleri</div>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td class="feature-item">
+                      <img src="{{programsIcon}}" alt="Programlar" class="feature-icon">
+                      <div class="feature-title">Özel Programlar</div>
+                      <div class="feature-desc">Hedeflerinize özel programlar</div>
+                    </td>
+                    <td class="feature-item">
+                      <img src="{{liveIcon}}" alt="Canlı" class="feature-icon">
+                      <div class="feature-title">Canlı Dersler</div>
+                      <div class="feature-desc">Eğitmenlerle gerçek zamanlı</div>
+                    </td>
+                  </tr>
+                </table>
+
+                <!-- CTA -->
+                <div class="cta-section">
+                  <h2>İlk Dersinize Başlayın</h2>
+                  <p>Başlangıç seviyesi için önerilen derslerimizi keşfedin</p>
+                  <a href="{{exploreUrl}}" class="button">Dersleri Keşfet</a>
+                </div>
+
+                <!-- Tips -->
+                <div class="tips-section">
+                  <h3>🌟 Başlarken İpuçları</h3>
+                  <div class="tip-item">
+                    <span class="tip-number">1</span>
+                    <span class="tip-text">Profilinizi tamamlayarak size özel öneriler alın</span>
+                  </div>
+                  <div class="tip-item">
+                    <span class="tip-number">2</span>
+                    <span class="tip-text">Günlük hatırlatıcıları açarak alışkanlık oluşturun</span>
+                  </div>
+                  <div class="tip-item">
+                    <span class="tip-number">3</span>
+                    <span class="tip-text">Başlangıç programımıza katılarak temelleri öğrenin</span>
+                  </div>
+                </div>
+
+                <p style="text-align: center; color: #666; font-size: 14px;">
+                  Herhangi bir sorunuz varsa <a href="mailto:{{supportEmail}}" style="color: #667eea;">destek ekibimize</a> ulaşabilirsiniz.
+                </p>
+              </td>
+            </tr>
+
+            <!-- Footer -->
+            <tr>
+              <td class="footer">
+                <div class="social-links" style="margin-bottom: 20px;">
+                  <a href="{{instagramUrl}}"><img src="{{instagramIcon}}" alt="Instagram" class="social-icon"></a>
+                  <a href="{{facebookUrl}}"><img src="{{facebookIcon}}" alt="Facebook" class="social-icon"></a>
+                  <a href="{{youtubeUrl}}"><img src="{{youtubeIcon}}" alt="YouTube" class="social-icon"></a>
+                </div>
+                <p>{{companyName}} | {{companyAddress}}</p>
+                <p><a href="{{unsubscribeUrl}}">E-posta tercihlerini yönet</a></p>
+                <p>&copy; {{year}} Yoga App. Tüm hakları saklıdır.</p>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </center>
+</body>
+</html>

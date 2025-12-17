@@ -1,0 +1,687 @@
+import { Request, Response } from 'express';
+import { z } from 'zod';
+import { Prisma } from '@prisma/client';
+import type { UserRole } from '@prisma/client';
+import { prisma } from '../utils/database';
+import { hashPassword, comparePassword } from '../utils/password';
+import { logger } from '../utils/logger';
+import { sendWelcomeEmail } from '../services/emailService';
+import { createTokenPair, revokeToken, refreshTokens } from '../services/tokenService';
+import { eventEmitter } from '../utils/eventEmitter';
+import {
+  createSignedUploadUrl,
+  ALLOWED_IMAGE_TYPES,
+  validateContentType,
+} from '../services/storageService';
+import { setAuthCookies, clearAuthCookies, getRefreshTokenFromCookies } from '../utils/cookies';
+
+const signupSchema = z.object({
+  email: z.string().email(),
+  password: z.string().min(8),
+  firstName: z.string().min(1).optional(),
+  lastName: z.string().min(1).optional(),
+  phoneNumber: z.string().optional(),
+  bio: z.string().optional(),
+});
+
+const loginSchema = z.object({
+  email: z.string().email(),
+  password: z.string().min(1),
+});
+
+const updateProfileSchema = z.object({
+  firstName: z.string().min(1).optional(),
+  lastName: z.string().min(1).optional(),
+  phoneNumber: z.string().optional(),
+  bio: z.string().optional(),
+  avatarUrl: z.string().optional(),
+});
+
+const changePasswordSchema = z.object({
+  currentPassword: z.string().min(1),
+  newPassword: z.string().min(8),
+});
+
+const deleteAccountSchema = z.object({
+  password: z.string().min(1),
+});
+
+const avatarUploadSchema = z.object({
+  filename: z.string().min(1),
+  contentType: z.string().min(1),
+});
+
+const idParamSchema = z.object({
+  id: z.string().cuid('Invalid user id'),
+});
+
+function buildUserResponse(user: {
+  id: string;
+  email: string;
+  firstName: string | null;
+  lastName: string | null;
+  role: UserRole;
+  phoneNumber: string | null;
+  bio: string | null;
+  avatarUrl?: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+  [key: string]: unknown;
+}) {
+  return {
+    id: user.id,
+    email: user.email,
+    firstName: user.firstName,
+    lastName: user.lastName,
+    role: user.role,
+    phoneNumber: user.phoneNumber,
+    bio: user.bio,
+    avatarUrl: user.avatarUrl ?? null,
+    createdAt: user.createdAt,
+    updatedAt: user.updatedAt,
+  };
+}
+
+async function recordAuditLog(params: {
+  userId?: string;
+  actorRole?: UserRole;
+  action: string;
+  metadata?: Prisma.JsonValue;
+}) {
+  const { userId, actorRole, action, metadata } = params;
+
+  try {
+    await prisma.auditLog.create({
+      data: {
+        userId: userId ?? null,
+        actorRole: actorRole ?? null,
+        action,
+        metadata: metadata ?? Prisma.JsonNull,
+      },
+    });
+  } catch (error) {
+    logger.warn({ err: error }, 'Failed to record audit log');
+  }
+}
+
+export async function signup(req: Request, res: Response) {
+  try {
+    const payload = signupSchema.parse(req.body);
+
+    const existingUser = await prisma.user.findUnique({
+      where: { email: payload.email },
+    });
+
+    if (existingUser) {
+      return res.status(400).json({ error: 'Email already in use' });
+    }
+
+    const passwordHash = await hashPassword(payload.password);
+
+    const user = await prisma.user.create({
+      data: {
+        email: payload.email,
+        passwordHash,
+        firstName: payload.firstName ?? null,
+        lastName: payload.lastName ?? null,
+        phoneNumber: payload.phoneNumber ?? null,
+        bio: payload.bio ?? null,
+        role: 'STUDENT',
+      },
+    });
+
+    await recordAuditLog({
+      userId: user.id,
+      actorRole: 'STUDENT',
+      action: 'user.signup',
+    });
+
+    // Send welcome email (non-blocking)
+    sendWelcomeEmail(user.email, user.firstName || '').catch((err) => {
+      logger.warn({ err, userId: user.id }, 'Failed to send welcome email');
+    });
+
+    // Emit user created event for webhooks
+    eventEmitter.emit('user.created', {
+      userId: user.id,
+      email: user.email,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      role: user.role,
+      createdAt: user.createdAt,
+    });
+
+    // Get request metadata for token tracking
+    const userAgent = req.headers['user-agent'];
+    const ipAddress =
+      (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() ||
+      req.ip ||
+      req.socket.remoteAddress;
+
+    // Create token pair with new token service
+    const tokens = await createTokenPair(
+      {
+        id: user.id,
+        userId: user.id,
+        email: user.email,
+        role: user.role,
+      },
+      userAgent,
+      ipAddress,
+    );
+
+    // Set HttpOnly cookies for web clients
+    setAuthCookies(res, tokens.accessToken, tokens.refreshToken);
+
+    return res.status(201).json({
+      message: 'Account created',
+      user: buildUserResponse(user),
+      // Still include tokens in response for mobile/API clients
+      tokens: {
+        accessToken: tokens.accessToken,
+        refreshToken: tokens.refreshToken,
+        expiresIn: tokens.expiresIn,
+        tokenType: 'Bearer',
+      },
+    });
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ error: 'Validation failed', details: error.flatten() });
+    }
+
+    console.error('Signup failed', error);
+    logger.error({ err: error }, 'Signup failed');
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+}
+
+export async function login(req: Request, res: Response) {
+  try {
+    const payload = loginSchema.parse(req.body);
+
+    const user = await prisma.user.findUnique({ where: { email: payload.email } });
+
+    if (!user) {
+      return res.status(401).json({ error: 'Invalid credentials' });
+    }
+
+    const valid = await comparePassword(payload.password, user.passwordHash);
+    if (!valid) {
+      return res.status(401).json({ error: 'Invalid credentials' });
+    }
+
+    await recordAuditLog({
+      userId: user.id,
+      actorRole: user.role,
+      action: 'user.login',
+    });
+
+    // Get request metadata for token tracking
+    const userAgent = req.headers['user-agent'];
+    const ipAddress =
+      (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() ||
+      req.ip ||
+      req.socket.remoteAddress;
+
+    // Create token pair with new token service
+    const tokens = await createTokenPair(
+      {
+        id: user.id,
+        userId: user.id,
+        email: user.email,
+        role: user.role,
+      },
+      userAgent,
+      ipAddress,
+    );
+
+    // Set HttpOnly cookies for web clients
+    setAuthCookies(res, tokens.accessToken, tokens.refreshToken);
+
+    return res.json({
+      message: 'Login successful',
+      user: buildUserResponse(user),
+      // Still include tokens in response for mobile/API clients
+      tokens: {
+        accessToken: tokens.accessToken,
+        refreshToken: tokens.refreshToken,
+        expiresIn: tokens.expiresIn,
+        tokenType: 'Bearer',
+      },
+    });
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ error: 'Validation failed', details: error.flatten() });
+    }
+
+    logger.error({ err: error }, 'Login failed');
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+}
+
+export async function getProfile(req: Request, res: Response) {
+  try {
+    if (!req.user) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { id: req.user.userId },
+    });
+
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    return res.json({ user: buildUserResponse(user) });
+  } catch (error) {
+    logger.error({ err: error }, 'Fetch profile failed');
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+}
+
+export async function updateProfile(req: Request, res: Response) {
+  try {
+    const { id } = idParamSchema.parse(req.params);
+    const payload = updateProfileSchema.parse(req.body);
+
+    if (!req.user) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
+    if (req.user.userId !== id && req.user.role !== 'ADMIN') {
+      return res.status(403).json({ error: 'Insufficient permissions' });
+    }
+
+    const updateData: Prisma.UserUpdateInput = {};
+
+    if (payload.firstName !== undefined) {
+      updateData.firstName = payload.firstName;
+    }
+
+    if (payload.lastName !== undefined) {
+      updateData.lastName = payload.lastName;
+    }
+
+    if (payload.phoneNumber !== undefined) {
+      updateData.phoneNumber = payload.phoneNumber ?? null;
+    }
+
+    if (payload.bio !== undefined) {
+      updateData.bio = payload.bio ?? null;
+    }
+
+    const user = await prisma.user.update({
+      where: { id },
+      data: updateData,
+    });
+
+    await recordAuditLog({
+      userId: id,
+      actorRole: req.user.role,
+      action: 'user.update',
+      metadata: { updatedBy: req.user.userId },
+    });
+
+    // Emit user updated event for webhooks
+    eventEmitter.emit('user.updated', {
+      userId: user.id,
+      email: user.email,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      role: user.role,
+      updatedAt: user.updatedAt,
+      updatedFields: Object.keys(payload),
+    });
+
+    return res.json({
+      message: 'Profile updated',
+      user: buildUserResponse(user),
+    });
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ error: 'Validation failed', details: error.flatten() });
+    }
+
+    logger.error({ err: error }, 'Update profile failed');
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+}
+
+export async function updateOwnProfile(req: Request, res: Response) {
+  try {
+    const payload = updateProfileSchema.parse(req.body);
+
+    if (!req.user) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
+    const userId = req.user.userId;
+    const updateData: Prisma.UserUpdateInput = {};
+
+    if (payload.firstName !== undefined) {
+      updateData.firstName = payload.firstName;
+    }
+
+    if (payload.lastName !== undefined) {
+      updateData.lastName = payload.lastName;
+    }
+
+    if (payload.phoneNumber !== undefined) {
+      updateData.phoneNumber = payload.phoneNumber ?? null;
+    }
+
+    if (payload.bio !== undefined) {
+      updateData.bio = payload.bio ?? null;
+    }
+
+    if (payload.avatarUrl !== undefined) {
+      updateData.avatarUrl = payload.avatarUrl ?? null;
+    }
+
+    const user = await prisma.user.update({
+      where: { id: userId },
+      data: updateData,
+    });
+
+    await recordAuditLog({
+      userId: userId,
+      actorRole: req.user.role,
+      action: 'user.update',
+      metadata: { updatedBy: req.user.userId },
+    });
+
+    eventEmitter.emit('user.updated', {
+      userId: user.id,
+      email: user.email,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      role: user.role,
+      updatedAt: user.updatedAt,
+      updatedFields: Object.keys(payload),
+    });
+
+    return res.json({
+      message: 'Profile updated',
+      user: buildUserResponse(user),
+    });
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ error: 'Validation failed', details: error.flatten() });
+    }
+
+    logger.error({ err: error }, 'Update own profile failed');
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+}
+
+export async function changePassword(req: Request, res: Response) {
+  try {
+    const payload = changePasswordSchema.parse(req.body);
+
+    if (!req.user) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { id: req.user.userId },
+    });
+
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const validPassword = await comparePassword(payload.currentPassword, user.passwordHash);
+    if (!validPassword) {
+      return res.status(400).json({ error: 'Current password is incorrect' });
+    }
+
+    const newPasswordHash = await hashPassword(payload.newPassword);
+
+    await prisma.user.update({
+      where: { id: req.user.userId },
+      data: { passwordHash: newPasswordHash },
+    });
+
+    await recordAuditLog({
+      userId: req.user.userId,
+      actorRole: req.user.role,
+      action: 'user.password_changed',
+    });
+
+    return res.json({ message: 'Password changed successfully' });
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ error: 'Validation failed', details: error.flatten() });
+    }
+
+    logger.error({ err: error }, 'Change password failed');
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+}
+
+export async function deleteOwnAccount(req: Request, res: Response) {
+  try {
+    const payload = deleteAccountSchema.parse(req.body);
+
+    if (!req.user) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { id: req.user.userId },
+    });
+
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const validPassword = await comparePassword(payload.password, user.passwordHash);
+    if (!validPassword) {
+      return res.status(400).json({ error: 'Password is incorrect' });
+    }
+
+    const userId = req.user.userId;
+    const userEmail = user.email;
+
+    await prisma.$transaction([
+      prisma.booking.deleteMany({ where: { userId } }),
+      prisma.payment.deleteMany({ where: { userId } }),
+      prisma.auditLog.create({
+        data: {
+          userId,
+          actorRole: req.user.role,
+          action: 'user.self_delete',
+          metadata: { deletedBy: userId },
+        },
+      }),
+      prisma.user.delete({ where: { id: userId } }),
+    ]);
+
+    eventEmitter.emit('user.deleted', {
+      userId,
+      email: userEmail,
+      deletedAt: new Date(),
+      deletedBy: userId,
+      selfDeleted: true,
+    });
+
+    return res.json({ message: 'Account deleted successfully' });
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ error: 'Validation failed', details: error.flatten() });
+    }
+
+    logger.error({ err: error }, 'Delete own account failed');
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+}
+
+export async function getAvatarUploadUrl(req: Request, res: Response) {
+  try {
+    const payload = avatarUploadSchema.parse(req.body);
+
+    if (!req.user) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
+    if (!validateContentType(payload.contentType, ALLOWED_IMAGE_TYPES)) {
+      return res.status(400).json({
+        error: 'Invalid file type. Allowed: JPEG, PNG, WebP, GIF',
+      });
+    }
+
+    const result = await createSignedUploadUrl({
+      filename: payload.filename,
+      contentType: payload.contentType,
+      userId: req.user.userId,
+      folder: 'images',
+    });
+
+    return res.json({
+      uploadUrl: result.uploadUrl,
+      fileUrl: result.fileUrl,
+      expiresAt: result.expiresAt,
+    });
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ error: 'Validation failed', details: error.flatten() });
+    }
+
+    logger.error({ err: error }, 'Get avatar upload URL failed');
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+}
+
+export async function deleteUser(req: Request, res: Response) {
+  try {
+    const { id } = idParamSchema.parse(req.params);
+
+    if (!req.user) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
+    if (req.user.userId !== id && req.user.role !== 'ADMIN') {
+      return res.status(403).json({ error: 'Insufficient permissions' });
+    }
+
+    // Get user email before deletion for webhook
+    const userToDelete = await prisma.user.findUnique({
+      where: { id },
+      select: { email: true },
+    });
+
+    await prisma.$transaction([
+      prisma.booking.deleteMany({ where: { userId: id } }),
+      prisma.payment.deleteMany({ where: { userId: id } }),
+      prisma.auditLog.create({
+        data: {
+          userId: id,
+          actorRole: req.user.role,
+          action: 'user.delete',
+          metadata: { deletedBy: req.user.userId },
+        },
+      }),
+      prisma.user.delete({ where: { id } }),
+    ]);
+
+    // Emit user deleted event for webhooks
+    eventEmitter.emit('user.deleted', {
+      userId: id,
+      email: userToDelete?.email ?? '',
+      deletedAt: new Date(),
+      deletedBy: req.user.userId,
+    });
+
+    return res.status(204).send();
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ error: 'Invalid user id', details: error.flatten() });
+    }
+
+    logger.error({ err: error }, 'Delete user failed');
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+}
+
+/**
+ * Logout - revoke refresh token and clear cookies
+ */
+export async function logout(req: Request, res: Response) {
+  try {
+    // Get refresh token from cookie or body
+    const refreshToken = getRefreshTokenFromCookies(req.cookies) || req.body?.refreshToken;
+
+    if (refreshToken) {
+      await revokeToken(refreshToken);
+    }
+
+    // Clear auth cookies
+    clearAuthCookies(res);
+
+    return res.json({ message: 'Logged out successfully' });
+  } catch (error) {
+    logger.error({ err: error }, 'Logout failed');
+    // Still clear cookies even if revoke fails
+    clearAuthCookies(res);
+    return res.json({ message: 'Logged out successfully' });
+  }
+}
+
+/**
+ * Refresh tokens - get new access token using refresh token
+ */
+export async function refreshToken(req: Request, res: Response) {
+  try {
+    // Get refresh token from cookie or body (for mobile clients)
+    const token = getRefreshTokenFromCookies(req.cookies) || req.body?.refreshToken;
+
+    if (!token) {
+      return res.status(401).json({ error: 'Refresh token required' });
+    }
+
+    // Get request metadata
+    const userAgent = req.headers['user-agent'];
+    const ipAddress =
+      (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() ||
+      req.ip ||
+      req.socket.remoteAddress;
+
+    const result = await refreshTokens(token, userAgent, ipAddress);
+
+    if (!result.success) {
+      // Clear cookies on failure
+      clearAuthCookies(res);
+
+      if (result.securityAlert) {
+        return res.status(401).json({
+          error: result.error,
+          securityAlert: true,
+        });
+      }
+
+      return res.status(401).json({ error: result.error });
+    }
+
+    // Set new cookies
+    if (result.tokens) {
+      setAuthCookies(res, result.tokens.accessToken, result.tokens.refreshToken);
+
+      return res.json({
+        message: 'Tokens refreshed',
+        tokens: {
+          accessToken: result.tokens.accessToken,
+          refreshToken: result.tokens.refreshToken,
+          expiresIn: result.tokens.expiresIn,
+          tokenType: 'Bearer',
+        },
+      });
+    }
+
+    return res.status(500).json({ error: 'Failed to refresh tokens' });
+  } catch (error) {
+    logger.error({ err: error }, 'Refresh token failed');
+    clearAuthCookies(res);
+    return res.status(401).json({ error: 'Invalid refresh token' });
+  }
+}
