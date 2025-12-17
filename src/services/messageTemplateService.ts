@@ -654,14 +654,24 @@ export async function initializeDefaultTemplates() {
     },
   ];
 
-  for (const template of defaultTemplates) {
-    const existing = await prisma.messageTemplate.findUnique({
-      where: { slug: template.slug },
-    });
+  // Check if messageTemplate model exists in prisma client
+  if (!prisma.messageTemplate) {
+    logger.warn('MessageTemplate model not found in Prisma client - skipping template initialization');
+    return;
+  }
 
-    if (!existing) {
-      await createTemplate(template);
-      logger.info({ slug: template.slug }, 'Created default message template');
+  for (const template of defaultTemplates) {
+    try {
+      const existing = await prisma.messageTemplate.findUnique({
+        where: { slug: template.slug },
+      });
+
+      if (!existing) {
+        await createTemplate(template);
+        logger.info({ slug: template.slug }, 'Created default message template');
+      }
+    } catch (error) {
+      logger.warn({ slug: template.slug, error }, 'Failed to initialize template - table may not exist');
     }
   }
 

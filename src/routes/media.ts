@@ -1,8 +1,19 @@
 import { Router } from 'express';
+import multer from 'multer';
 import { authenticateToken, requireRoles } from '../middleware/auth';
 import { generateUploadUrl, getMedia, getSignedMediaUrl } from '../controllers/mediaController';
+import { uploadLocalFile } from '../controllers/localMediaController';
 
 const router = Router();
+
+// Multer configuration for local file uploads
+const storage = multer.memoryStorage();
+const upload = multer({
+  storage,
+  limits: {
+    fileSize: 50 * 1024 * 1024, // 50MB limit
+  },
+});
 
 /**
  * @openapi
@@ -71,7 +82,11 @@ const router = Router();
  *       403:
  *         description: Insufficient permissions (requires ADMIN or TEACHER role)
  */
-router.post('/upload', authenticateToken, requireRoles('ADMIN', 'TEACHER'), generateUploadUrl);
+// S3 presigned URL upload (requires S3 config)
+router.post('/upload-s3', authenticateToken, requireRoles('ADMIN', 'TEACHER'), generateUploadUrl);
+
+// Local file upload (no S3 required)
+router.post('/upload', authenticateToken, requireRoles('ADMIN', 'TEACHER'), upload.single('file'), uploadLocalFile);
 
 /**
  * @openapi

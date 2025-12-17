@@ -3618,7 +3618,8 @@ model user_warnings {
   @@index([userId])
 }
 
-model users {
+model User {
+  @@map("users")
   id                                                              String                        @id
   email                                                           String                        @unique
   passwordHash                                                    String

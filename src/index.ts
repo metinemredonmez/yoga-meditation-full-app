@@ -145,6 +145,10 @@ app.use(cookieParserMiddleware);
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 
+// Static file serving for uploads
+import * as path from 'path';
+app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
+
 // Metrics middleware (Prometheus)
 if (config.metrics?.enabled) {
   app.use(metricsMiddleware());

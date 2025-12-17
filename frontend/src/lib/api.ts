@@ -2172,19 +2172,20 @@ export async function getSignedMediaUrl(id: string) {
   return data as { message: string; signedUrl: string; expiresIn: number };
 }
 
-// Helper function to upload file directly to S3
+// Helper function to upload file directly to local storage
 export async function uploadMediaToS3(
   file: File,
   type: MediaUploadType = 'image',
   onProgress?: (progress: number) => void
 ): Promise<{ fileUrl: string; key: string }> {
-  // Get presigned upload URL
-  const { upload } = await getMediaUploadUrl(file.name, file.type, type);
+  // Use local upload endpoint with FormData
+  const formData = new FormData();
+  formData.append('file', file);
+  formData.append('type', type);
 
-  // Upload to S3
-  await axios.put(upload.uploadUrl, file, {
+  const { data } = await api.post('/api/media/upload', formData, {
     headers: {
-      'Content-Type': file.type,
+      'Content-Type': 'multipart/form-data',
     },
     onUploadProgress: (progressEvent) => {
       if (progressEvent.total && onProgress) {
@@ -2194,7 +2195,7 @@ export async function uploadMediaToS3(
     },
   });
 
-  return { fileUrl: upload.fileUrl, key: upload.key };
+  return { fileUrl: data.upload.fileUrl, key: data.upload.key };
 }
 
 export default api;
