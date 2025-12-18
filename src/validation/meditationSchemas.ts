@@ -15,7 +15,7 @@ export const meditationFiltersSchema = z.object({
   search: z.string().min(1).optional(),
   page: z.coerce.number().int().positive().default(1),
   limit: z.coerce.number().int().positive().max(100).default(20),
-  sortBy: z.enum(['createdAt', 'title', 'durationSeconds', 'playCount', 'averageRating']).default('createdAt'),
+  sortBy: z.enum(['createdAt', 'title', 'duration', 'playCount', 'averageRating']).default('createdAt'),
   sortOrder: z.enum(['asc', 'desc']).default('desc'),
 });
 
@@ -54,24 +54,21 @@ export const createMeditationSchema = z.object({
   categoryId: z.string().uuid(),
   instructorId: z.string().uuid().optional(),
   title: z.string().min(1).max(200),
-  titleTr: z.string().min(1).max(200).optional(),
+  titleEn: z.string().min(1).max(200).optional(),
   slug: z.string().min(1).max(200),
   description: z.string().min(1),
-  descriptionTr: z.string().optional(),
+  descriptionEn: z.string().optional(),
   difficulty: meditationDifficultyEnum,
-  durationSeconds: z.number().int().positive(),
+  duration: z.number().int().positive(), // saniye
   audioUrl: z.string().url(),
-  imageUrl: z.string().url().optional(),
-  thumbnailUrl: z.string().url().optional(),
-  backgroundMusicUrl: z.string().url().optional(),
-  isFree: z.boolean().default(false),
+  audioUrlEn: z.string().url().optional(),
+  coverImage: z.string().url().optional(),
+  backgroundSoundId: z.string().uuid().optional(),
   isPremium: z.boolean().default(false),
   isFeatured: z.boolean().default(false),
-  sortOrder: z.number().int().default(0),
+  isPublished: z.boolean().default(false),
   tags: z.array(z.string()).default([]),
   benefits: z.array(z.string()).default([]),
-  benefitsTr: z.array(z.string()).default([]),
-  prerequisites: z.array(z.string()).default([]),
 });
 
 export const updateMeditationSchema = createMeditationSchema.partial().refine(
@@ -82,13 +79,12 @@ export const updateMeditationSchema = createMeditationSchema.partial().refine(
 // Category admin schemas
 export const createCategorySchema = z.object({
   name: z.string().min(1).max(100),
-  nameTr: z.string().min(1).max(100).optional(),
+  nameEn: z.string().min(1).max(100).optional(),
   slug: z.string().min(1).max(100),
   description: z.string().optional(),
-  descriptionTr: z.string().optional(),
-  iconUrl: z.string().url().optional(),
-  imageUrl: z.string().url().optional(),
+  icon: z.string().optional(), // emoji veya icon name
   color: z.string().regex(/^#[0-9A-Fa-f]{6}$/).optional(),
+  coverImage: z.string().url().optional(),
   sortOrder: z.number().int().default(0),
   isActive: z.boolean().default(true),
 });

@@ -36,18 +36,18 @@ export async function getMeditations(filters: MeditationFilters) {
   const skip = (page - 1) * limit;
 
   const where: Prisma.meditationsWhereInput = {
-    isActive: true,
+    isPublished: true,
     ...(categoryId && { categoryId }),
     ...(instructorId && { instructorId }),
     ...(difficulty && { difficulty: difficulty as MeditationDifficulty }),
-    ...(isFree !== undefined && { isFree }),
+    ...(isFree !== undefined && { isPremium: !isFree }),
     ...(isFeatured !== undefined && { isFeatured }),
-    ...(minDuration && { durationSeconds: { gte: minDuration } }),
-    ...(maxDuration && { durationSeconds: { lte: maxDuration } }),
+    ...(minDuration && { duration: { gte: minDuration } }),
+    ...(maxDuration && { duration: { lte: maxDuration } }),
     ...(search && {
       OR: [
         { title: { contains: search, mode: 'insensitive' } },
-        { titleTr: { contains: search, mode: 'insensitive' } },
+        { titleEn: { contains: search, mode: 'insensitive' } },
         { description: { contains: search, mode: 'insensitive' } },
       ],
     }),
@@ -68,16 +68,16 @@ export async function getMeditations(filters: MeditationFilters) {
           select: {
             id: true,
             name: true,
-            nameTr: true,
+            nameEn: true,
             slug: true,
-            iconUrl: true,
+            icon: true,
           },
         },
         instructor: {
           select: {
             id: true,
             displayName: true,
-            avatarUrl: true,
+            profileImageUrl: true,
           },
         },
       },
@@ -102,26 +102,26 @@ export async function getMeditations(filters: MeditationFilters) {
 export async function getFeaturedMeditations(limit: number = 10) {
   return prisma.meditations.findMany({
     where: {
-      isActive: true,
+      isPublished: true,
       isFeatured: true,
     },
-    orderBy: { sortOrder: 'asc' },
+    orderBy: { createdAt: 'desc' },
     take: limit,
     include: {
       category: {
         select: {
           id: true,
           name: true,
-          nameTr: true,
+          nameEn: true,
           slug: true,
-          iconUrl: true,
+          icon: true,
         },
       },
       instructor: {
         select: {
           id: true,
           displayName: true,
-          avatarUrl: true,
+          profileImageUrl: true,
         },
       },
     },
@@ -139,7 +139,7 @@ export async function getCategories() {
       _count: {
         select: {
           meditations: {
-            where: { isActive: true },
+            where: { isPublished: true },
           },
         },
       },
@@ -153,10 +153,10 @@ export async function getCategories() {
 export async function searchMeditations(query: string, limit: number = 20) {
   return prisma.meditations.findMany({
     where: {
-      isActive: true,
+      isPublished: true,
       OR: [
         { title: { contains: query, mode: 'insensitive' } },
-        { titleTr: { contains: query, mode: 'insensitive' } },
+        { titleEn: { contains: query, mode: 'insensitive' } },
         { description: { contains: query, mode: 'insensitive' } },
         { tags: { has: query } },
       ],
@@ -168,7 +168,7 @@ export async function searchMeditations(query: string, limit: number = 20) {
         select: {
           id: true,
           name: true,
-          nameTr: true,
+          nameEn: true,
           slug: true,
         },
       },
@@ -185,7 +185,7 @@ export async function getForYouMeditations(userId: string, limit: number = 10) {
     prisma.meditation_sessions.findMany({
       where: { userId, completed: true },
       select: { meditation: { select: { categoryId: true, difficulty: true } } },
-      orderBy: { completedAt: 'desc' },
+      orderBy: { endedAt: 'desc' },
       take: 50,
     }),
     prisma.meditation_favorites.findMany({
@@ -194,7 +194,7 @@ export async function getForYouMeditations(userId: string, limit: number = 10) {
     }),
     prisma.user_onboarding.findUnique({
       where: { userId },
-      select: { preferredDifficulty: true, goals: true },
+      select: { experienceLevel: true, goals: true },
     }),
   ]);
 
@@ -212,14 +212,21 @@ export async function getForYouMeditations(userId: string, limit: number = 10) {
     if (f.meditation?.difficulty) preferredDifficulties.add(f.meditation.difficulty);
   });
 
-  // Add onboarding preferences
-  if (onboarding?.preferredDifficulty) {
-    preferredDifficulties.add(onboarding.preferredDifficulty as MeditationDifficulty);
+  // Add onboarding preferences - experienceLevel maps to difficulty
+  if (onboarding?.experienceLevel) {
+    // Map experience level to meditation difficulty
+    const levelToDifficulty: Record<string, MeditationDifficulty> = {
+      'BEGINNER': MeditationDifficulty.BEGINNER,
+      'INTERMEDIATE': MeditationDifficulty.INTERMEDIATE,
+      'ADVANCED': MeditationDifficulty.ADVANCED,
+    };
+    const difficulty = levelToDifficulty[onboarding.experienceLevel];
+    if (difficulty) preferredDifficulties.add(difficulty);
   }
 
   // Build query based on preferences
   const where: Prisma.meditationsWhereInput = {
-    isActive: true,
+    isPublished: true,
     ...(preferredCategories.size > 0 && {
       categoryId: { in: Array.from(preferredCategories) },
     }),
@@ -249,16 +256,16 @@ export async function getForYouMeditations(userId: string, limit: number = 10) {
         select: {
           id: true,
           name: true,
-          nameTr: true,
+          nameEn: true,
           slug: true,
-          iconUrl: true,
+          icon: true,
         },
       },
       instructor: {
         select: {
           id: true,
           displayName: true,
-          avatarUrl: true,
+          profileImageUrl: true,
         },
       },
     },
@@ -270,14 +277,14 @@ export async function getForYouMeditations(userId: string, limit: number = 10) {
  */
 export async function getMeditation(id: string, userId?: string) {
   const meditation = await prisma.meditations.findUnique({
-    where: { id, isActive: true },
+    where: { id, isPublished: true },
     include: {
       category: true,
       instructor: {
         select: {
           id: true,
           displayName: true,
-          avatarUrl: true,
+          profileImageUrl: true,
           bio: true,
         },
       },
@@ -337,7 +344,7 @@ export async function getRelatedMeditations(meditationId: string, limit: number 
   return prisma.meditations.findMany({
     where: {
       id: { not: meditationId },
-      isActive: true,
+      isPublished: true,
       OR: [
         { categoryId: meditation.categoryId },
         { difficulty: meditation.difficulty },
@@ -351,7 +358,7 @@ export async function getRelatedMeditations(meditationId: string, limit: number 
         select: {
           id: true,
           name: true,
-          nameTr: true,
+          nameEn: true,
           slug: true,
         },
       },
@@ -365,7 +372,7 @@ export async function getRelatedMeditations(meditationId: string, limit: number 
 export async function startSession(userId: string, meditationId: string) {
   // Check if meditation exists
   const meditation = await prisma.meditations.findUnique({
-    where: { id: meditationId, isActive: true },
+    where: { id: meditationId, isPublished: true },
   });
 
   if (!meditation) {
@@ -378,7 +385,9 @@ export async function startSession(userId: string, meditationId: string) {
     create: {
       meditationId,
       userId,
-      progressSeconds: 0,
+      currentTime: 0,
+      duration: meditation.duration,
+      percentage: 0,
       completed: false,
     },
     update: {
@@ -414,18 +423,31 @@ export async function updateProgress(
 ) {
   const { progressSeconds, completed } = input;
 
+  // Get meditation duration to calculate percentage
+  const meditation = await prisma.meditations.findUnique({
+    where: { id: meditationId },
+    select: { duration: true },
+  });
+
+  const duration = meditation?.duration || 0;
+  const percentage = duration > 0 ? (progressSeconds / duration) * 100 : 0;
+
   return prisma.meditation_progress.upsert({
     where: { meditationId_userId: { meditationId, userId } },
     create: {
       meditationId,
       userId,
-      progressSeconds,
+      currentTime: progressSeconds,
+      duration,
+      percentage: Math.min(percentage, 100),
       completed: completed || false,
       lastPlayedAt: new Date(),
     },
     update: {
-      progressSeconds,
-      ...(completed && { completed, completedAt: new Date(), completionCount: { increment: 1 } }),
+      currentTime: progressSeconds,
+      percentage: Math.min(percentage, 100),
+      totalListened: { increment: progressSeconds },
+      ...(completed && { completed, completedAt: new Date(), playCount: { increment: 1 } }),
       lastPlayedAt: new Date(),
     },
   });
@@ -445,7 +467,7 @@ export async function completeSession(
   // Get the meditation to calculate XP
   const meditation = await prisma.meditations.findUnique({
     where: { id: meditationId },
-    select: { durationSeconds: true },
+    select: { duration: true },
   });
 
   if (!meditation) {
@@ -456,8 +478,8 @@ export async function completeSession(
   const session = await prisma.meditation_sessions.update({
     where: { id: sessionId },
     data: {
-      completedAt: new Date(),
-      listenedSeconds,
+      endedAt: new Date(),
+      duration: listenedSeconds,
       completed: true,
     },
   });
@@ -468,16 +490,21 @@ export async function completeSession(
     create: {
       meditationId,
       userId,
-      progressSeconds: meditation.durationSeconds,
+      currentTime: meditation.duration,
+      duration: meditation.duration,
+      percentage: 100,
       completed: true,
       completedAt: new Date(),
-      completionCount: 1,
+      playCount: 1,
+      totalListened: listenedSeconds,
     },
     update: {
-      progressSeconds: meditation.durationSeconds,
+      currentTime: meditation.duration,
+      percentage: 100,
       completed: true,
       completedAt: new Date(),
-      completionCount: { increment: 1 },
+      playCount: { increment: 1 },
+      totalListened: { increment: listenedSeconds },
     },
   });
 
@@ -608,16 +635,16 @@ export async function getFavorites(userId: string, page: number = 1, limit: numb
               select: {
                 id: true,
                 name: true,
-                nameTr: true,
+                nameEn: true,
                 slug: true,
-                iconUrl: true,
+                icon: true,
               },
             },
             instructor: {
               select: {
                 id: true,
                 displayName: true,
-                avatarUrl: true,
+                profileImageUrl: true,
               },
             },
           },
@@ -657,7 +684,7 @@ export async function getHistory(userId: string, page: number = 1, limit: number
               select: {
                 id: true,
                 name: true,
-                nameTr: true,
+                nameEn: true,
                 slug: true,
               },
             },
@@ -687,7 +714,7 @@ export async function getContinueMeditations(userId: string, limit: number = 10)
     where: {
       userId,
       completed: false,
-      progressSeconds: { gt: 0 },
+      currentTime: { gt: 0 },
     },
     orderBy: { lastPlayedAt: 'desc' },
     take: limit,
@@ -698,9 +725,9 @@ export async function getContinueMeditations(userId: string, limit: number = 10)
             select: {
               id: true,
               name: true,
-              nameTr: true,
+              nameEn: true,
               slug: true,
-              iconUrl: true,
+              icon: true,
             },
           },
         },
@@ -710,7 +737,8 @@ export async function getContinueMeditations(userId: string, limit: number = 10)
 
   return inProgress.map((p) => ({
     ...p.meditation,
-    progressSeconds: p.progressSeconds,
+    currentTime: p.currentTime,
+    percentage: p.percentage,
     lastPlayedAt: p.lastPlayedAt,
   }));
 }
@@ -728,7 +756,7 @@ export async function getAdminMeditations(filters: MeditationFilters) {
     ...(search && {
       OR: [
         { title: { contains: search, mode: 'insensitive' } },
-        { titleTr: { contains: search, mode: 'insensitive' } },
+        { titleEn: { contains: search, mode: 'insensitive' } },
       ],
     }),
   };
@@ -741,7 +769,7 @@ export async function getAdminMeditations(filters: MeditationFilters) {
       take: limit,
       include: {
         category: {
-          select: { id: true, name: true, nameTr: true },
+          select: { id: true, name: true, nameEn: true },
         },
         instructor: {
           select: { id: true, displayName: true },
@@ -812,7 +840,7 @@ export async function updateMeditation(id: string, input: UpdateMeditationInput)
 export async function deleteMeditation(id: string) {
   return prisma.meditations.update({
     where: { id },
-    data: { isActive: false },
+    data: { isPublished: false },
   });
 }
 
@@ -855,7 +883,7 @@ export async function updateCategory(id: string, input: UpdateCategoryInput) {
 export async function deleteCategory(id: string) {
   // Check if category has meditations
   const count = await prisma.meditations.count({
-    where: { categoryId: id, isActive: true },
+    where: { categoryId: id, isPublished: true },
   });
 
   if (count > 0) {
@@ -873,11 +901,11 @@ export async function deleteCategory(id: string) {
  */
 export async function getMeditationStats() {
   const [totalMeditations, totalSessions, totalListenTime, categoryStats] = await Promise.all([
-    prisma.meditations.count({ where: { isActive: true } }),
+    prisma.meditations.count({ where: { isPublished: true } }),
     prisma.meditation_sessions.count({ where: { completed: true } }),
     prisma.meditation_sessions.aggregate({
       where: { completed: true },
-      _sum: { listenedSeconds: true },
+      _sum: { duration: true },
     }),
     prisma.meditation_categories.findMany({
       where: { isActive: true },
@@ -886,7 +914,7 @@ export async function getMeditationStats() {
         name: true,
         _count: {
           select: {
-            meditations: { where: { isActive: true } },
+            meditations: { where: { isPublished: true } },
           },
         },
       },
@@ -896,7 +924,7 @@ export async function getMeditationStats() {
   return {
     totalMeditations,
     totalSessions,
-    totalListenTimeMinutes: Math.floor((totalListenTime._sum.listenedSeconds || 0) / 60),
+    totalListenTimeMinutes: Math.floor((totalListenTime._sum.duration || 0) / 60),
     categoryStats,
   };
 }

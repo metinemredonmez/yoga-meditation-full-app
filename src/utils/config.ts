@@ -21,6 +21,7 @@ const optionalString = z.preprocess((val) => {
 
 const configSchema = z.object({
   DATABASE_URL: z.string().min(1, 'DATABASE_URL is required'),
+  API_BASE_URL: optionalString, // Production API URL for Swagger
   JWT_ACCESS_SECRET: z.string().min(32, 'JWT_ACCESS_SECRET must be at least 32 characters'),
   JWT_REFRESH_SECRET: z.string().min(32, 'JWT_REFRESH_SECRET must be at least 32 characters'),
   JWT_ACCESS_EXPIRES_IN: z.string().default('365d'),

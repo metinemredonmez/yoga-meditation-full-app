@@ -46,14 +46,13 @@ export const completeBreathworkSessionSchema = z.object({
 // Admin schemas
 export const createBreathworkSchema = z.object({
   title: z.string().min(1).max(200),
-  titleTr: z.string().min(1).max(200).optional(),
+  titleEn: z.string().min(1).max(200).optional(),
   slug: z.string().min(1).max(200),
   description: z.string().min(1),
-  descriptionTr: z.string().optional(),
+  descriptionEn: z.string().optional(),
   category: breathworkCategoryEnum,
   pattern: breathworkPatternEnum,
   animation: breathworkAnimationEnum.default('CIRCLE'),
-  instructorId: z.string().uuid().optional(),
   durationSeconds: z.number().int().positive(),
   inhaleSeconds: z.number().int().positive(),
   holdInSeconds: z.number().int().min(0).default(0),
@@ -61,18 +60,12 @@ export const createBreathworkSchema = z.object({
   holdOutSeconds: z.number().int().min(0).default(0),
   cycles: z.number().int().positive().default(4),
   imageUrl: z.string().url().optional(),
-  thumbnailUrl: z.string().url().optional(),
   audioUrl: z.string().url().optional(),
-  backgroundMusicUrl: z.string().url().optional(),
-  voiceGuidanceUrl: z.string().url().optional(),
   isFree: z.boolean().default(false),
   isPremium: z.boolean().default(false),
   isFeatured: z.boolean().default(false),
-  sortOrder: z.number().int().default(0),
   benefits: z.array(z.string()).default([]),
-  benefitsTr: z.array(z.string()).default([]),
-  instructions: z.array(z.string()).default([]),
-  instructionsTr: z.array(z.string()).default([]),
+  tags: z.array(z.string()).default([]),
 });
 
 export const updateBreathworkSchema = createBreathworkSchema.partial().refine(

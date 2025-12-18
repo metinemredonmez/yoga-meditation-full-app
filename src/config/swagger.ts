@@ -14,6 +14,10 @@ const definition = {
       url: `http://localhost:${config.PORT}`,
       description: 'Local development',
     },
+    ...(config.API_BASE_URL ? [{
+      url: config.API_BASE_URL,
+      description: 'Production',
+    }] : []),
   ],
   components: {
     securitySchemes: {

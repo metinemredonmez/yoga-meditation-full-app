@@ -84,7 +84,10 @@ export async function searchBreathworks(req: Request, res: Response) {
  */
 export async function getByCategory(req: Request, res: Response) {
   try {
-    const { category } = req.params;
+    const category = req.params.category;
+    if (!category) {
+      return res.status(400).json({ error: 'Category is required' });
+    }
     const limit = req.query.limit ? parseInt(req.query.limit as string, 10) : 10;
     const breathworks = await breathworkService.getBreathworksByCategory(category, limit);
     return res.json({ breathworks });

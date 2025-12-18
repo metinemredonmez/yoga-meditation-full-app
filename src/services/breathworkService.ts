@@ -409,17 +409,18 @@ async function calculateStreak(userId: string): Promise<number> {
   const uniqueDays = new Set<string>();
   sessions.forEach((s) => {
     if (s.createdAt) {
-      uniqueDays.add(s.createdAt.toISOString().split('T')[0]);
+      const dateStr = s.createdAt.toISOString().split('T')[0] as string;
+      uniqueDays.add(dateStr);
     }
   });
 
   const sortedDays = Array.from(uniqueDays).sort().reverse();
-  const today = new Date().toISOString().split('T')[0];
+  const today = new Date().toISOString().split('T')[0] as string;
 
   // Check if today or yesterday is in the list
   const yesterday = new Date();
   yesterday.setDate(yesterday.getDate() - 1);
-  const yesterdayStr = yesterday.toISOString().split('T')[0];
+  const yesterdayStr = yesterday.toISOString().split('T')[0] as string;
 
   if (!sortedDays.includes(today) && !sortedDays.includes(yesterdayStr)) {
     return 0;
@@ -433,7 +434,7 @@ async function calculateStreak(userId: string): Promise<number> {
     currentDate.setDate(currentDate.getDate() - 1);
   }
 
-  while (sortedDays.includes(currentDate.toISOString().split('T')[0])) {
+  while (sortedDays.includes(currentDate.toISOString().split('T')[0] as string)) {
     streak++;
     currentDate.setDate(currentDate.getDate() - 1);
   }
@@ -502,9 +503,9 @@ export async function createBreathwork(input: CreateBreathworkInput) {
     data: {
       slug: input.slug,
       title: input.title,
-      titleEn: input.titleTr,
+      titleEn: input.titleEn,
       description: input.description,
-      descriptionEn: input.descriptionTr,
+      descriptionEn: input.descriptionEn,
       category: input.category as BreathworkCategory,
       pattern: input.pattern as BreathworkPattern,
       animationType: (input.animation || 'CIRCLE') as BreathworkAnimation,
@@ -532,9 +533,9 @@ export async function updateBreathwork(id: string, input: UpdateBreathworkInput)
 
   if (input.slug) data.slug = input.slug;
   if (input.title) data.title = input.title;
-  if (input.titleTr) data.titleEn = input.titleTr;
+  if (input.titleEn) data.titleEn = input.titleEn;
   if (input.description) data.description = input.description;
-  if (input.descriptionTr) data.descriptionEn = input.descriptionTr;
+  if (input.descriptionEn) data.descriptionEn = input.descriptionEn;
   if (input.category) data.category = input.category as BreathworkCategory;
   if (input.pattern) data.pattern = input.pattern as BreathworkPattern;
   if (input.animation) data.animationType = input.animation as BreathworkAnimation;
