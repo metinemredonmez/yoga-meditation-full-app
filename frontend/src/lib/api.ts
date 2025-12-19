@@ -2270,6 +2270,310 @@ export async function getPodcastAudioUploadUrl(filename: string, contentType: st
 }
 
 // ============================================
+// WELLNESS - MEDITATIONS (Admin)
+// ============================================
+
+export async function getAdminMeditations(params?: {
+  page?: number;
+  limit?: number;
+  search?: string;
+  categoryId?: string;
+  instructorId?: string;
+  difficulty?: string;
+  isPremium?: boolean;
+  isPublished?: boolean;
+  isFeatured?: boolean;
+  sortBy?: string;
+  sortOrder?: 'asc' | 'desc';
+}) {
+  const { data } = await api.get('/api/admin/meditations', { params });
+  return data;
+}
+
+export async function getAdminMeditationById(id: string) {
+  const { data } = await api.get(`/api/admin/meditations/${id}`);
+  return data;
+}
+
+export async function createMeditation(payload: {
+  categoryId: string;
+  instructorId?: string;
+  title: string;
+  titleTr?: string;
+  slug: string;
+  description: string;
+  descriptionTr?: string;
+  difficulty: 'BEGINNER' | 'INTERMEDIATE' | 'ADVANCED';
+  durationSeconds: number;
+  audioUrl: string;
+  audioUrlTr?: string;
+  imageUrl?: string;
+  thumbnailUrl?: string;
+  backgroundMusicUrl?: string;
+  isFree?: boolean;
+  isPremium?: boolean;
+  isFeatured?: boolean;
+  sortOrder?: number;
+  tags?: string[];
+  benefits?: string[];
+  benefitsTr?: string[];
+}) {
+  const { data } = await api.post('/api/admin/meditations', payload);
+  return data;
+}
+
+export async function updateMeditation(id: string, payload: Partial<{
+  categoryId: string;
+  instructorId: string;
+  title: string;
+  titleTr: string;
+  slug: string;
+  description: string;
+  descriptionTr: string;
+  difficulty: 'BEGINNER' | 'INTERMEDIATE' | 'ADVANCED';
+  durationSeconds: number;
+  audioUrl: string;
+  audioUrlTr: string;
+  imageUrl: string;
+  thumbnailUrl: string;
+  backgroundMusicUrl: string;
+  isFree: boolean;
+  isPremium: boolean;
+  isFeatured: boolean;
+  isActive: boolean;
+  sortOrder: number;
+  tags: string[];
+  benefits: string[];
+  benefitsTr: string[];
+}>) {
+  const { data } = await api.put(`/api/admin/meditations/${id}`, payload);
+  return data;
+}
+
+export async function deleteMeditation(id: string) {
+  const { data } = await api.delete(`/api/admin/meditations/${id}`);
+  return data;
+}
+
+export async function getMeditationStats() {
+  const { data } = await api.get('/api/admin/meditations/stats');
+  return data;
+}
+
+// Meditation Categories
+export async function getMeditationCategories(params?: {
+  includeInactive?: boolean;
+}) {
+  const { data } = await api.get('/api/admin/meditations/categories', { params });
+  return data;
+}
+
+export async function createMeditationCategory(payload: {
+  name: string;
+  nameTr?: string;
+  slug: string;
+  description?: string;
+  descriptionTr?: string;
+  iconUrl?: string;
+  imageUrl?: string;
+  color?: string;
+  sortOrder?: number;
+  isActive?: boolean;
+}) {
+  const { data } = await api.post('/api/admin/meditations/categories', payload);
+  return data;
+}
+
+export async function updateMeditationCategory(id: string, payload: Partial<{
+  name: string;
+  nameTr: string;
+  slug: string;
+  description: string;
+  descriptionTr: string;
+  iconUrl: string;
+  imageUrl: string;
+  color: string;
+  sortOrder: number;
+  isActive: boolean;
+}>) {
+  const { data } = await api.put(`/api/admin/meditations/categories/${id}`, payload);
+  return data;
+}
+
+export async function deleteMeditationCategory(id: string) {
+  const { data } = await api.delete(`/api/admin/meditations/categories/${id}`);
+  return data;
+}
+
+// ============================================
+// WELLNESS - BREATHWORK (Admin)
+// ============================================
+
+export async function getAdminBreathwork(params?: {
+  page?: number;
+  limit?: number;
+  search?: string;
+  category?: string;
+  pattern?: string;
+  difficulty?: string;
+  isPremium?: boolean;
+  isPublished?: boolean;
+  sortBy?: string;
+  sortOrder?: 'asc' | 'desc';
+}) {
+  const { data } = await api.get('/api/admin/breathwork', { params });
+  return data;
+}
+
+export async function getAdminBreathworkById(id: string) {
+  const { data } = await api.get(`/api/admin/breathwork/${id}`);
+  return data;
+}
+
+export async function createBreathwork(payload: {
+  title: string;
+  titleTr?: string;
+  slug: string;
+  description: string;
+  descriptionTr?: string;
+  category: string;
+  pattern: string;
+  difficulty: 'BEGINNER' | 'INTERMEDIATE' | 'ADVANCED';
+  inhale: number;
+  hold1: number;
+  exhale: number;
+  hold2: number;
+  cycles: number;
+  coverImage?: string;
+  audioUrl?: string;
+  animationType?: string;
+  primaryColor?: string;
+  secondaryColor?: string;
+  benefits?: string[];
+  tags?: string[];
+  isPremium?: boolean;
+  isFeatured?: boolean;
+  isPublished?: boolean;
+}) {
+  const { data } = await api.post('/api/admin/breathwork', payload);
+  return data;
+}
+
+export async function updateBreathwork(id: string, payload: Partial<{
+  title: string;
+  titleTr: string;
+  slug: string;
+  description: string;
+  descriptionTr: string;
+  category: string;
+  pattern: string;
+  difficulty: 'BEGINNER' | 'INTERMEDIATE' | 'ADVANCED';
+  inhale: number;
+  hold1: number;
+  exhale: number;
+  hold2: number;
+  cycles: number;
+  coverImage: string;
+  audioUrl: string;
+  animationType: string;
+  primaryColor: string;
+  secondaryColor: string;
+  benefits: string[];
+  tags: string[];
+  isPremium: boolean;
+  isFeatured: boolean;
+  isPublished: boolean;
+  isActive: boolean;
+}>) {
+  const { data } = await api.put(`/api/admin/breathwork/${id}`, payload);
+  return data;
+}
+
+export async function deleteBreathwork(id: string) {
+  const { data } = await api.delete(`/api/admin/breathwork/${id}`);
+  return data;
+}
+
+export async function getBreathworkStats() {
+  const { data } = await api.get('/api/admin/breathwork/stats');
+  return data;
+}
+
+// ============================================
+// WELLNESS - SOUNDSCAPES (Admin)
+// ============================================
+
+export async function getAdminSoundscapes(params?: {
+  page?: number;
+  limit?: number;
+  search?: string;
+  category?: string;
+  isLoop?: boolean;
+  isMixable?: boolean;
+  isPremium?: boolean;
+  isPublished?: boolean;
+  sortBy?: string;
+  sortOrder?: 'asc' | 'desc';
+}) {
+  const { data } = await api.get('/api/admin/soundscapes', { params });
+  return data;
+}
+
+export async function getAdminSoundscapeById(id: string) {
+  const { data } = await api.get(`/api/admin/soundscapes/${id}`);
+  return data;
+}
+
+export async function createSoundscape(payload: {
+  title: string;
+  titleTr?: string;
+  slug: string;
+  category: string;
+  audioUrl: string;
+  coverImage?: string;
+  duration?: number;
+  isLoop?: boolean;
+  isMixable?: boolean;
+  defaultVolume?: number;
+  tags?: string[];
+  isPremium?: boolean;
+  isPublished?: boolean;
+}) {
+  const { data } = await api.post('/api/admin/soundscapes', payload);
+  return data;
+}
+
+export async function updateSoundscape(id: string, payload: Partial<{
+  title: string;
+  titleTr: string;
+  slug: string;
+  category: string;
+  audioUrl: string;
+  coverImage: string;
+  duration: number;
+  isLoop: boolean;
+  isMixable: boolean;
+  defaultVolume: number;
+  tags: string[];
+  isPremium: boolean;
+  isPublished: boolean;
+  isActive: boolean;
+}>) {
+  const { data } = await api.put(`/api/admin/soundscapes/${id}`, payload);
+  return data;
+}
+
+export async function deleteSoundscape(id: string) {
+  const { data } = await api.delete(`/api/admin/soundscapes/${id}`);
+  return data;
+}
+
+export async function getSoundscapeStats() {
+  const { data } = await api.get('/api/admin/soundscapes/stats');
+  return data;
+}
+
+// ============================================
 // MEDIA LIBRARY
 // ============================================
 
@@ -2331,6 +2635,572 @@ export async function uploadMediaToS3(
   });
 
   return { fileUrl: data.upload.fileUrl, key: data.upload.key };
+}
+
+// ============================================
+// WELLNESS - SLEEP STORIES (Admin)
+// ============================================
+
+export async function getAdminSleepStories(params?: {
+  page?: number;
+  limit?: number;
+  search?: string;
+  category?: string;
+  isPremium?: boolean;
+  isFeatured?: boolean;
+  isPublished?: boolean;
+  sortBy?: string;
+  sortOrder?: 'asc' | 'desc';
+}) {
+  const { data } = await api.get('/api/admin/sleep-stories', { params });
+  return data;
+}
+
+export async function getAdminSleepStoryById(id: string) {
+  const { data } = await api.get(`/api/admin/sleep-stories/${id}`);
+  return data;
+}
+
+export async function createSleepStory(payload: {
+  title: string;
+  titleEn?: string;
+  slug: string;
+  description?: string;
+  descriptionEn?: string;
+  category: string;
+  narratorName?: string;
+  duration: number;
+  audioUrl: string;
+  coverImageUrl?: string;
+  backgroundSoundId?: string;
+  tags?: string[];
+  isPremium?: boolean;
+  isFeatured?: boolean;
+  isPublished?: boolean;
+}) {
+  const { data } = await api.post('/api/admin/sleep-stories', payload);
+  return data;
+}
+
+export async function updateSleepStory(id: string, payload: Partial<{
+  title: string;
+  titleEn: string;
+  slug: string;
+  description: string;
+  descriptionEn: string;
+  category: string;
+  narratorName: string;
+  duration: number;
+  audioUrl: string;
+  coverImageUrl: string;
+  backgroundSoundId: string;
+  tags: string[];
+  isPremium: boolean;
+  isFeatured: boolean;
+  isPublished: boolean;
+}>) {
+  const { data } = await api.put(`/api/admin/sleep-stories/${id}`, payload);
+  return data;
+}
+
+export async function deleteSleepStory(id: string) {
+  const { data } = await api.delete(`/api/admin/sleep-stories/${id}`);
+  return data;
+}
+
+export async function getSleepStoryStats() {
+  const { data } = await api.get('/api/admin/sleep-stories/stats');
+  return data;
+}
+
+// ============================================
+// WELLNESS - TIMER PRESETS (Admin)
+// ============================================
+
+export async function getAdminTimerPresets(params?: {
+  page?: number;
+  limit?: number;
+  isSystem?: boolean;
+}) {
+  const { data } = await api.get('/api/admin/timer-presets', { params });
+  return data;
+}
+
+export async function getAdminTimerPresetById(id: string) {
+  const { data } = await api.get(`/api/admin/timer-presets/${id}`);
+  return data;
+}
+
+export async function createTimerPreset(payload: {
+  name: string;
+  nameEn?: string;
+  description?: string;
+  icon?: string;
+  color?: string;
+  duration: number;
+  intervalBell?: number;
+  startBell?: string;
+  endBell?: string;
+  intervalBellSound?: string;
+  backgroundSoundId?: string;
+  backgroundVolume?: number;
+  isSystem?: boolean;
+  isDefault?: boolean;
+  sortOrder?: number;
+}) {
+  const { data } = await api.post('/api/admin/timer-presets', payload);
+  return data;
+}
+
+export async function updateTimerPreset(id: string, payload: Partial<{
+  name: string;
+  nameEn: string;
+  description: string;
+  icon: string;
+  color: string;
+  duration: number;
+  intervalBell: number;
+  startBell: string;
+  endBell: string;
+  intervalBellSound: string;
+  backgroundSoundId: string;
+  backgroundVolume: number;
+  isSystem: boolean;
+  isDefault: boolean;
+  sortOrder: number;
+}>) {
+  const { data } = await api.put(`/api/admin/timer-presets/${id}`, payload);
+  return data;
+}
+
+export async function deleteTimerPreset(id: string) {
+  const { data } = await api.delete(`/api/admin/timer-presets/${id}`);
+  return data;
+}
+
+export async function reorderTimerPresets(presetIds: string[]) {
+  const { data } = await api.put('/api/admin/timer-presets/reorder', { presetIds });
+  return data;
+}
+
+export async function getTimerPresetStats() {
+  const { data } = await api.get('/api/admin/timer-presets/stats');
+  return data;
+}
+
+// ============================================
+// JOURNAL PROMPTS (Admin)
+// ============================================
+
+export async function getAdminJournalPrompts(params?: {
+  page?: number;
+  limit?: number;
+  type?: string;
+  category?: string;
+  isActive?: boolean;
+}) {
+  const { data } = await api.get('/api/admin/journal-prompts', { params });
+  return data;
+}
+
+export async function getAdminJournalPromptById(id: string) {
+  const { data } = await api.get(`/api/admin/journal-prompts/${id}`);
+  return data;
+}
+
+export async function createJournalPrompt(payload: {
+  prompt: string;
+  promptEn?: string;
+  type: string;
+  category?: string;
+  sortOrder?: number;
+  isActive?: boolean;
+}) {
+  const { data } = await api.post('/api/admin/journal-prompts', payload);
+  return data;
+}
+
+export async function updateJournalPrompt(id: string, payload: Partial<{
+  prompt: string;
+  promptEn: string;
+  type: string;
+  category: string;
+  sortOrder: number;
+  isActive: boolean;
+}>) {
+  const { data } = await api.put(`/api/admin/journal-prompts/${id}`, payload);
+  return data;
+}
+
+export async function deleteJournalPrompt(id: string) {
+  const { data } = await api.delete(`/api/admin/journal-prompts/${id}`);
+  return data;
+}
+
+export async function reorderJournalPrompts(promptIds: string[]) {
+  const { data } = await api.put('/api/admin/journal-prompts/reorder', { promptIds });
+  return data;
+}
+
+export async function getJournalPromptStats() {
+  const { data } = await api.get('/api/admin/journal-prompts/stats');
+  return data;
+}
+
+// ============================================
+// DAILY QUOTES (Admin)
+// ============================================
+
+export async function getAdminDailyQuotes(params?: {
+  page?: number;
+  limit?: number;
+  category?: string;
+  language?: string;
+  isActive?: boolean;
+}) {
+  const { data } = await api.get('/api/admin/daily-quotes', { params });
+  return data;
+}
+
+export async function getAdminDailyQuoteById(id: string) {
+  const { data } = await api.get(`/api/admin/daily-quotes/${id}`);
+  return data;
+}
+
+export async function createDailyQuote(payload: {
+  text: string;
+  textEn?: string;
+  author?: string;
+  category?: string;
+  language?: string;
+  scheduledDate?: string;
+  isActive?: boolean;
+}) {
+  const { data } = await api.post('/api/admin/daily-quotes', payload);
+  return data;
+}
+
+export async function updateDailyQuote(id: string, payload: Partial<{
+  text: string;
+  textEn: string;
+  author: string;
+  category: string;
+  language: string;
+  scheduledDate: string;
+  isActive: boolean;
+}>) {
+  const { data } = await api.put(`/api/admin/daily-quotes/${id}`, payload);
+  return data;
+}
+
+export async function deleteDailyQuote(id: string) {
+  const { data } = await api.delete(`/api/admin/daily-quotes/${id}`);
+  return data;
+}
+
+export async function getDailyQuoteStats() {
+  const { data } = await api.get('/api/admin/daily-quotes/stats');
+  return data;
+}
+
+// ============================================
+// DAILY CONTENT (Admin)
+// ============================================
+
+export async function getAdminDailyContent(params?: {
+  startDate?: string;
+  endDate?: string;
+  page?: number;
+  limit?: number;
+  isPublished?: boolean;
+}) {
+  const { data } = await api.get('/api/admin/daily-content', { params });
+  return data;
+}
+
+export async function getAdminDailyContentByDate(date: string) {
+  const { data } = await api.get(`/api/admin/daily-content/${date}`);
+  return data;
+}
+
+export async function createDailyContent(payload: {
+  date: string;
+  quoteId?: string;
+  meditationId?: string;
+  breathworkId?: string;
+  tip?: string;
+  tipEn?: string;
+  challenge?: string;
+  challengeEn?: string;
+  isPublished?: boolean;
+}) {
+  const { data } = await api.post('/api/admin/daily-content', payload);
+  return data;
+}
+
+export async function updateDailyContent(id: string, payload: Partial<{
+  date: string;
+  quoteId: string;
+  meditationId: string;
+  breathworkId: string;
+  tip: string;
+  tipEn: string;
+  challenge: string;
+  challengeEn: string;
+  isPublished: boolean;
+}>) {
+  const { data } = await api.put(`/api/admin/daily-content/${id}`, payload);
+  return data;
+}
+
+export async function deleteDailyContent(id: string) {
+  const { data } = await api.delete(`/api/admin/daily-content/${id}`);
+  return data;
+}
+
+export async function autoGenerateDailyContent(params: {
+  startDate: string;
+  endDate: string;
+}) {
+  const { data } = await api.post('/api/admin/daily-content/auto-generate', params);
+  return data;
+}
+
+export async function copyDailyContent(fromDate: string, toDate: string) {
+  const { data } = await api.post('/api/admin/daily-content/copy', { fromDate, toDate });
+  return data;
+}
+
+export async function getDailyContentStats() {
+  const { data } = await api.get('/api/admin/daily-content/stats');
+  return data;
+}
+
+// ============================================
+// PLAYLISTS (Admin)
+// ============================================
+
+export async function getAdminPlaylists(params?: {
+  page?: number;
+  limit?: number;
+  type?: string;
+  contentType?: string;
+  isSystem?: boolean;
+  isPublic?: boolean;
+  isFeatured?: boolean;
+}) {
+  const { data } = await api.get('/api/admin/playlists', { params });
+  return data;
+}
+
+export async function getAdminPlaylistById(id: string) {
+  const { data } = await api.get(`/api/admin/playlists/${id}`);
+  return data;
+}
+
+export async function createPlaylist(payload: {
+  name: string;
+  nameEn?: string;
+  description?: string;
+  descriptionEn?: string;
+  coverImage?: string;
+  color?: string;
+  type: string;
+  contentType: string;
+  isSystem?: boolean;
+  isPublic?: boolean;
+  isFeatured?: boolean;
+  isPublished?: boolean;
+  sortOrder?: number;
+}) {
+  const { data } = await api.post('/api/admin/playlists', payload);
+  return data;
+}
+
+export async function updatePlaylist(id: string, payload: Partial<{
+  name: string;
+  nameEn: string;
+  description: string;
+  descriptionEn: string;
+  coverImage: string;
+  color: string;
+  type: string;
+  contentType: string;
+  isSystem: boolean;
+  isPublic: boolean;
+  isFeatured: boolean;
+  isPublished: boolean;
+  sortOrder: number;
+}>) {
+  const { data } = await api.put(`/api/admin/playlists/${id}`, payload);
+  return data;
+}
+
+export async function deletePlaylist(id: string) {
+  const { data } = await api.delete(`/api/admin/playlists/${id}`);
+  return data;
+}
+
+export async function getPlaylistStats() {
+  const { data } = await api.get('/api/admin/playlists/stats');
+  return data;
+}
+
+// Playlist Items
+export async function addPlaylistItem(playlistId: string, payload: {
+  contentType: string;
+  contentId: string;
+  note?: string;
+}) {
+  const { data } = await api.post(`/api/admin/playlists/${playlistId}/items`, payload);
+  return data;
+}
+
+export async function updatePlaylistItem(playlistId: string, itemId: string, payload: {
+  note?: string;
+}) {
+  const { data } = await api.put(`/api/admin/playlists/${playlistId}/items/${itemId}`, payload);
+  return data;
+}
+
+export async function removePlaylistItem(playlistId: string, itemId: string) {
+  const { data } = await api.delete(`/api/admin/playlists/${playlistId}/items/${itemId}`);
+  return data;
+}
+
+export async function reorderPlaylistItems(playlistId: string, itemIds: string[]) {
+  const { data } = await api.put(`/api/admin/playlists/${playlistId}/items/reorder`, { itemIds });
+  return data;
+}
+
+// ============================================
+// MOOD ENTRIES (Admin - Read Only)
+// ============================================
+
+export async function getAdminMoodEntries(params?: {
+  page?: number;
+  limit?: number;
+  userId?: string;
+  mood?: string;
+  startDate?: string;
+  endDate?: string;
+}) {
+  const { data } = await api.get('/api/admin/mood-entries', { params });
+  return data;
+}
+
+export async function getMoodEntryStats() {
+  const { data } = await api.get('/api/admin/mood-entries/stats');
+  return data;
+}
+
+// ============================================
+// USER GOALS (Admin - Read Only)
+// ============================================
+
+export async function getAdminUserGoals(params?: {
+  page?: number;
+  limit?: number;
+  userId?: string;
+  type?: string;
+  isActive?: boolean;
+  isCompleted?: boolean;
+}) {
+  const { data } = await api.get('/api/admin/user-goals', { params });
+  return data;
+}
+
+export async function getUserGoalStats() {
+  const { data } = await api.get('/api/admin/user-goals/stats');
+  return data;
+}
+
+// ============================================
+// ONBOARDING CONFIG
+// ============================================
+
+export async function getOnboardingConfig() {
+  const { data } = await api.get('/api/admin/onboarding/config');
+  return data;
+}
+
+export async function updateOnboardingConfig(payload: any) {
+  const { data } = await api.put('/api/admin/onboarding/config', payload);
+  return data;
+}
+
+export async function getOnboardingStats(params?: { period?: string }) {
+  const { data } = await api.get('/api/admin/onboarding/stats', { params });
+  return data;
+}
+
+// ============================================
+// GOAL TEMPLATES
+// ============================================
+
+export async function getAdminGoalTemplates(params?: {
+  page?: number;
+  limit?: number;
+  type?: string;
+  period?: string;
+  isActive?: boolean;
+}) {
+  const { data } = await api.get('/api/admin/goal-templates', { params });
+  return data;
+}
+
+export async function getAdminGoalTemplateById(id: string) {
+  const { data } = await api.get(`/api/admin/goal-templates/${id}`);
+  return data;
+}
+
+export async function createGoalTemplate(payload: any) {
+  const { data } = await api.post('/api/admin/goal-templates', payload);
+  return data;
+}
+
+export async function updateGoalTemplate(id: string, payload: any) {
+  const { data } = await api.put(`/api/admin/goal-templates/${id}`, payload);
+  return data;
+}
+
+export async function deleteGoalTemplate(id: string) {
+  const { data } = await api.delete(`/api/admin/goal-templates/${id}`);
+  return data;
+}
+
+// ============================================
+// REMINDER TEMPLATES
+// ============================================
+
+export async function getAdminReminderTemplates(params?: {
+  page?: number;
+  limit?: number;
+  type?: string;
+  isActive?: boolean;
+}) {
+  const { data } = await api.get('/api/admin/reminder-templates', { params });
+  return data;
+}
+
+export async function getAdminReminderTemplateById(id: string) {
+  const { data } = await api.get(`/api/admin/reminder-templates/${id}`);
+  return data;
+}
+
+export async function createReminderTemplate(payload: any) {
+  const { data } = await api.post('/api/admin/reminder-templates', payload);
+  return data;
+}
+
+export async function updateReminderTemplate(id: string, payload: any) {
+  const { data } = await api.put(`/api/admin/reminder-templates/${id}`, payload);
+  return data;
+}
+
+export async function deleteReminderTemplate(id: string) {
+  const { data } = await api.delete(`/api/admin/reminder-templates/${id}`);
+  return data;
 }
 
 export default api;

@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { openDB, DBSchema, IDBPDatabase } from 'idb';
+import api from '@/lib/api';
 
 // ============================================
 // Types
@@ -331,38 +332,19 @@ export function useOfflineSync(): UseOfflineSyncReturn {
         return;
       }
 
-      // Get auth token
-      const token = localStorage.getItem('authToken');
-      if (!token) {
-        throw new Error('Not authenticated');
-      }
-
-      // Get device ID
+      // Get device ID (non-sensitive, can stay in localStorage)
       let deviceId = localStorage.getItem('deviceId');
       if (!deviceId) {
         deviceId = `web-${Math.random().toString(36).substr(2, 9)}`;
         localStorage.setItem('deviceId', deviceId);
       }
 
-      // Sync with server
-      const response = await fetch('/api/offline/sync', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          lastSyncAt: syncStatus.lastSyncAt,
-          offlineActions: actions,
-          deviceId
-        })
+      // Sync with server using HttpOnly cookie auth
+      const { data: result } = await api.post('/api/offline/sync', {
+        lastSyncAt: syncStatus.lastSyncAt,
+        offlineActions: actions,
+        deviceId
       });
-
-      if (!response.ok) {
-        throw new Error('Sync failed');
-      }
-
-      const result = await response.json();
 
       // Remove successfully synced actions
       const successfulIds = result.processedActions

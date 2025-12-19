@@ -15,6 +15,22 @@ import exportsRoutes from './exports';
 import bulkRoutes from './bulk';
 import notesRoutes from './notes';
 
+// Sprint 3: Timer/Session + Sleep
+import timerRoutes from './timer';
+import sleepRoutes from './sleep';
+
+// Sprint 4: Journal
+import journalRoutes from './journal';
+
+// Sprint 11: Final Polish - New Routes
+import goalTemplatesRoutes from './goalTemplates';
+import reminderTemplatesRoutes from './reminderTemplates';
+import onboardingRoutes from './onboarding';
+import moodTagsRoutes from './moodTags';
+
+// Integration Settings
+import integrationsRoutes from './integrations';
+
 const router = Router();
 
 // All admin routes require authentication and admin role
@@ -34,5 +50,21 @@ router.use('/maintenance', maintenanceRoutes);
 router.use('/exports', exportsRoutes);
 router.use('/bulk', bulkRoutes);
 router.use('/notes', notesRoutes);
+
+// Sprint 3: Timer/Session + Sleep
+router.use('/timer', timerRoutes);
+router.use('/sleep', sleepRoutes);
+
+// Sprint 4: Journal
+router.use('/journal', journalRoutes);
+
+// Sprint 11: Final Polish - New Routes
+router.use('/goal-templates', goalTemplatesRoutes);
+router.use('/reminder-templates', reminderTemplatesRoutes);
+router.use('/onboarding', onboardingRoutes);
+router.use('/mood-tags', moodTagsRoutes);
+
+// Integration Settings Management
+router.use('/integrations', integrationsRoutes);
 
 export default router;

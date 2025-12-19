@@ -1,5 +1,4 @@
 import crypto from 'crypto';
-import { config } from './config';
 
 const ALGORITHM = 'aes-256-gcm';
 const IV_LENGTH = 16;
@@ -7,8 +6,16 @@ const AUTH_TAG_LENGTH = 16;
 const SALT_LENGTH = 64;
 const KEY_LENGTH = 32;
 
-// Use a dedicated encryption key or fallback to JWT secret
-const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY || config.JWT_ACCESS_SECRET;
+// ENCRYPTION_KEY must be set separately from JWT secrets
+const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY;
+
+if (!ENCRYPTION_KEY) {
+  throw new Error('ENCRYPTION_KEY environment variable is required for data encryption');
+}
+
+if (ENCRYPTION_KEY.length < 32) {
+  throw new Error('ENCRYPTION_KEY must be at least 32 characters long');
+}
 
 /**
  * Derives a key from the password using PBKDF2

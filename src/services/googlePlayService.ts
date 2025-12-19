@@ -327,9 +327,9 @@ async function processGoogleSubscriptionNotification(
   if (!subscription) {
     // New subscription - verify and create
     if (notificationType === GOOGLE_NOTIFICATION_TYPES.SUBSCRIPTION_PURCHASED) {
-      logger.info({ purchaseToken, subscriptionId }, 'New Google subscription notification - needs user context');
+      logger.info({ subscriptionId }, 'New Google subscription notification - needs user context');
     } else {
-      logger.warn({ purchaseToken, subscriptionId }, 'Subscription not found for Google notification');
+      logger.warn({ subscriptionId }, 'Subscription not found for Google notification');
     }
     return;
   }

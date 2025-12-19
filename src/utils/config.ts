@@ -24,8 +24,8 @@ const configSchema = z.object({
   API_BASE_URL: optionalString, // Production API URL for Swagger
   JWT_ACCESS_SECRET: z.string().min(32, 'JWT_ACCESS_SECRET must be at least 32 characters'),
   JWT_REFRESH_SECRET: z.string().min(32, 'JWT_REFRESH_SECRET must be at least 32 characters'),
-  JWT_ACCESS_EXPIRES_IN: z.string().default('365d'),
-  JWT_REFRESH_EXPIRES_IN: z.string().default('365d'),
+  JWT_ACCESS_EXPIRES_IN: z.string().default('15m'),
+  JWT_REFRESH_EXPIRES_IN: z.string().default('30d'),
   JWT_ISSUER: z.string().default('yoga-app'),
   JWT_AUDIENCE: z.string().default('yoga-app-users'),
   PORT: z.coerce.number().default(3000),
@@ -93,6 +93,11 @@ const configSchema = z.object({
   GOOGLE_PACKAGE_NAME: optionalString,
   GOOGLE_SERVICE_ACCOUNT_EMAIL: optionalString,
   GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY: optionalString, // Base64 encoded
+  // Google Pub/Sub JWT Verification (for webhook authentication)
+  GOOGLE_PUBSUB_AUDIENCE: optionalString, // Your webhook endpoint URL
+  // Google OAuth Configuration
+  GOOGLE_CLIENT_ID: optionalString,
+  GOOGLE_CLIENT_SECRET: optionalString,
 
   // Payment Settings
   PAYMENT_SUCCESS_URL: z.string().default('http://localhost:3000/payment/success'),
@@ -125,7 +130,7 @@ const configSchema = z.object({
   REFRESH_TOKEN_COOKIE_NAME: z.string().default('yoga_refresh_token'),
   // Notification Preferences
   DEFAULT_TIMEZONE: z.string().default('Europe/Istanbul'),
-  UNSUBSCRIBE_TOKEN_SECRET: z.string().default('change-this-secret-key'),
+  UNSUBSCRIBE_TOKEN_SECRET: z.string().min(32, 'UNSUBSCRIBE_TOKEN_SECRET must be at least 32 characters'),
   FRONTEND_URL: z.string().default('http://localhost:3000'),
   // Redis Configuration
   REDIS_URL: optionalString,
@@ -319,11 +324,15 @@ function loadConfig() {
         keyId: raw.APPLE_KEY_ID,
         privateKey: raw.APPLE_PRIVATE_KEY,
         environment: raw.APPLE_ENVIRONMENT,
+        clientId: raw.APPLE_BUNDLE_ID, // For Apple Sign In, use bundle ID as client ID
       },
       google: {
         packageName: raw.GOOGLE_PACKAGE_NAME,
         serviceAccountEmail: raw.GOOGLE_SERVICE_ACCOUNT_EMAIL,
         serviceAccountPrivateKey: raw.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY,
+        pubsubAudience: raw.GOOGLE_PUBSUB_AUDIENCE,
+        clientId: raw.GOOGLE_CLIENT_ID,
+        clientSecret: raw.GOOGLE_CLIENT_SECRET,
       },
       payment: {
         successUrl: raw.PAYMENT_SUCCESS_URL,

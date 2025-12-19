@@ -3,7 +3,7 @@ import cors from 'cors';
 import helmet from 'helmet';
 import hpp from 'hpp';
 import cookieParser from 'cookie-parser';
-import csrf from 'csurf';
+import { doubleCsrf } from 'csrf-csrf';
 import { config } from '../utils/config';
 
 const allowedOrigins = new Set(config.CORS_ORIGINS);
@@ -17,48 +17,83 @@ export const corsMiddleware = cors({
   credentials: true,
 });
 
+// Parse allowed origins for CSP
+const cspConnectSrc = ["'self'", ...Array.from(allowedOrigins)];
+
 export const helmetMiddleware: RequestHandler = helmet({
+  // Content Security Policy
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", "'unsafe-inline'"], // React needs unsafe-inline for some features
+      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+      fontSrc: ["'self'", "https://fonts.gstatic.com", "data:"],
+      imgSrc: ["'self'", "data:", "https:", "blob:"],
+      connectSrc: cspConnectSrc,
+      mediaSrc: ["'self'", "https:", "blob:"],
+      objectSrc: ["'none'"],
+      frameAncestors: ["'none'"],
+      baseUri: ["'self'"],
+      formAction: ["'self'"],
+      upgradeInsecureRequests: config.NODE_ENV === 'production' ? [] : null,
+    },
+  },
+  // Cross-Origin policies
   crossOriginEmbedderPolicy: false,
+  crossOriginOpenerPolicy: { policy: 'same-origin-allow-popups' },
   crossOriginResourcePolicy: { policy: 'cross-origin' },
+  // Other security headers
+  dnsPrefetchControl: { allow: false },
+  frameguard: { action: 'deny' },
+  hsts: config.NODE_ENV === 'production' ? {
+    maxAge: 31536000, // 1 year
+    includeSubDomains: true,
+    preload: true,
+  } : false,
+  ieNoOpen: true,
+  noSniff: true,
+  originAgentCluster: true,
+  permittedCrossDomainPolicies: { permittedPolicies: 'none' },
+  referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
+  xssFilter: true,
 }) as unknown as RequestHandler;
 
 export const hppMiddleware: RequestHandler = hpp() as unknown as RequestHandler;
 
 export const cookieParserMiddleware: RequestHandler = cookieParser();
 
-const enableCsrf = config.NODE_ENV === 'production';
+// CSRF Protection using csrf-csrf (double submit cookie pattern)
+const csrfSecret = process.env.CSRF_SECRET || config.JWT_ACCESS_SECRET;
 
-const csrfOptions = {
-  cookie: {
-    key: config.CSRF_COOKIE_NAME,
+const {
+  doubleCsrfProtection,
+  generateToken,
+} = doubleCsrf({
+  getSecret: () => csrfSecret,
+  cookieName: config.CSRF_COOKIE_NAME,
+  cookieOptions: {
     httpOnly: true,
-    sameSite: 'lax' as const,
-    secure: config.SESSION_COOKIE_SECURE,
+    sameSite: config.cookie.sameSite,
+    secure: config.cookie.secure,
+    path: '/',
   },
-  ignoreMethods: ['GET', 'HEAD', 'OPTIONS'],
-};
+  getTokenFromRequest: (req) => {
+    // Check header first, then body
+    return (req.headers[config.CSRF_HEADER_NAME.toLowerCase()] as string) ||
+           (req.body?._csrf as string);
+  },
+});
 
-export const csrfProtection: RequestHandler = enableCsrf
-  ? (csrf(csrfOptions) as unknown as RequestHandler)
-  : (_req: Request, _res: Response, next: NextFunction) => next();
+// Enable CSRF in all environments (was only production before)
+export const csrfProtection: RequestHandler = doubleCsrfProtection;
 
 export const attachCsrfToken: RequestHandler = (req, res, next) => {
-  if (!enableCsrf) {
-    return next();
-  }
-
   try {
-    const token = req.csrfToken();
-    res.cookie(config.CSRF_COOKIE_NAME, token, {
-      httpOnly: true,
-      sameSite: 'lax',
-      secure: config.SESSION_COOKIE_SECURE,
-    });
+    const token = generateToken(req, res);
     res.setHeader(config.CSRF_HEADER_NAME, token);
-  } catch (error) {
-    // Token generation is only available for non-mutating requests.
+  } catch {
+    // Token generation may fail for some requests, that's ok
   }
-
   return next();
 };
 

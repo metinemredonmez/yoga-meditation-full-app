@@ -3,6 +3,7 @@ import { prisma } from '../utils/database';
 import { hashPassword } from '../utils/password';
 import { sendPasswordResetEmail } from './emailService';
 import { logger } from '../utils/logger';
+import { isPasswordPreviouslyUsed, addPasswordToHistory } from './passwordHistoryService';
 
 const TOKEN_EXPIRY_HOURS = 1;
 const TOKEN_BYTES = 32;
@@ -125,8 +126,28 @@ export async function resetPassword(token: string, newPassword: string): Promise
     };
   }
 
+  // Check password history - prevent reuse of last 5 passwords
+  const wasUsedBefore = await isPasswordPreviouslyUsed(validation.userId, newPassword);
+  if (wasUsedBefore) {
+    return {
+      success: false,
+      message: 'You cannot reuse any of your last 5 passwords. Please choose a different password.',
+    };
+  }
+
+  // Get current password hash for history
+  const user = await prisma.user.findUnique({
+    where: { id: validation.userId },
+    select: { passwordHash: true },
+  });
+
   const hashedToken = hashToken(token);
   const hashedPassword = await hashPassword(newPassword);
+
+  // Add current password to history before changing
+  if (user) {
+    await addPasswordToHistory(validation.userId, user.passwordHash);
+  }
 
   // Use transaction to ensure atomicity
   await prisma.$transaction([

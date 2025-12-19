@@ -97,6 +97,10 @@ import adminGamificationRoutes from './routes/adminGamification';
 import i18nRoutes from './routes/i18n';
 import adminI18nRoutes from './routes/adminI18n';
 
+// Security Routes
+import twoFactorRoutes from './routes/twoFactor';
+import socialAuthRoutes from './routes/socialAuth';
+
 // Sprint 23: Admin Dashboard API Routes
 import adminDashboardRoutes from './routes/admin/index';
 
@@ -124,6 +128,31 @@ import meditationRoutes from './routes/meditation';
 import adminMeditationRoutes from './routes/adminMeditation';
 import breathworkRoutes from './routes/breathwork';
 import adminBreathworkRoutes from './routes/adminBreathwork';
+
+// Sprint 2: Soundscapes + Daily Content + Mood
+import soundscapeRoutes from './routes/soundscape';
+import adminSoundscapeRoutes from './routes/adminSoundscape';
+import dailyContentRoutes from './routes/dailyContent';
+import adminDailyContentRoutes from './routes/adminDailyContent';
+import moodRoutes from './routes/mood';
+import adminMoodRoutes from './routes/adminMood';
+
+// Sprint 3: Timer/Session + Sleep
+import sessionRoutes from './routes/session';
+import timerPresetRoutes from './routes/timerPreset';
+import sleepStoryRoutes from './routes/sleepStory';
+import sleepTrackingRoutes from './routes/sleepTracking';
+
+// Sprint 4: Journal + Onboarding + Goals + Reminders
+import journalRoutes from './routes/journal';
+import onboardingRoutes from './routes/onboarding';
+import goalRoutes from './routes/goal';
+import userReminderRoutes from './routes/userReminder';
+
+// Sprint 5: Playlists + Wellness Stats
+import playlistRoutes from './routes/playlist';
+import adminPlaylistRoutes from './routes/admin/playlist';
+import wellnessRoutes from './routes/wellness';
 
 import swaggerUi from 'swagger-ui-express';
 import { createServer } from 'http';
@@ -257,6 +286,12 @@ app.use('/api/admin/gamification', adminGamificationRoutes);
 app.use('/api/i18n', i18nRoutes);
 app.use('/api/admin/i18n', adminI18nRoutes);
 
+// Security: Two-Factor Authentication
+app.use('/api/2fa', twoFactorRoutes);
+
+// Social Authentication (Google, Apple)
+app.use('/api/auth', socialAuthRoutes);
+
 // Sprint 23: Admin Dashboard API
 app.use('/api/admin/dashboard', adminDashboardRoutes);
 
@@ -281,6 +316,31 @@ app.use('/api/meditations', meditationRoutes);
 app.use('/api/admin/meditations', adminMeditationRoutes);
 app.use('/api/breathworks', breathworkRoutes);
 app.use('/api/admin/breathworks', adminBreathworkRoutes);
+
+// Sprint 2: Soundscapes + Daily Content + Mood
+app.use('/api/soundscapes', soundscapeRoutes);
+app.use('/api/admin/soundscapes', adminSoundscapeRoutes);
+app.use('/api/daily', dailyContentRoutes);
+app.use('/api/admin', adminDailyContentRoutes); // /api/admin/quotes, /api/admin/daily-content
+app.use('/api/mood', moodRoutes);
+app.use('/api/admin/mood', adminMoodRoutes);
+
+// Sprint 3: Timer/Session + Sleep
+app.use('/api/sessions', sessionRoutes);
+app.use('/api/timer/presets', timerPresetRoutes);
+app.use('/api/sleep/stories', sleepStoryRoutes);
+app.use('/api/sleep/tracking', sleepTrackingRoutes);
+
+// Sprint 4: Journal + Onboarding + Goals + Reminders
+app.use('/api/journal', journalRoutes);
+app.use('/api/onboarding', onboardingRoutes);
+app.use('/api/goals', goalRoutes);
+app.use('/api/user-reminders', userReminderRoutes);
+
+// Sprint 5: Playlists + Wellness Stats
+app.use('/api/playlists', playlistRoutes);
+app.use('/api/admin/playlists', adminPlaylistRoutes);
+app.use('/api/wellness', wellnessRoutes);
 
 // External Webhooks (Iyzico, Twilio, SendGrid) - No auth required
 app.use('/webhooks', externalWebhookRoutes);

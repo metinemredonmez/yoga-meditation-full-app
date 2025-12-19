@@ -14380,6 +14380,1067 @@
                     }
                 }
             }
+        },
+        "/api/journal": {
+            "get": {
+                "summary": "Get journal entries",
+                "tags": ["Journal"],
+                "security": [{ "bearerAuth": [] }],
+                "parameters": [
+                    { "in": "query", "name": "page", "schema": { "type": "integer" } },
+                    { "in": "query", "name": "limit", "schema": { "type": "integer" } },
+                    { "in": "query", "name": "startDate", "schema": { "type": "string", "format": "date" } },
+                    { "in": "query", "name": "endDate", "schema": { "type": "string", "format": "date" } },
+                    { "in": "query", "name": "mood", "schema": { "type": "string" } },
+                    { "in": "query", "name": "tags", "schema": { "type": "string" } }
+                ],
+                "responses": {
+                    "200": { "description": "List of journal entries with pagination" }
+                }
+            },
+            "post": {
+                "summary": "Create journal entry",
+                "tags": ["Journal"],
+                "security": [{ "bearerAuth": [] }],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "content": { "type": "string" },
+                                    "title": { "type": "string" },
+                                    "mood": { "type": "string", "enum": ["VERY_BAD", "BAD", "NEUTRAL", "GOOD", "VERY_GOOD"] },
+                                    "energy": { "type": "string", "enum": ["VERY_LOW", "LOW", "MEDIUM", "HIGH", "VERY_HIGH"] },
+                                    "tags": { "type": "array", "items": { "type": "string" } },
+                                    "promptId": { "type": "string" },
+                                    "isPrivate": { "type": "boolean" }
+                                },
+                                "required": ["content"]
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": { "description": "Journal entry created" }
+                }
+            }
+        },
+        "/api/journal/favorites": {
+            "get": {
+                "summary": "Get favorite journal entries",
+                "tags": ["Journal"],
+                "security": [{ "bearerAuth": [] }],
+                "responses": {
+                    "200": { "description": "List of favorite entries" }
+                }
+            }
+        },
+        "/api/journal/calendar": {
+            "get": {
+                "summary": "Get journal calendar",
+                "tags": ["Journal"],
+                "security": [{ "bearerAuth": [] }],
+                "parameters": [
+                    { "in": "query", "name": "month", "schema": { "type": "integer" } },
+                    { "in": "query", "name": "year", "schema": { "type": "integer" } }
+                ],
+                "responses": {
+                    "200": { "description": "Calendar view with entry indicators" }
+                }
+            }
+        },
+        "/api/journal/stats": {
+            "get": {
+                "summary": "Get journal statistics",
+                "tags": ["Journal"],
+                "security": [{ "bearerAuth": [] }],
+                "responses": {
+                    "200": { "description": "Journal statistics" }
+                }
+            }
+        },
+        "/api/journal/search": {
+            "get": {
+                "summary": "Search journal entries",
+                "tags": ["Journal"],
+                "security": [{ "bearerAuth": [] }],
+                "parameters": [
+                    { "in": "query", "name": "q", "schema": { "type": "string" }, "required": true }
+                ],
+                "responses": {
+                    "200": { "description": "Search results" }
+                }
+            }
+        },
+        "/api/journal/prompts": {
+            "get": {
+                "summary": "Get journal prompts",
+                "tags": ["Journal"],
+                "security": [{ "bearerAuth": [] }],
+                "parameters": [
+                    { "in": "query", "name": "category", "schema": { "type": "string" } }
+                ],
+                "responses": {
+                    "200": { "description": "List of prompts" }
+                }
+            }
+        },
+        "/api/journal/prompts/random": {
+            "get": {
+                "summary": "Get random journal prompt",
+                "tags": ["Journal"],
+                "security": [{ "bearerAuth": [] }],
+                "responses": {
+                    "200": { "description": "Random prompt" }
+                }
+            }
+        },
+        "/api/journal/{id}": {
+            "get": {
+                "summary": "Get single journal entry",
+                "tags": ["Journal"],
+                "security": [{ "bearerAuth": [] }],
+                "parameters": [
+                    { "in": "path", "name": "id", "required": true, "schema": { "type": "string" } }
+                ],
+                "responses": {
+                    "200": { "description": "Journal entry details" }
+                }
+            },
+            "put": {
+                "summary": "Update journal entry",
+                "tags": ["Journal"],
+                "security": [{ "bearerAuth": [] }],
+                "parameters": [
+                    { "in": "path", "name": "id", "required": true, "schema": { "type": "string" } }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "content": { "type": "string" },
+                                    "title": { "type": "string" },
+                                    "mood": { "type": "string" },
+                                    "energy": { "type": "string" },
+                                    "tags": { "type": "array", "items": { "type": "string" } },
+                                    "isPrivate": { "type": "boolean" }
+                                }
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": { "description": "Updated journal entry" }
+                }
+            },
+            "delete": {
+                "summary": "Delete journal entry",
+                "tags": ["Journal"],
+                "security": [{ "bearerAuth": [] }],
+                "parameters": [
+                    { "in": "path", "name": "id", "required": true, "schema": { "type": "string" } }
+                ],
+                "responses": {
+                    "204": { "description": "Entry deleted" }
+                }
+            }
+        },
+        "/api/journal/{id}/favorite": {
+            "post": {
+                "summary": "Toggle favorite status",
+                "tags": ["Journal"],
+                "security": [{ "bearerAuth": [] }],
+                "parameters": [
+                    { "in": "path", "name": "id", "required": true, "schema": { "type": "string" } }
+                ],
+                "responses": {
+                    "200": { "description": "Favorite status toggled" }
+                }
+            }
+        },
+        "/api/onboarding": {
+            "get": {
+                "summary": "Get onboarding status",
+                "tags": ["Onboarding"],
+                "security": [{ "bearerAuth": [] }],
+                "responses": {
+                    "200": { "description": "Onboarding status and progress" }
+                }
+            },
+            "put": {
+                "summary": "Update onboarding",
+                "tags": ["Onboarding"],
+                "security": [{ "bearerAuth": [] }],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "currentStep": { "type": "integer" },
+                                    "answers": { "type": "object" }
+                                }
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": { "description": "Updated onboarding" }
+                }
+            }
+        },
+        "/api/onboarding/start": {
+            "post": {
+                "summary": "Start onboarding",
+                "tags": ["Onboarding"],
+                "security": [{ "bearerAuth": [] }],
+                "responses": {
+                    "200": { "description": "Onboarding started" }
+                }
+            }
+        },
+        "/api/onboarding/answer": {
+            "post": {
+                "summary": "Save onboarding answer",
+                "tags": ["Onboarding"],
+                "security": [{ "bearerAuth": [] }],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "questionKey": { "type": "string" },
+                                    "answer": { "type": "object" }
+                                },
+                                "required": ["questionKey", "answer"]
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": { "description": "Answer saved" }
+                }
+            }
+        },
+        "/api/onboarding/skip": {
+            "post": {
+                "summary": "Skip onboarding",
+                "tags": ["Onboarding"],
+                "security": [{ "bearerAuth": [] }],
+                "responses": {
+                    "200": { "description": "Onboarding skipped" }
+                }
+            }
+        },
+        "/api/onboarding/complete": {
+            "post": {
+                "summary": "Complete onboarding",
+                "tags": ["Onboarding"],
+                "security": [{ "bearerAuth": [] }],
+                "responses": {
+                    "200": { "description": "Onboarding completed" }
+                }
+            }
+        },
+        "/api/onboarding/reset": {
+            "post": {
+                "summary": "Reset onboarding",
+                "tags": ["Onboarding"],
+                "security": [{ "bearerAuth": [] }],
+                "responses": {
+                    "200": { "description": "Onboarding reset" }
+                }
+            }
+        },
+        "/api/onboarding/recommendations": {
+            "get": {
+                "summary": "Get recommendations based on onboarding",
+                "tags": ["Onboarding"],
+                "security": [{ "bearerAuth": [] }],
+                "responses": {
+                    "200": { "description": "Personalized recommendations" }
+                }
+            }
+        },
+        "/api/goals": {
+            "get": {
+                "summary": "Get user goals",
+                "tags": ["Goals"],
+                "security": [{ "bearerAuth": [] }],
+                "parameters": [
+                    { "in": "query", "name": "status", "schema": { "type": "string", "enum": ["ACTIVE", "PAUSED", "COMPLETED", "CANCELLED"] } },
+                    { "in": "query", "name": "type", "schema": { "type": "string" } }
+                ],
+                "responses": {
+                    "200": { "description": "List of goals" }
+                }
+            },
+            "post": {
+                "summary": "Create goal",
+                "tags": ["Goals"],
+                "security": [{ "bearerAuth": [] }],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "type": { "type": "string", "enum": ["MEDITATION_MINUTES", "MEDITATION_SESSIONS", "STREAK_DAYS", "BREATHWORK_SESSIONS", "JOURNAL_ENTRIES", "MOOD_TRACKING", "CUSTOM"] },
+                                    "title": { "type": "string" },
+                                    "description": { "type": "string" },
+                                    "targetValue": { "type": "integer" },
+                                    "frequency": { "type": "string", "enum": ["DAILY", "WEEKLY", "MONTHLY", "CUSTOM"] },
+                                    "startDate": { "type": "string", "format": "date" },
+                                    "endDate": { "type": "string", "format": "date" }
+                                },
+                                "required": ["type", "title", "targetValue", "frequency"]
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": { "description": "Goal created" }
+                }
+            }
+        },
+        "/api/goals/templates": {
+            "get": {
+                "summary": "Get goal templates",
+                "tags": ["Goals"],
+                "security": [{ "bearerAuth": [] }],
+                "responses": {
+                    "200": { "description": "List of goal templates" }
+                }
+            }
+        },
+        "/api/goals/suggestions": {
+            "get": {
+                "summary": "Get goal suggestions",
+                "tags": ["Goals"],
+                "security": [{ "bearerAuth": [] }],
+                "responses": {
+                    "200": { "description": "Personalized goal suggestions" }
+                }
+            }
+        },
+        "/api/goals/{id}": {
+            "get": {
+                "summary": "Get single goal",
+                "tags": ["Goals"],
+                "security": [{ "bearerAuth": [] }],
+                "parameters": [
+                    { "in": "path", "name": "id", "required": true, "schema": { "type": "string" } }
+                ],
+                "responses": {
+                    "200": { "description": "Goal details" }
+                }
+            },
+            "put": {
+                "summary": "Update goal",
+                "tags": ["Goals"],
+                "security": [{ "bearerAuth": [] }],
+                "parameters": [
+                    { "in": "path", "name": "id", "required": true, "schema": { "type": "string" } }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "title": { "type": "string" },
+                                    "description": { "type": "string" },
+                                    "targetValue": { "type": "integer" },
+                                    "status": { "type": "string" }
+                                }
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": { "description": "Updated goal" }
+                }
+            },
+            "delete": {
+                "summary": "Delete goal",
+                "tags": ["Goals"],
+                "security": [{ "bearerAuth": [] }],
+                "parameters": [
+                    { "in": "path", "name": "id", "required": true, "schema": { "type": "string" } }
+                ],
+                "responses": {
+                    "204": { "description": "Goal deleted" }
+                }
+            }
+        },
+        "/api/goals/{id}/toggle": {
+            "post": {
+                "summary": "Toggle goal status (active/paused)",
+                "tags": ["Goals"],
+                "security": [{ "bearerAuth": [] }],
+                "parameters": [
+                    { "in": "path", "name": "id", "required": true, "schema": { "type": "string" } }
+                ],
+                "responses": {
+                    "200": { "description": "Goal status toggled" }
+                }
+            }
+        },
+        "/api/goals/{id}/complete": {
+            "post": {
+                "summary": "Mark goal as completed",
+                "tags": ["Goals"],
+                "security": [{ "bearerAuth": [] }],
+                "parameters": [
+                    { "in": "path", "name": "id", "required": true, "schema": { "type": "string" } }
+                ],
+                "responses": {
+                    "200": { "description": "Goal marked completed" }
+                }
+            }
+        },
+        "/api/goals/{id}/progress": {
+            "get": {
+                "summary": "Get goal progress history",
+                "tags": ["Goals"],
+                "security": [{ "bearerAuth": [] }],
+                "parameters": [
+                    { "in": "path", "name": "id", "required": true, "schema": { "type": "string" } }
+                ],
+                "responses": {
+                    "200": { "description": "Progress history" }
+                }
+            },
+            "post": {
+                "summary": "Add progress to goal",
+                "tags": ["Goals"],
+                "security": [{ "bearerAuth": [] }],
+                "parameters": [
+                    { "in": "path", "name": "id", "required": true, "schema": { "type": "string" } }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "value": { "type": "integer" },
+                                    "note": { "type": "string" }
+                                },
+                                "required": ["value"]
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": { "description": "Progress added" }
+                }
+            }
+        },
+        "/api/user-reminders": {
+            "get": {
+                "summary": "Get user reminders",
+                "tags": ["User Reminders"],
+                "security": [{ "bearerAuth": [] }],
+                "responses": {
+                    "200": { "description": "List of reminders" }
+                }
+            },
+            "post": {
+                "summary": "Create reminder",
+                "tags": ["User Reminders"],
+                "security": [{ "bearerAuth": [] }],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "type": { "type": "string", "enum": ["MEDITATION", "BREATHWORK", "JOURNAL", "MOOD", "HYDRATION", "CUSTOM"] },
+                                    "title": { "type": "string" },
+                                    "message": { "type": "string" },
+                                    "time": { "type": "string", "format": "time" },
+                                    "days": { "type": "array", "items": { "type": "string" } },
+                                    "isEnabled": { "type": "boolean" }
+                                },
+                                "required": ["type", "title", "time", "days"]
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": { "description": "Reminder created" }
+                }
+            }
+        },
+        "/api/user-reminders/templates": {
+            "get": {
+                "summary": "Get reminder templates",
+                "tags": ["User Reminders"],
+                "security": [{ "bearerAuth": [] }],
+                "responses": {
+                    "200": { "description": "List of templates" }
+                }
+            }
+        },
+        "/api/user-reminders/{id}": {
+            "get": {
+                "summary": "Get single reminder",
+                "tags": ["User Reminders"],
+                "security": [{ "bearerAuth": [] }],
+                "parameters": [
+                    { "in": "path", "name": "id", "required": true, "schema": { "type": "string" } }
+                ],
+                "responses": {
+                    "200": { "description": "Reminder details" }
+                }
+            },
+            "put": {
+                "summary": "Update reminder",
+                "tags": ["User Reminders"],
+                "security": [{ "bearerAuth": [] }],
+                "parameters": [
+                    { "in": "path", "name": "id", "required": true, "schema": { "type": "string" } }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "title": { "type": "string" },
+                                    "message": { "type": "string" },
+                                    "time": { "type": "string" },
+                                    "days": { "type": "array", "items": { "type": "string" } },
+                                    "isEnabled": { "type": "boolean" }
+                                }
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": { "description": "Updated reminder" }
+                }
+            },
+            "delete": {
+                "summary": "Delete reminder",
+                "tags": ["User Reminders"],
+                "security": [{ "bearerAuth": [] }],
+                "parameters": [
+                    { "in": "path", "name": "id", "required": true, "schema": { "type": "string" } }
+                ],
+                "responses": {
+                    "204": { "description": "Reminder deleted" }
+                }
+            }
+        },
+        "/api/user-reminders/{id}/toggle": {
+            "post": {
+                "summary": "Toggle reminder enabled status",
+                "tags": ["User Reminders"],
+                "security": [{ "bearerAuth": [] }],
+                "parameters": [
+                    { "in": "path", "name": "id", "required": true, "schema": { "type": "string" } }
+                ],
+                "responses": {
+                    "200": { "description": "Reminder toggled" }
+                }
+            }
+        },
+        "/api/playlists": {
+            "get": {
+                "summary": "Get all accessible playlists",
+                "tags": ["Playlists"],
+                "security": [{ "bearerAuth": [] }],
+                "parameters": [
+                    { "in": "query", "name": "type", "schema": { "type": "string", "enum": ["CUSTOM", "SYSTEM", "CURATED", "GENERATED", "COURSE"] } },
+                    { "in": "query", "name": "contentType", "schema": { "type": "string", "enum": ["MEDITATION", "BREATHWORK", "SOUNDSCAPE", "SLEEP", "MIXED"] } },
+                    { "in": "query", "name": "search", "schema": { "type": "string" } },
+                    { "in": "query", "name": "page", "schema": { "type": "integer" } },
+                    { "in": "query", "name": "limit", "schema": { "type": "integer" } }
+                ],
+                "responses": {
+                    "200": { "description": "List of playlists" }
+                }
+            },
+            "post": {
+                "summary": "Create playlist",
+                "tags": ["Playlists"],
+                "security": [{ "bearerAuth": [] }],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "name": { "type": "string" },
+                                    "nameEn": { "type": "string" },
+                                    "description": { "type": "string" },
+                                    "descriptionEn": { "type": "string" },
+                                    "coverImage": { "type": "string" },
+                                    "color": { "type": "string" },
+                                    "contentType": { "type": "string" },
+                                    "isPublic": { "type": "boolean" }
+                                },
+                                "required": ["name"]
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": { "description": "Playlist created" }
+                }
+            }
+        },
+        "/api/playlists/me": {
+            "get": {
+                "summary": "Get user's own playlists",
+                "tags": ["Playlists"],
+                "security": [{ "bearerAuth": [] }],
+                "responses": {
+                    "200": { "description": "User's playlists" }
+                }
+            }
+        },
+        "/api/playlists/saved": {
+            "get": {
+                "summary": "Get user's saved playlists",
+                "tags": ["Playlists"],
+                "security": [{ "bearerAuth": [] }],
+                "responses": {
+                    "200": { "description": "Saved playlists" }
+                }
+            }
+        },
+        "/api/playlists/featured": {
+            "get": {
+                "summary": "Get featured playlists",
+                "tags": ["Playlists"],
+                "security": [{ "bearerAuth": [] }],
+                "responses": {
+                    "200": { "description": "Featured playlists" }
+                }
+            }
+        },
+        "/api/playlists/system": {
+            "get": {
+                "summary": "Get system playlists",
+                "tags": ["Playlists"],
+                "security": [{ "bearerAuth": [] }],
+                "responses": {
+                    "200": { "description": "System playlists" }
+                }
+            }
+        },
+        "/api/playlists/{id}": {
+            "get": {
+                "summary": "Get single playlist with items",
+                "tags": ["Playlists"],
+                "security": [{ "bearerAuth": [] }],
+                "parameters": [
+                    { "in": "path", "name": "id", "required": true, "schema": { "type": "string" } }
+                ],
+                "responses": {
+                    "200": { "description": "Playlist with items" }
+                }
+            },
+            "put": {
+                "summary": "Update playlist",
+                "tags": ["Playlists"],
+                "security": [{ "bearerAuth": [] }],
+                "parameters": [
+                    { "in": "path", "name": "id", "required": true, "schema": { "type": "string" } }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "name": { "type": "string" },
+                                    "description": { "type": "string" },
+                                    "coverImage": { "type": "string" },
+                                    "isPublic": { "type": "boolean" }
+                                }
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": { "description": "Updated playlist" }
+                }
+            },
+            "delete": {
+                "summary": "Delete playlist",
+                "tags": ["Playlists"],
+                "security": [{ "bearerAuth": [] }],
+                "parameters": [
+                    { "in": "path", "name": "id", "required": true, "schema": { "type": "string" } }
+                ],
+                "responses": {
+                    "204": { "description": "Playlist deleted" }
+                }
+            }
+        },
+        "/api/playlists/{id}/items": {
+            "post": {
+                "summary": "Add item to playlist",
+                "tags": ["Playlists"],
+                "security": [{ "bearerAuth": [] }],
+                "parameters": [
+                    { "in": "path", "name": "id", "required": true, "schema": { "type": "string" } }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "itemType": { "type": "string", "enum": ["MEDITATION", "BREATHWORK", "SOUNDSCAPE", "SLEEP_STORY"] },
+                                    "meditationId": { "type": "string" },
+                                    "breathworkId": { "type": "string" },
+                                    "soundscapeId": { "type": "string" },
+                                    "sleepStoryId": { "type": "string" },
+                                    "sortOrder": { "type": "integer" }
+                                },
+                                "required": ["itemType"]
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": { "description": "Item added" }
+                }
+            }
+        },
+        "/api/playlists/{id}/items/{itemId}": {
+            "put": {
+                "summary": "Update item in playlist",
+                "tags": ["Playlists"],
+                "security": [{ "bearerAuth": [] }],
+                "parameters": [
+                    { "in": "path", "name": "id", "required": true, "schema": { "type": "string" } },
+                    { "in": "path", "name": "itemId", "required": true, "schema": { "type": "string" } }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "sortOrder": { "type": "integer" }
+                                }
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": { "description": "Item updated" }
+                }
+            },
+            "delete": {
+                "summary": "Remove item from playlist",
+                "tags": ["Playlists"],
+                "security": [{ "bearerAuth": [] }],
+                "parameters": [
+                    { "in": "path", "name": "id", "required": true, "schema": { "type": "string" } },
+                    { "in": "path", "name": "itemId", "required": true, "schema": { "type": "string" } }
+                ],
+                "responses": {
+                    "204": { "description": "Item removed" }
+                }
+            }
+        },
+        "/api/playlists/{id}/items/reorder": {
+            "put": {
+                "summary": "Reorder items in playlist",
+                "tags": ["Playlists"],
+                "security": [{ "bearerAuth": [] }],
+                "parameters": [
+                    { "in": "path", "name": "id", "required": true, "schema": { "type": "string" } }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "itemIds": { "type": "array", "items": { "type": "string" } }
+                                },
+                                "required": ["itemIds"]
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": { "description": "Items reordered" }
+                }
+            }
+        },
+        "/api/playlists/{id}/save": {
+            "post": {
+                "summary": "Save playlist",
+                "tags": ["Playlists"],
+                "security": [{ "bearerAuth": [] }],
+                "parameters": [
+                    { "in": "path", "name": "id", "required": true, "schema": { "type": "string" } }
+                ],
+                "responses": {
+                    "200": { "description": "Playlist saved" }
+                }
+            },
+            "delete": {
+                "summary": "Unsave playlist",
+                "tags": ["Playlists"],
+                "security": [{ "bearerAuth": [] }],
+                "parameters": [
+                    { "in": "path", "name": "id", "required": true, "schema": { "type": "string" } }
+                ],
+                "responses": {
+                    "200": { "description": "Playlist unsaved" }
+                }
+            }
+        },
+        "/api/playlists/{id}/play": {
+            "post": {
+                "summary": "Track playlist play",
+                "tags": ["Playlists"],
+                "security": [{ "bearerAuth": [] }],
+                "parameters": [
+                    { "in": "path", "name": "id", "required": true, "schema": { "type": "string" } }
+                ],
+                "responses": {
+                    "200": { "description": "Play tracked" }
+                }
+            }
+        },
+        "/api/wellness/stats": {
+            "get": {
+                "summary": "Get user's overall wellness stats",
+                "tags": ["Wellness"],
+                "security": [{ "bearerAuth": [] }],
+                "responses": {
+                    "200": { "description": "Wellness stats" }
+                }
+            }
+        },
+        "/api/wellness/summary": {
+            "get": {
+                "summary": "Get wellness summary (dashboard view)",
+                "tags": ["Wellness"],
+                "security": [{ "bearerAuth": [] }],
+                "responses": {
+                    "200": { "description": "Wellness summary with stats, streaks, trends" }
+                }
+            }
+        },
+        "/api/wellness/streak": {
+            "get": {
+                "summary": "Get streak info",
+                "tags": ["Wellness"],
+                "security": [{ "bearerAuth": [] }],
+                "responses": {
+                    "200": { "description": "Streak information with calendar" }
+                }
+            }
+        },
+        "/api/wellness/activity": {
+            "post": {
+                "summary": "Record activity (internal use)",
+                "tags": ["Wellness"],
+                "security": [{ "bearerAuth": [] }],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "type": { "type": "string", "enum": ["MEDITATION", "BREATHWORK", "SLEEP_STORY", "JOURNAL", "MOOD"] },
+                                    "durationMinutes": { "type": "integer" }
+                                },
+                                "required": ["type"]
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": { "description": "Activity recorded" }
+                }
+            }
+        },
+        "/api/admin/playlists": {
+            "get": {
+                "summary": "Get all playlists (admin)",
+                "tags": ["Admin Playlists"],
+                "security": [{ "bearerAuth": [] }],
+                "parameters": [
+                    { "in": "query", "name": "type", "schema": { "type": "string" } },
+                    { "in": "query", "name": "contentType", "schema": { "type": "string" } },
+                    { "in": "query", "name": "isSystem", "schema": { "type": "boolean" } },
+                    { "in": "query", "name": "isPublished", "schema": { "type": "boolean" } },
+                    { "in": "query", "name": "search", "schema": { "type": "string" } },
+                    { "in": "query", "name": "page", "schema": { "type": "integer" } },
+                    { "in": "query", "name": "limit", "schema": { "type": "integer" } }
+                ],
+                "responses": {
+                    "200": { "description": "List of all playlists" }
+                }
+            },
+            "post": {
+                "summary": "Create system/curated playlist",
+                "tags": ["Admin Playlists"],
+                "security": [{ "bearerAuth": [] }],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "name": { "type": "string" },
+                                    "nameEn": { "type": "string" },
+                                    "description": { "type": "string" },
+                                    "descriptionEn": { "type": "string" },
+                                    "coverImage": { "type": "string" },
+                                    "color": { "type": "string" },
+                                    "type": { "type": "string" },
+                                    "contentType": { "type": "string" },
+                                    "isSystem": { "type": "boolean" },
+                                    "isPublic": { "type": "boolean" },
+                                    "isFeatured": { "type": "boolean" },
+                                    "isPublished": { "type": "boolean" },
+                                    "sortOrder": { "type": "integer" }
+                                },
+                                "required": ["name"]
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": { "description": "Playlist created" }
+                }
+            }
+        },
+        "/api/admin/playlists/{id}": {
+            "get": {
+                "summary": "Get single playlist (admin)",
+                "tags": ["Admin Playlists"],
+                "security": [{ "bearerAuth": [] }],
+                "parameters": [
+                    { "in": "path", "name": "id", "required": true, "schema": { "type": "string" } }
+                ],
+                "responses": {
+                    "200": { "description": "Playlist details" }
+                }
+            },
+            "put": {
+                "summary": "Update playlist (admin)",
+                "tags": ["Admin Playlists"],
+                "security": [{ "bearerAuth": [] }],
+                "parameters": [
+                    { "in": "path", "name": "id", "required": true, "schema": { "type": "string" } }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "name": { "type": "string" },
+                                    "description": { "type": "string" },
+                                    "coverImage": { "type": "string" },
+                                    "type": { "type": "string" },
+                                    "isSystem": { "type": "boolean" },
+                                    "isPublic": { "type": "boolean" },
+                                    "isFeatured": { "type": "boolean" },
+                                    "isPublished": { "type": "boolean" },
+                                    "sortOrder": { "type": "integer" }
+                                }
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": { "description": "Updated playlist" }
+                }
+            },
+            "delete": {
+                "summary": "Delete playlist (admin)",
+                "tags": ["Admin Playlists"],
+                "security": [{ "bearerAuth": [] }],
+                "parameters": [
+                    { "in": "path", "name": "id", "required": true, "schema": { "type": "string" } }
+                ],
+                "responses": {
+                    "204": { "description": "Playlist deleted" }
+                }
+            }
+        },
+        "/api/admin/playlists/{id}/items": {
+            "post": {
+                "summary": "Add item to playlist (admin)",
+                "tags": ["Admin Playlists"],
+                "security": [{ "bearerAuth": [] }],
+                "parameters": [
+                    { "in": "path", "name": "id", "required": true, "schema": { "type": "string" } }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "itemType": { "type": "string" },
+                                    "meditationId": { "type": "string" },
+                                    "breathworkId": { "type": "string" },
+                                    "soundscapeId": { "type": "string" },
+                                    "sleepStoryId": { "type": "string" },
+                                    "sortOrder": { "type": "integer" }
+                                },
+                                "required": ["itemType"]
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": { "description": "Item added" }
+                }
+            }
+        },
+        "/api/admin/playlists/{id}/items/{itemId}": {
+            "delete": {
+                "summary": "Remove item from playlist (admin)",
+                "tags": ["Admin Playlists"],
+                "security": [{ "bearerAuth": [] }],
+                "parameters": [
+                    { "in": "path", "name": "id", "required": true, "schema": { "type": "string" } },
+                    { "in": "path", "name": "itemId", "required": true, "schema": { "type": "string" } }
+                ],
+                "responses": {
+                    "204": { "description": "Item removed" }
+                }
+            }
         }
     },
     "tags": [
@@ -14392,12 +15453,24 @@
             "description": "Cache management endpoints (Admin only)"
         },
         {
+            "name": "Goals",
+            "description": "User wellness goals and progress tracking"
+        },
+        {
             "name": "Invoices",
             "description": "Invoice management"
         },
         {
+            "name": "Journal",
+            "description": "Personal journal entries and prompts"
+        },
+        {
             "name": "NotificationPreferences",
             "description": "User notification preference management"
+        },
+        {
+            "name": "Onboarding",
+            "description": "User onboarding flow and recommendations"
         },
         {
             "name": "Payments",
@@ -14406,6 +15479,14 @@
         {
             "name": "Payment Webhooks",
             "description": "Payment provider webhook endpoints"
+        },
+        {
+            "name": "Playlists",
+            "description": "User and system playlists for content organization"
+        },
+        {
+            "name": "Admin Playlists",
+            "description": "Admin playlist management (Admin only)"
         },
         {
             "name": "Rate Limit",
@@ -14418,6 +15499,14 @@
         {
             "name": "Subscription Plans",
             "description": "Subscription plan management"
+        },
+        {
+            "name": "User Reminders",
+            "description": "User reminder management for daily activities"
+        },
+        {
+            "name": "Wellness",
+            "description": "User wellness statistics, streaks, and activity tracking"
         }
     ]
 }

@@ -61,7 +61,26 @@ import {
   IconGift,
   IconShoppingCart,
   // Podcast
-  IconMicrophone
+  IconMicrophone,
+  // New Icons for Sprint 9-10
+  IconPlaylist,
+  IconCategory,
+  IconTemplate,
+  IconRocket,
+  IconChartPie,
+  IconMoodSmile,
+  IconTarget,
+  IconBell,
+  IconHeart,
+  IconBrain,
+  IconWind,
+  IconClock,
+  IconSunrise,
+  IconBook,
+  IconPencil,
+  IconMusic,
+  IconQuote,
+  IconEdit
 } from '@tabler/icons-react';
 
 export type Icon = React.ComponentType<IconProps>;
@@ -129,5 +148,29 @@ export const Icons = {
   shop: IconShoppingCart,
   dailyRewards: IconGift,
   // Podcast
-  podcast: IconMicrophone
+  podcast: IconMicrophone,
+  // New Icons for Sprint 9-10
+  playlist: IconPlaylist,
+  userContent: IconCategory,
+  template: IconTemplate,
+  rocket: IconRocket,
+  chart: IconChartPie,
+  mood: IconMoodSmile,
+  target: IconTarget,
+  bell: IconBell,
+  wellness: IconHeart,
+  meditation: IconBrain,
+  breathwork: IconWind,
+  timer: IconClock,
+  dailyContent: IconSunrise,
+  journal: IconBook,
+  quotes: IconPencil,
+  // Sidebar icon aliases
+  heart: IconHeart,
+  wind: IconWind,
+  music: IconMusic,
+  clock: IconClock,
+  quote: IconQuote,
+  book: IconBook,
+  edit: IconEdit
 };

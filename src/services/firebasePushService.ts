@@ -102,12 +102,12 @@ export async function sendPushToDevice(payload: PushNotificationPayload): Promis
     };
 
     const response = await admin.messaging().send(message);
-    logger.info({ messageId: response, token: payload.token.slice(0, 20) }, 'Push notification sent');
+    logger.info({ messageId: response }, 'Push notification sent');
 
     return { success: true, messageId: response };
   } catch (error: unknown) {
     const err = error as Error & { code?: string };
-    logger.error({ err, token: payload.token.slice(0, 20) }, 'Failed to send push notification');
+    logger.error({ err, errorCode: err.code }, 'Failed to send push notification');
 
     // Handle invalid tokens
     if (err.code === 'messaging/registration-token-not-registered' ||
@@ -417,7 +417,7 @@ async function removeInvalidToken(token: string): Promise<void> {
       where: { token },
       data: { isActive: false }
     });
-    logger.info({ token: token.slice(0, 20) }, 'Marked invalid token as inactive');
+    logger.info('Marked invalid device token as inactive');
   } catch (error) {
     logger.error({ err: error }, 'Failed to mark invalid token');
   }

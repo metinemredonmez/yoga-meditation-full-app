@@ -3826,7 +3826,34 @@ model users {
   user_goals           user_goals[]
   user_reminders       user_reminders[]
 
+  // Sprint 3: Timer & Sleep relations
+  timer_presets        timer_presets[]
+  sleep_timer_settings sleep_timer_settings?
+  sleep_tracking       sleep_tracking[]
+
+  // Sprint 5: Playlists & Wellness Stats relations
+  playlists            playlists[]
+  saved_playlists      saved_playlists[]
+  user_wellness_stats  user_wellness_stats?
+
+  // Security
+  password_history          password_history[]
+  twoFactorSecret           String?
+  twoFactorVerifiedAt       DateTime?
+  two_factor_backup_codes   two_factor_backup_codes[]
+
+  // Social Login
+  googleId                  String?                       @unique
+  appleId                   String?                       @unique
+  provider                  String?                       @default("email")
+
+  // Integration Settings Relations
+  integration_settings_updated   integration_settings[] @relation("IntegrationSettingsUpdatedBy")
+  integration_logs_created       integration_logs[]     @relation("IntegrationLogsCreatedBy")
+
   @@index([stripeCustomerId])
+  @@index([googleId])
+  @@index([appleId])
 }
 
 model video_progress {
@@ -5257,10 +5284,12 @@ model meditations {
   updatedAt DateTime @updatedAt
 
   // Relations
-  progress  meditation_progress[]
-  favorites meditation_favorites[]
-  ratings   meditation_ratings[]
-  sessions  meditation_sessions[]
+  progress     meditation_progress[]
+  favorites    meditation_favorites[]
+  ratings      meditation_ratings[]
+  sessions     meditation_sessions[]
+  dailyContent daily_content[]
+  playlistItems playlist_items[]
 
   @@index([categoryId])
   @@index([instructorId])
@@ -5337,20 +5366,48 @@ model meditation_ratings {
 model meditation_sessions {
   id String @id @default(cuid())
 
-  meditationId String
-  meditation   meditations @relation(fields: [meditationId], references: [id], onDelete: Cascade)
-
   userId String
-  user   users  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user   users @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  duration  Int     @default(0) // dinlenen saniye
-  completed Boolean @default(false)
+  // İçerik bağlantısı (opsiyonel - timer only olabilir)
+  meditationId String?
+  meditation   meditations? @relation(fields: [meditationId], references: [id])
 
-  startedAt DateTime  @default(now())
-  endedAt   DateTime?
+  // Session tipi
+  type SessionType @default(GUIDED)
+
+  // Süre
+  targetDuration Int // hedef süre (saniye)
+  actualDuration Int @default(0) // gerçek süre
+
+  // Durum
+  status SessionStatus @default(IN_PROGRESS)
+
+  // Timer ayarları
+  intervalBell Int?    // ara zil (saniye, null=yok)
+  endBell      String? // bitiş zili sesi
+
+  // Background
+  backgroundSoundId String?
+  backgroundSound   soundscapes? @relation("SessionBackgroundSound", fields: [backgroundSoundId], references: [id])
+  backgroundVolume  Int?         @default(50)
+
+  // Context
+  mood MoodLevel?
+  note String?
+
+  // Timestamps
+  startedAt   DateTime  @default(now())
+  pausedAt    DateTime?
+  endedAt     DateTime?
+  completedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([userId])
   @@index([meditationId])
+  @@index([status])
 }
 
 // Breathwork
@@ -5402,8 +5459,10 @@ model breathworks {
   updatedAt DateTime @updatedAt
 
   // Relations
-  progress breathwork_progress[]
-  sessions breathwork_sessions[]
+  progress      breathwork_progress[]
+  sessions      breathwork_sessions[]
+  dailyContent  daily_content[]
+  playlistItems playlist_items[]
 }
 
 // Breathwork Progress
@@ -5488,6 +5547,12 @@ model soundscapes {
   sleepStories sleep_stories[]
   mixItems     sound_mix_items[]
   favorites    soundscape_favorites[]
+  playlistItems playlist_items[]
+
+  // Sprint 3: Timer & Sleep relations
+  sessionBackgrounds     meditation_sessions[]    @relation("SessionBackgroundSound")
+  presetBackgrounds      timer_presets[]          @relation("PresetBackgroundSound")
+  sleepTimerDefaults     sleep_timer_settings[]   @relation("SleepTimerDefaultSound")
 }
 
 // Soundscape Favorites
@@ -5578,8 +5643,9 @@ model sleep_stories {
   updatedAt DateTime @updatedAt
 
   // Relations
-  progress sleep_story_progress[]
-  ratings  sleep_story_ratings[]
+  progress      sleep_story_progress[]
+  ratings       sleep_story_ratings[]
+  playlistItems playlist_items[]
 
   @@index([category])
   @@index([isPremium])
@@ -5646,8 +5712,38 @@ model daily_quotes {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  dailyContent daily_content[]
+
   @@index([scheduledDate])
   @@index([isActive])
+}
+
+// Daily Content - Günlük önerilen içerik
+model daily_content {
+  id String @id @default(cuid())
+
+  date DateTime @unique @db.Date // Gün bazlı
+
+  // İlişkili içerikler
+  quoteId String?
+  quote   daily_quotes? @relation(fields: [quoteId], references: [id])
+
+  meditationId String?
+  meditation   meditations? @relation(fields: [meditationId], references: [id])
+
+  breathworkId String?
+  breathwork   breathworks? @relation(fields: [breathworkId], references: [id])
+
+  // Ekstra öneriler
+  tip       String? // Günün ipucu
+  challenge String? // Günün challenge'ı
+
+  isPublished Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([date])
 }
 
 // Mood Entry
@@ -5694,35 +5790,61 @@ model journal_entries {
   userId String
   user   users  @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  // İçerik
+  title   String?
+  content String   @db.Text
+
+  // Tip
   type     JournalType      @default(FREE_WRITE)
   promptId String?
   prompt   journal_prompts? @relation(fields: [promptId], references: [id])
 
-  content String
-  mood    MoodLevel?
+  // Context
+  mood MoodLevel?
+  tags String[]
 
-  isPrivate Boolean @default(true)
+  // Medya
+  images   String[] // image URLs
+  audioUrl String? // sesli günlük
 
-  date      DateTime @default(now())
+  // Meta
+  wordCount  Int     @default(0)
+  isPrivate  Boolean @default(true)
+  isFavorite Boolean @default(false)
+
+  // Tarih
+  date      DateTime @default(now()) @db.Date
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([userId])
   @@index([date])
+  @@index([type])
 }
 
 // Journal Prompts
 model journal_prompts {
   id String @id @default(cuid())
 
-  type     JournalType
+  // İçerik
   prompt   String
   promptEn String?
-  category String? // daily, weekly, gratitude, reflection
 
-  isActive  Boolean  @default(true)
+  // Kategorileme
+  type     JournalType
+  category String? // daily, weekly, deep, gratitude
+
+  // Meta
+  isActive  Boolean @default(true)
+  sortOrder Int     @default(0)
+
+  // Stats
+  useCount Int @default(0)
+
   createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
+  // Relations
   entries journal_entries[]
 }
 
@@ -5733,19 +5855,26 @@ model user_onboarding {
   userId String @unique
   user   users  @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  // Durum
   isCompleted Boolean   @default(false)
   completedAt DateTime?
+  skippedAt   DateTime?
 
-  // Cevaplar
-  experienceLevel   String? // BEGINNER, INTERMEDIATE, ADVANCED
-  goals             String[] // STRESS_RELIEF, BETTER_SLEEP, FLEXIBILITY, etc
+  // İlerleme
+  currentStep Int @default(1)
+  totalSteps  Int @default(5)
+
+  // Cevaplar (JSON olarak)
+  answers Json? // tüm cevaplar
+
+  // Ayrıştırılmış cevaplar
+  experienceLevel   String? // BEGINNER, SOME, INTERMEDIATE, ADVANCED
+  goals             String[] // STRESS_RELIEF, BETTER_SLEEP, FOCUS, FLEXIBILITY, etc
   interests         String[] // YOGA, MEDITATION, PILATES, BREATHWORK
   practiceFrequency String? // DAILY, FEW_TIMES_WEEK, WEEKLY, OCCASIONALLY
   preferredDuration Int? // dakika (5, 10, 15, 20, 30)
-  preferredTime     String? // MORNING, AFTERNOON, EVENING, ANYTIME
-
-  currentStep Int @default(0)
-  totalSteps  Int @default(5)
+  preferredTime     String? // MORNING, AFTERNOON, EVENING, NIGHT, FLEXIBLE
+  healthConditions  String[] // BACK_PAIN, ANXIETY, INSOMNIA, etc
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -5758,24 +5887,63 @@ model user_goals {
   userId String
   user   users  @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  type         GoalType
-  title        String
-  targetValue  Int
-  currentValue Int      @default(0)
-  unit         String? // dakika, gün, vs
+  // Hedef detayları
+  type        GoalType
+  title       String
+  description String?
 
-  period   GoalPeriod @default(DAILY)
-  isActive Boolean    @default(true)
+  // Hedef değerleri
+  targetValue  Int // hedef değer
+  currentValue Int    @default(0) // mevcut değer
+  unit         String // dakika, gün, session
 
-  startDate   DateTime  @default(now())
-  endDate     DateTime?
+  // Periyot
+  period GoalPeriod
+
+  // Tarihler
+  startDate DateTime  @default(now())
+  endDate   DateTime?
+
+  // Durum
+  isActive    Boolean   @default(true)
+  isCompleted Boolean   @default(false)
   completedAt DateTime?
+
+  // Hatırlatıcı
+  reminderEnabled Boolean @default(false)
+  reminderTime    String? // "09:00"
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  // Relations
+  progress goal_progress[]
+
   @@index([userId])
   @@index([isActive])
+}
+
+// Goal Progress (Günlük ilerleme kaydı)
+model goal_progress {
+  id String @id @default(cuid())
+
+  goalId String
+  goal   user_goals @relation(fields: [goalId], references: [id], onDelete: Cascade)
+
+  // İlerleme
+  value Int // o gün eklenen değer
+  date  DateTime @default(now()) @db.Date
+
+  // Kaynak (hangi aktiviteden geldi)
+  source   String? // meditation, breathwork, manual
+  sourceId String? // aktivite id
+
+  note String?
+
+  createdAt DateTime @default(now())
+
+  @@index([goalId])
+  @@index([date])
 }
 
 // User Reminders
@@ -5785,22 +5953,93 @@ model user_reminders {
   userId String
   user   users  @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  // Hatırlatıcı detayları
   type    ReminderType
   title   String
   message String?
 
+  // Zamanlama
   time     String // HH:mm format
-  days     String[] // MONDAY, TUESDAY, etc
+  days     String[] // MONDAY, TUESDAY, etc veya EVERYDAY
   timezone String   @default("Europe/Istanbul")
 
+  // Durum
   isEnabled Boolean @default(true)
 
+  // Son tetiklenme
   lastTriggeredAt DateTime?
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+
+  // Tercihler
+  soundEnabled     Boolean @default(true)
+  vibrationEnabled Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([userId])
   @@index([isEnabled])
+}
+
+// ==================== GOAL TEMPLATES ====================
+
+model goal_templates {
+  id String @id @default(cuid())
+
+  // Hedef bilgileri
+  type        GoalType
+  title       String
+  titleEn     String?
+  description String?
+  descriptionEn String?
+
+  // Hedef parametreleri
+  targetValue Int
+  unit        String      // "minutes", "sessions", "days", "entries"
+  period      GoalPeriod
+
+  // Görünüm
+  icon      String?
+  color     String?
+  sortOrder Int     @default(0)
+
+  // Durum
+  isActive Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([type])
+  @@index([isActive])
+}
+
+// ==================== REMINDER TEMPLATES ====================
+
+model reminder_templates {
+  id String @id @default(cuid())
+
+  // Hatırlatıcı bilgileri
+  type    ReminderType
+  title   String
+  titleEn String?
+  message String?
+  messageEn String?
+
+  // Varsayılan zamanlama
+  time String // HH:mm format
+
+  // Görünüm
+  icon      String?
+  color     String?
+  sortOrder Int     @default(0)
+
+  // Durum
+  isActive Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([type])
+  @@index([isActive])
 }
 
 // ============================================
@@ -5904,23 +6143,28 @@ enum QuoteCategory {
 }
 
 enum JournalType {
-  FREE_WRITE
-  GRATITUDE
-  REFLECTION
-  MORNING_PAGES
-  EVENING_REVIEW
-  PRACTICE_NOTES
+  FREE_WRITE // serbest yazı
+  GRATITUDE // şükran günlüğü
+  REFLECTION // yansıma/düşünce
+  DREAM // rüya günlüğü
+  MOOD // mood ile bağlantılı
+  PRACTICE_NOTES // pratik notları
+  INTENTION // günlük niyet
+  AFFIRMATION // olumlamalar
+  MORNING_PAGES // sabah sayfaları
+  EVENING_REVIEW // akşam değerlendirmesi
 }
 
 enum GoalType {
-  PRACTICE_DAYS
-  PRACTICE_MINUTES
-  MEDITATION_MINUTES
-  BREATHWORK_SESSIONS
-  STREAK_DAYS
-  WEIGHT_LOSS
-  FLEXIBILITY
-  CUSTOM
+  PRACTICE_DAYS // X gün pratik yap
+  PRACTICE_MINUTES // X dakika pratik yap
+  MEDITATION_COUNT // X meditasyon tamamla
+  BREATHWORK_COUNT // X nefes egzersizi
+  STREAK // X gün seri
+  MOOD_LOG // X gün mood kaydet
+  JOURNAL_ENTRIES // X günlük yaz
+  SLEEP_TRACKING // X gün uyku takibi
+  CUSTOM // özel hedef
 }
 
 enum GoalPeriod {
@@ -5931,11 +6175,384 @@ enum GoalPeriod {
 }
 
 enum ReminderType {
-  MORNING
-  EVENING
-  PRACTICE
+  MORNING // sabah rutini
+  EVENING // akşam rutini
+  PRACTICE // pratik hatırlatıcı
+  MOOD // mood kaydetme
+  JOURNAL // günlük yazma
+  HYDRATION // su içme
+  POSTURE // duruş düzeltme
+  BREAK // mola ver
+  BEDTIME // yatma vakti
+  CUSTOM // özel
+}
+
+// Sprint 3 Enums
+enum SessionType {
+  GUIDED // rehberli meditasyon
+  TIMER  // sadece timer
+  OPEN   // açık uçlu (süresiz)
+}
+
+enum SessionStatus {
+  IN_PROGRESS
+  PAUSED
+  COMPLETED
+  ABANDONED
+}
+
+// Sprint 3: Timer Presets
+model timer_presets {
+  id String @id @default(cuid())
+
+  userId String? // null = sistem preset'i
+  user   users?  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  name        String
+  nameEn      String?
+  description String?
+
+  // Timer ayarları
+  duration     Int  // saniye
+  intervalBell Int? // ara zil (saniye)
+
+  // Ses ayarları
+  startBell         String? // başlangıç zili
+  endBell           String? // bitiş zili
+  intervalBellSound String? // ara zil sesi
+
+  // Background
+  backgroundSoundId String?
+  backgroundSound   soundscapes? @relation("PresetBackgroundSound", fields: [backgroundSoundId], references: [id])
+  backgroundVolume  Int?         @default(50)
+
+  // Görsel
+  icon  String?
+  color String?
+
+  // Meta
+  isSystem  Boolean @default(false) // sistem preset'i mi
+  isDefault Boolean @default(false) // kullanıcının varsayılanı
+  sortOrder Int     @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+}
+
+// Sprint 3: Sleep Timer Settings
+model sleep_timer_settings {
+  id String @id @default(cuid())
+
+  userId String @unique
+  user   users  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Varsayılan süre
+  defaultDuration Int @default(1800) // 30 dakika
+
+  // Fade out
+  fadeOutEnabled  Boolean @default(true)
+  fadeOutDuration Int     @default(60) // saniye
+
+  // Ses ayarları
+  defaultSoundId String?
+  defaultSound   soundscapes? @relation("SleepTimerDefaultSound", fields: [defaultSoundId], references: [id])
+  defaultVolume  Int          @default(50)
+
+  // Uyku hikayesi tercihleri
+  autoPlayNextStory Boolean @default(false)
+
+  // Hatırlatıcı
+  bedtimeReminder     Boolean @default(false)
+  bedtimeReminderTime String? // "22:00"
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// Sprint 3: Sleep Tracking
+model sleep_tracking {
+  id String @id @default(cuid())
+
+  userId String
+  user   users  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Uyku zamanları
+  date     DateTime @db.Date // uyku tarihi
+  bedTime  DateTime // yatağa giriş
+  wakeTime DateTime // uyanma
+
+  // Hesaplanan
+  totalMinutes Int // toplam uyku süresi
+
+  // Kalite değerlendirmesi
+  quality Int? // 1-5
+
+  // Context
+  fellAsleepWith String? // "meditation", "story", "sounds", "nothing"
+  contentId      String? // meditation/story/sound id
+
+  // Notlar
+  notes     String?
+  dreamNote String?
+
+  // Etiketler
+  tags String[] // ["kabus", "derin uyku", "erken uyandım"]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, date])
+  @@index([userId])
+  @@index([date])
+}
+
+// ============================================
+// SPRINT 5: PLAYLISTS + WELLNESS STATS
+// ============================================
+
+// Sprint 5: Playlist Type Enum
+enum PlaylistType {
+  CUSTOM    // kullanıcı oluşturdu
+  SYSTEM    // sistem oluşturdu
+  CURATED   // editör seçimi
+  GENERATED // AI oluşturdu
+  COURSE    // kurs/program
+}
+
+// Sprint 5: Playlist Content Type Enum
+enum PlaylistContentType {
+  MEDITATION // sadece meditasyon
+  BREATHWORK // sadece nefes
+  SOUNDSCAPE // sadece ses
+  SLEEP      // sadece uyku
+  MIXED      // karışık
+}
+
+// Sprint 5: Playlist Item Type Enum
+enum PlaylistItemType {
   MEDITATION
   BREATHWORK
-  WATER
-  CUSTOM
+  SOUNDSCAPE
+  SLEEP_STORY
 }
+
+// Sprint 5: Playlist
+model playlists {
+  id String @id @default(cuid())
+
+  userId String?
+  user   users?  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Detaylar
+  name          String
+  nameEn        String?
+  description   String?
+  descriptionEn String?
+
+  // Görsel
+  coverImage String?
+  color      String? // hex gradient başlangıç
+
+  // Tip
+  type        PlaylistType        @default(CUSTOM)
+  contentType PlaylistContentType @default(MIXED)
+
+  // Meta
+  isSystem    Boolean @default(false) // sistem playlist'i
+  isPublic    Boolean @default(false) // herkese açık
+  isFeatured  Boolean @default(false) // öne çıkan
+  isPublished Boolean @default(true)
+
+  // Stats
+  totalDuration Int @default(0) // saniye
+  itemCount     Int @default(0)
+  playCount     Int @default(0)
+  saveCount     Int @default(0) // kaç kişi kaydetti
+
+  // Sıralama
+  sortOrder Int @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  items   playlist_items[]
+  savedBy saved_playlists[]
+
+  @@index([userId])
+  @@index([isPublic])
+  @@index([type])
+  @@index([isFeatured])
+}
+
+// Sprint 5: Playlist Item
+model playlist_items {
+  id String @id @default(cuid())
+
+  playlistId String
+  playlist   playlists @relation(fields: [playlistId], references: [id], onDelete: Cascade)
+
+  // İçerik (polymorphic - biri dolu olacak)
+  contentType PlaylistItemType
+
+  meditationId String?
+  meditation   meditations? @relation(fields: [meditationId], references: [id], onDelete: Cascade)
+
+  breathworkId String?
+  breathwork   breathworks? @relation(fields: [breathworkId], references: [id], onDelete: Cascade)
+
+  soundscapeId String?
+  soundscape   soundscapes? @relation(fields: [soundscapeId], references: [id], onDelete: Cascade)
+
+  sleepStoryId String?
+  sleepStory   sleep_stories? @relation(fields: [sleepStoryId], references: [id], onDelete: Cascade)
+
+  // Sıralama
+  sortOrder Int @default(0)
+
+  // Notlar
+  note String?
+
+  createdAt DateTime @default(now())
+
+  @@index([playlistId])
+  @@index([meditationId])
+  @@index([breathworkId])
+  @@index([soundscapeId])
+  @@index([sleepStoryId])
+}
+
+// Sprint 5: Saved Playlist (başkasının playlist'ini kaydetme)
+model saved_playlists {
+  id String @id @default(cuid())
+
+  userId String
+  user   users @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  playlistId String
+  playlist   playlists @relation(fields: [playlistId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@unique([userId, playlistId])
+  @@index([userId])
+}
+
+// Sprint 5: User Wellness Stats (Özet istatistikler)
+model user_wellness_stats {
+  id String @id @default(cuid())
+
+  userId String @unique
+  user   users  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Toplam istatistikler
+  totalMeditationMinutes Int @default(0)
+  totalMeditationCount   Int @default(0)
+  totalBreathworkMinutes Int @default(0)
+  totalBreathworkCount   Int @default(0)
+  totalSessionMinutes    Int @default(0)
+  totalSessionCount      Int @default(0)
+  totalSleepStoryCount   Int @default(0)
+  totalJournalEntries    Int @default(0)
+  totalMoodEntries       Int @default(0)
+
+  // Streak'ler
+  currentStreak    Int       @default(0)
+  longestStreak    Int       @default(0)
+  lastActivityDate DateTime?
+
+  // Haftalık özet
+  weeklyMinutes      Int       @default(0)
+  weeklySessionCount Int       @default(0)
+  weekStartDate      DateTime?
+
+  // Aylık özet
+  monthlyMinutes      Int       @default(0)
+  monthlySessionCount Int       @default(0)
+  monthStartDate      DateTime?
+
+  // Favori kategoriler (JSON)
+  topCategories Json? // ["stress-relief", "sleep", "focus"]
+  topTimes      Json? // ["morning", "evening"]
+
+  // Başarılar
+  achievementCount Int @default(0)
+  badgeCount       Int @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// Password history for preventing password reuse
+model password_history {
+  id           String   @id @default(cuid())
+  userId       String
+  passwordHash String
+  createdAt    DateTime @default(now())
+  user         users    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([createdAt])
+}
+
+// Two-factor authentication backup codes
+model two_factor_backup_codes {
+  id        String   @id @default(cuid())
+  userId    String
+  code      String   // Hashed backup code
+  usedAt    DateTime?
+  createdAt DateTime @default(now())
+  user      users    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+
+// ============================================
+// Integration Settings (3rd party services)
+// ============================================
+
+// Integration settings for 3rd party services (encrypted)
+model integration_settings {
+  id          String   @id @default(cuid())
+  category    String   // auth, payment, notification, storage, streaming, monitoring, email, sms
+  provider    String   // google, stripe, firebase, aws_s3, etc.
+  key         String   // client_id, api_key, secret_key, etc.
+  value       String   @db.Text // Encrypted value
+  isActive    Boolean  @default(true)
+  isEncrypted Boolean  @default(true)
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  updatedBy   String?
+  updatedByUser users? @relation("IntegrationSettingsUpdatedBy", fields: [updatedBy], references: [id])
+
+  @@unique([category, provider, key])
+  @@index([category])
+  @@index([provider])
+  @@index([isActive])
+}
+
+// Integration activity logs
+model integration_logs {
+  id        String   @id @default(cuid())
+  category  String
+  provider  String
+  action    String   // test_connection, update_config, toggle_status, error
+  status    String   // success, failed
+  message   String?
+  metadata  Json?
+  ipAddress String?
+  userAgent String?
+  createdAt DateTime @default(now())
+  createdBy String?
+  user      users?   @relation("IntegrationLogsCreatedBy", fields: [createdBy], references: [id])
+
+  @@index([category])
+  @@index([provider])
+  @@index([action])
+  @@index([createdAt])
+}
+

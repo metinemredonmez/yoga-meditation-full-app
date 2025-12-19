@@ -1,7 +1,12 @@
-import { Request, Response } from 'express';
+import { Request, Response, NextFunction } from 'express';
+import { OAuth2Client } from 'google-auth-library';
 import { isGoogleConfigured, parseRTDN } from '../utils/googlePlay';
 import { logger } from '../utils/logger';
 import { handleGoogleNotification } from '../services/googlePlayService';
+import { config } from '../utils/config';
+
+// Initialize OAuth2Client for JWT verification
+const oAuth2Client = new OAuth2Client();
 
 /**
  * Handle Google Play Real-time Developer Notifications (RTDN)
@@ -133,36 +138,103 @@ export async function handleGoogleVoidedPurchases(req: Request, res: Response) {
 }
 
 /**
+ * Verify Google Cloud Pub/Sub JWT token
+ *
+ * Validates the JWT token sent by Google Cloud Pub/Sub using Google's public keys.
+ * Returns the decoded payload if valid, null otherwise.
+ */
+async function verifyGooglePubSubToken(token: string): Promise<{
+  valid: boolean;
+  email?: string;
+  error?: string;
+}> {
+  try {
+    // Google Pub/Sub tokens should be verified against Google's public keys
+    // The audience should be the URL of this endpoint
+    const ticket = await oAuth2Client.verifyIdToken({
+      idToken: token,
+      audience: config.google?.pubsubAudience || undefined,
+    });
+
+    const payload = ticket.getPayload();
+
+    if (!payload) {
+      return { valid: false, error: 'Empty token payload' };
+    }
+
+    // Verify the email claim matches expected service account
+    const email = payload.email;
+
+    // Google Pub/Sub push requests come from a service account
+    // Format: service-PROJECT_NUMBER@gcp-sa-pubsub.iam.gserviceaccount.com
+    if (email && !email.endsWith('@gcp-sa-pubsub.iam.gserviceaccount.com')) {
+      logger.warn({ email }, 'Google Pub/Sub token email is not from Pub/Sub service account');
+      // Allow through but log - could be configured differently
+    }
+
+    // Verify token is not expired (verifyIdToken already checks this)
+    // Verify issuer
+    const issuer = payload.iss;
+    if (issuer !== 'https://accounts.google.com' && issuer !== 'accounts.google.com') {
+      return { valid: false, error: `Invalid issuer: ${issuer}` };
+    }
+
+    return { valid: true, email };
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    logger.error({ err: error }, 'Google Pub/Sub JWT verification failed');
+    return { valid: false, error: errorMessage };
+  }
+}
+
+/**
  * Verify Google Cloud Pub/Sub push authentication
  *
  * This middleware verifies that the request comes from Google Cloud Pub/Sub
+ * using proper JWT verification with Google's public keys.
  */
-export function verifyGooglePubSubAuth(req: Request, res: Response, next: Function) {
+export async function verifyGooglePubSubAuth(
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
   // Google Cloud Pub/Sub includes an authorization header with a JWT token
   const authHeader = req.headers.authorization;
 
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
     logger.warn('Missing or invalid authorization header in Google webhook');
     // In development, we might want to skip verification
-    if (process.env.NODE_ENV === 'development') {
+    if (config.NODE_ENV === 'development') {
       logger.warn('Skipping Google Pub/Sub auth verification in development');
       return next();
     }
-    return res.status(401).json({ error: 'Unauthorized' });
+    res.status(401).json({ error: 'Unauthorized' });
+    return;
   }
 
   const token = authHeader.substring(7);
 
-  // In production, you should verify the JWT token
-  // The token is signed by Google and contains claims about the sender
-  // For now, we just check that a token exists
-  // TODO: Implement proper JWT verification using Google's public keys
-
   if (!token) {
-    return res.status(401).json({ error: 'Invalid token' });
+    res.status(401).json({ error: 'Invalid token' });
+    return;
   }
 
-  // Token exists, proceed
-  // In production, decode and verify the token
+  // Verify the JWT token using Google's public keys
+  const verification = await verifyGooglePubSubToken(token);
+
+  if (!verification.valid) {
+    logger.warn({ error: verification.error }, 'Google Pub/Sub token verification failed');
+
+    // In development, allow through with warning
+    if (config.NODE_ENV === 'development') {
+      logger.warn('Allowing unverified request in development mode');
+      return next();
+    }
+
+    res.status(401).json({ error: 'Invalid token', details: verification.error });
+    return;
+  }
+
+  logger.debug({ email: verification.email }, 'Google Pub/Sub token verified');
   next();
 }

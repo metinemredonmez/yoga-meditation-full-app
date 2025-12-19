@@ -14,10 +14,28 @@ import {
   validateContentType,
 } from '../services/storageService';
 import { setAuthCookies, clearAuthCookies, getRefreshTokenFromCookies } from '../utils/cookies';
+import {
+  isAccountLocked,
+  recordFailedAttempt,
+  clearLoginAttempts,
+} from '../services/loginAttemptService';
+import {
+  isPasswordPreviouslyUsed,
+  addPasswordToHistory,
+  initializePasswordHistory,
+} from '../services/passwordHistoryService';
+
+// Strong password schema with complexity requirements
+const passwordSchema = z.string()
+  .min(8, 'Password must be at least 8 characters')
+  .regex(/[a-z]/, 'Password must contain at least one lowercase letter')
+  .regex(/[A-Z]/, 'Password must contain at least one uppercase letter')
+  .regex(/[0-9]/, 'Password must contain at least one number')
+  .regex(/[^a-zA-Z0-9]/, 'Password must contain at least one special character');
 
 const signupSchema = z.object({
   email: z.string().email(),
-  password: z.string().min(8),
+  password: passwordSchema,
   firstName: z.string().min(1).optional(),
   lastName: z.string().min(1).optional(),
   phoneNumber: z.string().optional(),
@@ -39,7 +57,7 @@ const updateProfileSchema = z.object({
 
 const changePasswordSchema = z.object({
   currentPassword: z.string().min(1),
-  newPassword: z.string().min(8),
+  newPassword: passwordSchema,
 });
 
 const deleteAccountSchema = z.object({
@@ -136,6 +154,9 @@ export async function signup(req: Request, res: Response) {
       action: 'user.signup',
     });
 
+    // Initialize password history
+    await initializePasswordHistory(user.id, passwordHash);
+
     // Send welcome email (non-blocking)
     sendWelcomeEmail(user.email, user.firstName || '').catch((err) => {
       logger.warn({ err, userId: user.id }, 'Failed to send welcome email');
@@ -198,17 +219,52 @@ export async function signup(req: Request, res: Response) {
 export async function login(req: Request, res: Response) {
   try {
     const payload = loginSchema.parse(req.body);
+    const ipAddress =
+      (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() ||
+      req.ip ||
+      req.socket.remoteAddress ||
+      'unknown';
+
+    // Check if account is locked due to too many failed attempts
+    const lockStatus = await isAccountLocked(payload.email);
+    if (lockStatus.locked) {
+      const minutes = Math.ceil((lockStatus.lockoutSeconds || 900) / 60);
+      return res.status(429).json({
+        error: 'Account temporarily locked',
+        message: `Too many failed login attempts. Please try again in ${minutes} minutes.`,
+        retryAfter: lockStatus.lockoutSeconds,
+      });
+    }
 
     const user = await prisma.user.findUnique({ where: { email: payload.email } });
 
     if (!user) {
+      // Record failed attempt even for non-existent users (prevent enumeration)
+      await recordFailedAttempt(payload.email, ipAddress);
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 
     const valid = await comparePassword(payload.password, user.passwordHash);
     if (!valid) {
-      return res.status(401).json({ error: 'Invalid credentials' });
+      // Record failed attempt
+      const attemptResult = await recordFailedAttempt(payload.email, ipAddress);
+
+      if (attemptResult.locked) {
+        return res.status(429).json({
+          error: 'Account temporarily locked',
+          message: 'Too many failed login attempts. Please try again in 15 minutes.',
+          retryAfter: attemptResult.lockoutSeconds,
+        });
+      }
+
+      return res.status(401).json({
+        error: 'Invalid credentials',
+        remainingAttempts: attemptResult.remainingAttempts,
+      });
     }
+
+    // Clear failed attempts on successful login
+    await clearLoginAttempts(payload.email);
 
     await recordAuditLog({
       userId: user.id,
@@ -218,10 +274,6 @@ export async function login(req: Request, res: Response) {
 
     // Get request metadata for token tracking
     const userAgent = req.headers['user-agent'];
-    const ipAddress =
-      (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() ||
-      req.ip ||
-      req.socket.remoteAddress;
 
     // Create token pair with new token service
     const tokens = await createTokenPair(
@@ -435,6 +487,18 @@ export async function changePassword(req: Request, res: Response) {
     if (!validPassword) {
       return res.status(400).json({ error: 'Current password is incorrect' });
     }
+
+    // Check password history - prevent reuse of last 5 passwords
+    const wasUsedBefore = await isPasswordPreviouslyUsed(req.user.userId, payload.newPassword);
+    if (wasUsedBefore) {
+      return res.status(400).json({
+        error: 'Password previously used',
+        message: 'You cannot reuse any of your last 5 passwords. Please choose a different password.',
+      });
+    }
+
+    // Add current password to history before changing
+    await addPasswordToHistory(req.user.userId, user.passwordHash);
 
     const newPasswordHash = await hashPassword(payload.newPassword);
 

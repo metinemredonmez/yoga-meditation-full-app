@@ -10,18 +10,15 @@ interface PushPayload {
 
 export async function sendPushNotification({ deviceToken, title, body, data }: PushPayload) {
   if (!config.PUSH_PROVIDER_API_KEY) {
-    logger.warn({ deviceToken, title }, 'Push provider key missing; push notification skipped');
+    logger.warn({ title }, 'Push provider key missing; push notification skipped');
     return { delivered: false, reason: 'Push provider not configured' } as const;
   }
 
   logger.info(
     {
-      deviceToken,
       title,
       body,
-      data,
-      providerKey: config.PUSH_PROVIDER_API_KEY?.slice(0, 6) ?? 'unset',
-      providerAppId: config.PUSH_PROVIDER_APP_ID,
+      hasData: !!data,
     },
     'Pretending to send push notification (placeholder)',
   );

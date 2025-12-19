@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import DOMPurify from 'dompurify';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -604,7 +605,7 @@ export function NotificationTemplates() {
                   <Label className="text-xs text-muted-foreground">HTML Önizleme</Label>
                   <div
                     className="mt-1 p-4 border rounded-lg bg-white dark:bg-gray-900 prose prose-sm max-w-none"
-                    dangerouslySetInnerHTML={{ __html: selectedTemplate.htmlBody }}
+                    dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(selectedTemplate.htmlBody) }}
                   />
                 </div>
               )}

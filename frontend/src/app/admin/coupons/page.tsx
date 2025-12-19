@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { getSession } from '@/lib/auth';
+import api from '@/lib/api';
 
 // ============================================
 // Types
@@ -100,11 +101,7 @@ export default function CouponsPage() {
   const fetchCoupons = async () => {
     try {
       setLoading(true);
-      const token = localStorage.getItem('token');
-      const response = await fetch('/api/admin/financial/coupons', {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const data = await response.json();
+      const { data } = await api.get('/api/admin/financial/coupons');
       if (data.success) {
         setCoupons(data.coupons || []);
       }
@@ -117,11 +114,7 @@ export default function CouponsPage() {
 
   const fetchStats = async () => {
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch('/api/admin/financial/stats/coupons', {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const data = await response.json();
+      const { data } = await api.get('/api/admin/financial/stats/coupons');
       if (data.success) {
         // Generate mock stats based on coupons data
         setStats({
@@ -159,27 +152,17 @@ export default function CouponsPage() {
         return;
       }
 
-      const token = localStorage.getItem('token');
-      const response = await fetch('/api/admin/financial/coupons', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          code: formData.code.toUpperCase(),
-          discountType: formData.type,
-          discountValue: formData.value,
-          maxUses: formData.maxUses ? parseInt(formData.maxUses) : null,
-          maxUsesPerUser: formData.maxUsesPerUser,
-          minPurchaseAmount: formData.minPurchaseAmount ? parseFloat(formData.minPurchaseAmount) : null,
-          applicablePlans: formData.applicablePlans,
-          startsAt: formData.startsAt || null,
-          expiresAt: formData.expiresAt || null,
-        }),
+      const { data } = await api.post('/api/admin/financial/coupons', {
+        code: formData.code.toUpperCase(),
+        discountType: formData.type,
+        discountValue: formData.value,
+        maxUses: formData.maxUses ? parseInt(formData.maxUses) : null,
+        maxUsesPerUser: formData.maxUsesPerUser,
+        minPurchaseAmount: formData.minPurchaseAmount ? parseFloat(formData.minPurchaseAmount) : null,
+        applicablePlans: formData.applicablePlans,
+        startsAt: formData.startsAt || null,
+        expiresAt: formData.expiresAt || null,
       });
-
-      const data = await response.json();
       if (data.success) {
         setFormSuccess('Kupon basariyla olusturuldu');
         resetForm();
@@ -196,17 +179,7 @@ export default function CouponsPage() {
 
   const updateCoupon = async (couponId: string, updates: Partial<Coupon>) => {
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`/api/admin/financial/coupons/${couponId}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(updates),
-      });
-
-      const data = await response.json();
+      const { data } = await api.put(`/api/admin/financial/coupons/${couponId}`, updates);
       if (data.success) {
         fetchCoupons();
       }
@@ -219,13 +192,7 @@ export default function CouponsPage() {
     if (!confirm('Bu kuponu silmek istediginizden emin misiniz?')) return;
 
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`/api/admin/financial/coupons/${couponId}`, {
-        method: 'DELETE',
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      const data = await response.json();
+      const { data } = await api.delete(`/api/admin/financial/coupons/${couponId}`);
       if (data.success) {
         fetchCoupons();
         fetchStats();

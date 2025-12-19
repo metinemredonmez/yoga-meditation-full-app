@@ -75,7 +75,7 @@ export async function unregisterDevice(userId: string, token: string): Promise<b
       },
     });
 
-    logger.info({ userId, token: token.slice(0, 20) + '...' }, 'Device unregistered');
+    logger.info({ userId }, 'Device unregistered');
     return true;
   } catch {
     return false;

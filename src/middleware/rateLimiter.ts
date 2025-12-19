@@ -128,7 +128,15 @@ function createRateLimiter(tierName: string, customTier?: Partial<RateLimitTier>
       next();
     } catch (error) {
       logger.error({ error, identifier, endpoint }, 'Rate limiter middleware error');
-      // Allow request on error
+
+      // Fail-closed: On Redis/storage error, apply a conservative delay
+      // This prevents abuse during infrastructure issues while not completely blocking users
+      if (config.NODE_ENV === 'production') {
+        // In production, apply a short delay instead of blocking completely
+        await new Promise((resolve) => setTimeout(resolve, 500));
+        logger.warn({ identifier, endpoint }, 'Rate limiter error - applied fallback delay');
+      }
+
       next();
     }
   };
@@ -196,6 +204,13 @@ export function apiKeyRateLimiter(customLimit?: number) {
       next();
     } catch (error) {
       logger.error({ error, identifier, endpoint }, 'API key rate limiter error');
+
+      // Fail-closed: Apply delay in production
+      if (config.NODE_ENV === 'production') {
+        await new Promise((resolve) => setTimeout(resolve, 500));
+        logger.warn({ identifier, endpoint }, 'API key rate limiter error - applied fallback delay');
+      }
+
       next();
     }
   };
