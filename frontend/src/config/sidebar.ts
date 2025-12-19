@@ -48,13 +48,6 @@ export const sidebarConfig: NavItemWithRoles[] = [
         shortcut: ['p', 'o'],
         roles: ['ADMIN', 'SUPER_ADMIN'], // Only ADMIN+
       },
-      {
-        title: 'Challenges',
-        url: '/dashboard/challenges',
-        icon: 'challenges',
-        shortcut: ['c', 'h'],
-        roles: ['ADMIN', 'SUPER_ADMIN'], // Only ADMIN+
-      },
     ],
   },
   {
@@ -310,43 +303,6 @@ export const sidebarConfig: NavItemWithRoles[] = [
     items: [],
   },
   {
-    title: 'Community',
-    url: '#',
-    icon: 'community',
-    isActive: false,
-    roles: ['ADMIN', 'SUPER_ADMIN'], // Only ADMIN+
-    items: [
-      {
-        title: 'Overview',
-        url: '/dashboard/community',
-        icon: 'community',
-        shortcut: ['c', 'o'],
-        roles: ['ADMIN', 'SUPER_ADMIN'],
-      },
-      {
-        title: 'Categories',
-        url: '/dashboard/community/categories',
-        icon: 'folder',
-        shortcut: ['c', 'c'],
-        roles: ['ADMIN', 'SUPER_ADMIN'],
-      },
-      {
-        title: 'Topics',
-        url: '/dashboard/community/topics',
-        icon: 'message',
-        shortcut: ['c', 't'],
-        roles: ['ADMIN', 'SUPER_ADMIN'],
-      },
-      {
-        title: 'Reports',
-        url: '/dashboard/community/reports',
-        icon: 'flag',
-        shortcut: ['c', 'r'],
-        roles: ['ADMIN', 'SUPER_ADMIN'],
-      },
-    ],
-  },
-  {
     title: 'Gamification',
     url: '#',
     icon: 'gamification',
@@ -358,27 +314,6 @@ export const sidebarConfig: NavItemWithRoles[] = [
         url: '/dashboard/gamification/achievements',
         icon: 'achievements',
         shortcut: ['g', 'a'],
-        roles: ['ADMIN', 'SUPER_ADMIN'],
-      },
-      {
-        title: 'Quests',
-        url: '/dashboard/gamification/quests',
-        icon: 'quests',
-        shortcut: ['g', 'q'],
-        roles: ['ADMIN', 'SUPER_ADMIN'],
-      },
-      {
-        title: 'Leaderboard',
-        url: '/dashboard/gamification/leaderboard',
-        icon: 'leaderboard',
-        shortcut: ['g', 'l'],
-        roles: ['ADMIN', 'SUPER_ADMIN'],
-      },
-      {
-        title: 'Shop',
-        url: '/dashboard/gamification/shop',
-        icon: 'shop',
-        shortcut: ['g', 's'],
         roles: ['ADMIN', 'SUPER_ADMIN'],
       },
       {

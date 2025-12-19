@@ -8,7 +8,7 @@ import {
   updateDailyContent,
   getAdminDailyQuotes,
   getAdminMeditations,
-  getAdminBreathworkSessions,
+  getAdminBreathwork,
 } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -85,12 +85,12 @@ export function DailyContentForm({ date }: DailyContentFormProps) {
       const [quotesData, meditationsData, breathworkData] = await Promise.all([
         getAdminDailyQuotes({ isActive: true }),
         getAdminMeditations({ isPublished: true, limit: 100 }),
-        getAdminBreathworkSessions({ isPublished: true, limit: 100 }),
+        getAdminBreathwork({ isPublished: true, limit: 100 }),
       ]);
 
       setQuotes(quotesData.quotes || quotesData.dailyQuotes || []);
       setMeditations(meditationsData.meditations || []);
-      setBreathworks(breathworkData.sessions || breathworkData.breathworkSessions || []);
+      setBreathworks(breathworkData.breathworks || breathworkData.sessions || []);
     } catch (error) {
       console.error('Failed to load options:', error);
     } finally {

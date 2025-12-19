@@ -252,6 +252,32 @@ async function main() {
       totalStudents: 1250,
       averageRating: 4.85,
       commissionRate: 0.25,
+      profileImageUrl: 'https://images.unsplash.com/photo-1594381898411-846e7d193883?w=400',
+      coverImageUrl: 'https://images.unsplash.com/photo-1545389336-cf090694435e?w=1200',
+    },
+  });
+
+  const instructorProfileMaya = await prisma.instructor_profiles.upsert({
+    where: { slug: 'maya-pilates' },
+    update: { userId: teacherMaya.id },
+    create: {
+      userId: teacherMaya.id,
+      displayName: 'Maya Pilates',
+      slug: 'maya-pilates',
+      bio: 'Certified Pilates instructor specializing in Mat Pilates and Reformer.',
+      shortBio: 'Pilates & Core Uzmanı',
+      specializations: ['Pilates', 'Core', 'Reformer'],
+      yearsOfExperience: 8,
+      languages: ['Turkish', 'English'],
+      status: 'APPROVED',
+      tier: 'PRO',
+      isVerified: true,
+      isFeatured: true,
+      totalStudents: 980,
+      averageRating: 4.88,
+      commissionRate: 0.25,
+      profileImageUrl: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=400',
+      coverImageUrl: 'https://images.unsplash.com/photo-1518611012118-696072aa579a?w=1200',
     },
   });
 
@@ -274,46 +300,33 @@ async function main() {
       totalStudents: 850,
       averageRating: 4.9,
       commissionRate: 0.25,
+      profileImageUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400',
+      coverImageUrl: 'https://images.unsplash.com/photo-1593811167562-9cef47bfc4d7?w=1200',
     },
   });
   console.log('👩‍🏫 Instructor profiles ensured');
 
   // ============================================
-  // GAMIFICATION: USER LEVELS
+  // GAMIFICATION: USER LEVELS (removed - model deleted)
   // ============================================
-  for (const user of [admin, teacher, student]) {
-    await prisma.user_levels.upsert({
-      where: { userId: user.id },
-      update: {},
-      create: {
-        userId: user.id,
-        level: 1,
-        currentXP: 0,
-        totalXP: 0,
-        currentStreak: 0,
-        longestStreak: 0,
-        streakFreezeCount: 2,
-        lastActivityDate: new Date(),
-      },
-    });
-  }
-
-  await prisma.user_levels.update({
-    where: { userId: student.id },
-    data: { totalXP: 500, currentXP: 500, level: 3, currentStreak: 5, longestStreak: 5 },
-  });
-  console.log('📊 User levels ensured');
+  console.log('📊 User levels skipped (model removed)');
 
   // ============================================
   // ACHIEVEMENTS
   // ============================================
   const achievementSeeds = [
-    { id: 'achievement-first-class', slug: 'first-class', name: 'First Steps', description: 'Complete your first class', icon: 'trophy-first', category: 'PRACTICE' as const, difficulty: 'EASY' as const, xpReward: 50, requirementType: 'CLASSES_COMPLETED' as const, requirementValue: 1 },
-    { id: 'achievement-10-classes', slug: '10-classes', name: 'Dedicated Practitioner', description: 'Complete 10 classes', icon: 'trophy-silver', category: 'PRACTICE' as const, difficulty: 'MEDIUM' as const, xpReward: 150, requirementType: 'CLASSES_COMPLETED' as const, requirementValue: 10 },
-    { id: 'achievement-7-day-streak', slug: '7-day-streak', name: 'Week Warrior', description: 'Maintain a 7-day streak', icon: 'flame-bronze', category: 'CONSISTENCY' as const, difficulty: 'EASY' as const, xpReward: 100, requirementType: 'STREAK_DAYS' as const, requirementValue: 7 },
-    { id: 'achievement-first-meditation', slug: 'first-meditation', name: 'İlk Meditasyon', description: 'İlk meditasyonunu tamamla', icon: 'lotus-bronze', category: 'PRACTICE' as const, difficulty: 'EASY' as const, xpReward: 50, requirementType: 'CUSTOM' as const, requirementValue: 1 },
-    { id: 'achievement-breath-master', slug: 'breath-master', name: 'Nefes Ustası', description: '50 nefes egzersizi tamamla', icon: 'wind-gold', category: 'PRACTICE' as const, difficulty: 'HARD' as const, xpReward: 400, requirementType: 'CUSTOM' as const, requirementValue: 50 },
-    { id: 'achievement-mood-tracker', slug: 'mood-tracker', name: 'Duygu Takipçisi', description: '30 gün mood kaydet', icon: 'smile-gold', category: 'CONSISTENCY' as const, difficulty: 'HARD' as const, xpReward: 350, requirementType: 'CUSTOM' as const, requirementValue: 30 },
+    { id: 'achievement-first-class', slug: 'first-class', name: 'First Steps', description: 'Complete your first class', icon: 'https://cdn-icons-png.flaticon.com/512/3176/3176298.png', category: 'PRACTICE' as const, difficulty: 'EASY' as const, xpReward: 50, requirementType: 'CLASSES_COMPLETED' as const, requirementValue: 1 },
+    { id: 'achievement-10-classes', slug: '10-classes', name: 'Dedicated Practitioner', description: 'Complete 10 classes', icon: 'https://cdn-icons-png.flaticon.com/512/3176/3176363.png', category: 'PRACTICE' as const, difficulty: 'MEDIUM' as const, xpReward: 150, requirementType: 'CLASSES_COMPLETED' as const, requirementValue: 10 },
+    { id: 'achievement-7-day-streak', slug: '7-day-streak', name: 'Week Warrior', description: 'Maintain a 7-day streak', icon: 'https://cdn-icons-png.flaticon.com/512/785/785116.png', category: 'CONSISTENCY' as const, difficulty: 'EASY' as const, xpReward: 100, requirementType: 'STREAK_DAYS' as const, requirementValue: 7 },
+    { id: 'achievement-first-meditation', slug: 'first-meditation', name: 'İlk Meditasyon', description: 'İlk meditasyonunu tamamla', icon: 'https://cdn-icons-png.flaticon.com/512/2647/2647625.png', category: 'PRACTICE' as const, difficulty: 'EASY' as const, xpReward: 50, requirementType: 'CUSTOM' as const, requirementValue: 1 },
+    { id: 'achievement-breath-master', slug: 'breath-master', name: 'Nefes Ustası', description: '50 nefes egzersizi tamamla', icon: 'https://cdn-icons-png.flaticon.com/512/2917/2917995.png', category: 'PRACTICE' as const, difficulty: 'HARD' as const, xpReward: 400, requirementType: 'CUSTOM' as const, requirementValue: 50 },
+    { id: 'achievement-mood-tracker', slug: 'mood-tracker', name: 'Duygu Takipçisi', description: '30 gün mood kaydet', icon: 'https://cdn-icons-png.flaticon.com/512/3688/3688601.png', category: 'CONSISTENCY' as const, difficulty: 'HARD' as const, xpReward: 350, requirementType: 'CUSTOM' as const, requirementValue: 30 },
+    { id: 'achievement-50-classes', slug: '50-classes', name: 'Yoga Master', description: '50 ders tamamla', icon: 'https://cdn-icons-png.flaticon.com/512/2583/2583344.png', category: 'PRACTICE' as const, difficulty: 'HARD' as const, xpReward: 500, requirementType: 'CLASSES_COMPLETED' as const, requirementValue: 50 },
+    { id: 'achievement-30-day-streak', slug: '30-day-streak', name: 'Month Champion', description: '30 günlük seri yap', icon: 'https://cdn-icons-png.flaticon.com/512/2583/2583281.png', category: 'CONSISTENCY' as const, difficulty: 'HARD' as const, xpReward: 600, requirementType: 'STREAK_DAYS' as const, requirementValue: 30 },
+    { id: 'achievement-early-bird', slug: 'early-bird', name: 'Early Bird', description: 'Sabah 7 den önce 10 pratik yap', icon: 'https://cdn-icons-png.flaticon.com/512/869/869869.png', category: 'PRACTICE' as const, difficulty: 'MEDIUM' as const, xpReward: 200, requirementType: 'CUSTOM' as const, requirementValue: 10 },
+    { id: 'achievement-night-owl', slug: 'night-owl', name: 'Night Owl', description: 'Akşam 10 dan sonra 10 pratik yap', icon: 'https://cdn-icons-png.flaticon.com/512/3236/3236952.png', category: 'PRACTICE' as const, difficulty: 'MEDIUM' as const, xpReward: 200, requirementType: 'CUSTOM' as const, requirementValue: 10 },
+    { id: 'achievement-social-yogi', slug: 'social-yogi', name: 'Social Yogi', description: '5 arkadaş davet et', icon: 'https://cdn-icons-png.flaticon.com/512/681/681494.png', category: 'SOCIAL' as const, difficulty: 'MEDIUM' as const, xpReward: 250, requirementType: 'CUSTOM' as const, requirementValue: 5 },
+    { id: 'achievement-challenge-winner', slug: 'challenge-winner', name: 'Challenge Winner', description: 'Bir challenge tamamla', icon: 'https://cdn-icons-png.flaticon.com/512/3176/3176395.png', category: 'MASTERY' as const, difficulty: 'MEDIUM' as const, xpReward: 300, requirementType: 'CHALLENGES_COMPLETED' as const, requirementValue: 1 },
   ];
 
   for (const achievement of achievementSeeds) {
@@ -326,23 +339,9 @@ async function main() {
   console.log('🏆 Achievements ensured');
 
   // ============================================
-  // QUESTS
+  // QUESTS (removed - model deleted)
   // ============================================
-  const questSeeds = [
-    { id: 'quest-daily-practice', name: 'Daily Practice', description: 'Complete at least one session today', icon: 'lotus', type: 'DAILY' as const, requirementType: 'COMPLETE_CLASSES' as const, requirementValue: 1, xpReward: 25, resetPeriod: 'DAILY' as const, isActive: true },
-    { id: 'quest-daily-meditation', name: 'Günlük Meditasyon', description: 'Bugün en az 1 meditasyon yap', icon: 'lotus', type: 'DAILY' as const, requirementType: 'CUSTOM' as const, requirementValue: 1, xpReward: 30, resetPeriod: 'DAILY' as const, isActive: true },
-    { id: 'quest-daily-breathwork', name: 'Günlük Nefes', description: 'Bugün en az 1 nefes egzersizi yap', icon: 'wind', type: 'DAILY' as const, requirementType: 'CUSTOM' as const, requirementValue: 1, xpReward: 25, resetPeriod: 'DAILY' as const, isActive: true },
-    { id: 'quest-daily-mood', name: 'Mood Takibi', description: 'Bugün mood\'unu kaydet', icon: 'smile', type: 'DAILY' as const, requirementType: 'CUSTOM' as const, requirementValue: 1, xpReward: 15, resetPeriod: 'DAILY' as const, isActive: true },
-  ];
-
-  for (const quest of questSeeds) {
-    await prisma.quests.upsert({
-      where: { id: quest.id },
-      update: quest,
-      create: quest,
-    });
-  }
-  console.log('📋 Quests ensured');
+  console.log('📋 Quests skipped (model removed)');
 
   // ============================================
   // LANGUAGES (i18n)
@@ -388,13 +387,16 @@ async function main() {
   // MEDITATIONS
   // ============================================
   const meditations = [
-    { id: 'med-beginner-intro', title: 'Meditasyona Giriş', titleEn: 'Introduction to Meditation', slug: 'meditasyona-giris', description: 'Meditasyona yeni başlayanlar için temel eğitim.', audioUrl: 'https://audio.wellness-app.local/meditations/beginner-intro.mp3', duration: 600, categoryId: 'med-cat-beginner', difficulty: 'BEGINNER' as const, instructorId: instructorProfileAlex.id, isPremium: false, playCount: 28450, averageRating: 4.8, tags: ['başlangıç', 'giriş'], benefits: ['Temelleri öğretir'], isPublished: true, publishedAt: new Date('2024-01-01') },
-    { id: 'med-beginner-3min', title: '3 Dakikalık İlk Meditasyon', titleEn: '3-Minute First Meditation', slug: '3-dakikalik-ilk-meditasyon', description: 'En kısa ve basit meditasyon.', audioUrl: 'https://audio.wellness-app.local/meditations/beginner-3min.mp3', duration: 180, categoryId: 'med-cat-beginner', difficulty: 'BEGINNER' as const, instructorId: instructorProfileAlex.id, isPremium: false, playCount: 35620, averageRating: 4.85, tags: ['başlangıç', 'kısa'], benefits: ['Kolay başlangıç'], isPublished: true, publishedAt: new Date('2024-01-02') },
-    { id: 'med-stress-relief-5min', title: '5 Dakikada Stres Giderme', titleEn: '5-Minute Stress Relief', slug: '5-dakikada-stres-giderme', description: 'Yoğun bir günün ortasında hızlıca rahatlayın.', audioUrl: 'https://audio.wellness-app.local/meditations/stress-relief-5min.mp3', duration: 300, categoryId: 'med-cat-stress', difficulty: 'BEGINNER' as const, instructorId: instructorProfileAlex.id, isPremium: false, playCount: 15420, averageRating: 4.7, tags: ['stres', 'hızlı'], benefits: ['Stresi azaltır'], isPublished: true, publishedAt: new Date('2024-01-15') },
-    { id: 'med-sleep-relaxation', title: 'Uyku Öncesi Gevşeme', titleEn: 'Pre-Sleep Relaxation', slug: 'uyku-oncesi-gevseme', description: 'Uyumadan önce zihninizi hazırlayın.', audioUrl: 'https://audio.wellness-app.local/meditations/sleep-relaxation.mp3', duration: 900, categoryId: 'med-cat-sleep', difficulty: 'BEGINNER' as const, instructorId: instructorProfileAlex.id, isPremium: false, playCount: 25680, averageRating: 4.9, tags: ['uyku', 'gece'], benefits: ['Uyku kalitesini artırır'], isPublished: true, publishedAt: new Date('2024-01-10') },
-    { id: 'med-morning-energy', title: 'Sabah Enerji Meditasyonu', titleEn: 'Morning Energy', slug: 'sabah-enerji', description: 'Güne enerji dolu başlamak için.', audioUrl: 'https://audio.wellness-app.local/meditations/morning-energy.mp3', duration: 420, categoryId: 'med-cat-morning', difficulty: 'BEGINNER' as const, instructorId: instructorProfileAlex.id, isPremium: false, playCount: 18650, averageRating: 4.75, tags: ['sabah', 'enerji'], benefits: ['Enerji verir'], isPublished: true, publishedAt: new Date('2024-01-12') },
-    { id: 'med-mindfulness-present', title: 'Şimdiye Dönüş', titleEn: 'Return to Present', slug: 'simdiye-donus', description: 'Şimdiki ana dönün.', audioUrl: 'https://audio.wellness-app.local/meditations/mindfulness-present.mp3', duration: 480, categoryId: 'med-cat-mindfulness', difficulty: 'BEGINNER' as const, instructorId: instructorProfileAlex.id, isPremium: false, playCount: 16780, averageRating: 4.75, tags: ['farkındalık', 'şimdi'], benefits: ['Zihinsel netlik'], isPublished: true, publishedAt: new Date('2024-01-08') },
-    { id: 'med-yoga-nidra', title: 'Yoga Nidra - Uyku Yogası', titleEn: 'Yoga Nidra', slug: 'yoga-nidra', description: 'Derin bilinçaltı gevşeme.', audioUrl: 'https://audio.wellness-app.local/meditations/yoga-nidra.mp3', duration: 2700, categoryId: 'med-cat-sleep', difficulty: 'INTERMEDIATE' as const, instructorId: instructorProfileAlex.id, isPremium: true, playCount: 9450, averageRating: 4.95, tags: ['yoga nidra', 'uyku'], benefits: ['45 dakika = 3 saat uyku'], isPublished: true, publishedAt: new Date('2024-02-15') },
+    { id: 'med-beginner-intro', title: 'Meditasyona Giriş', titleEn: 'Introduction to Meditation', slug: 'meditasyona-giris', description: 'Meditasyona yeni başlayanlar için temel eğitim.', audioUrl: 'https://cdn.pixabay.com/audio/2024/02/14/audio_0e0c3f5db2.mp3', coverImage: 'https://images.unsplash.com/photo-1506126613408-eca07ce68773?w=800', duration: 600, categoryId: 'med-cat-beginner', difficulty: 'BEGINNER' as const, instructorId: instructorProfileAlex.id, isPremium: false, playCount: 28450, averageRating: 4.8, tags: ['başlangıç', 'giriş'], benefits: ['Temelleri öğretir'], isPublished: true, publishedAt: new Date('2024-01-01') },
+    { id: 'med-beginner-3min', title: '3 Dakikalık İlk Meditasyon', titleEn: '3-Minute First Meditation', slug: '3-dakikalik-ilk-meditasyon', description: 'En kısa ve basit meditasyon.', audioUrl: 'https://cdn.pixabay.com/audio/2022/10/25/audio_946b0939c5.mp3', coverImage: 'https://images.unsplash.com/photo-1518241353330-0f7941c2d9b5?w=800', duration: 180, categoryId: 'med-cat-beginner', difficulty: 'BEGINNER' as const, instructorId: instructorProfileAlex.id, isPremium: false, playCount: 35620, averageRating: 4.85, tags: ['başlangıç', 'kısa'], benefits: ['Kolay başlangıç'], isPublished: true, publishedAt: new Date('2024-01-02') },
+    { id: 'med-stress-relief-5min', title: '5 Dakikada Stres Giderme', titleEn: '5-Minute Stress Relief', slug: '5-dakikada-stres-giderme', description: 'Yoğun bir günün ortasında hızlıca rahatlayın.', audioUrl: 'https://cdn.pixabay.com/audio/2022/03/10/audio_0c2b46c1bb.mp3', coverImage: 'https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?w=800', duration: 300, categoryId: 'med-cat-stress', difficulty: 'BEGINNER' as const, instructorId: instructorProfileAlex.id, isPremium: false, playCount: 15420, averageRating: 4.7, tags: ['stres', 'hızlı'], benefits: ['Stresi azaltır'], isPublished: true, publishedAt: new Date('2024-01-15') },
+    { id: 'med-sleep-relaxation', title: 'Uyku Öncesi Gevşeme', titleEn: 'Pre-Sleep Relaxation', slug: 'uyku-oncesi-gevseme', description: 'Uyumadan önce zihninizi hazırlayın.', audioUrl: 'https://cdn.pixabay.com/audio/2022/08/02/audio_2dae70d4f5.mp3', coverImage: 'https://images.unsplash.com/photo-1511295742362-92c96b1cf484?w=800', duration: 900, categoryId: 'med-cat-sleep', difficulty: 'BEGINNER' as const, instructorId: instructorProfileAlex.id, isPremium: false, playCount: 25680, averageRating: 4.9, tags: ['uyku', 'gece'], benefits: ['Uyku kalitesini artırır'], isPublished: true, publishedAt: new Date('2024-01-10') },
+    { id: 'med-morning-energy', title: 'Sabah Enerji Meditasyonu', titleEn: 'Morning Energy', slug: 'sabah-enerji', description: 'Güne enerji dolu başlamak için.', audioUrl: 'https://cdn.pixabay.com/audio/2023/09/04/audio_9f9aa6dec5.mp3', coverImage: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800', duration: 420, categoryId: 'med-cat-morning', difficulty: 'BEGINNER' as const, instructorId: instructorProfileAlex.id, isPremium: false, playCount: 18650, averageRating: 4.75, tags: ['sabah', 'enerji'], benefits: ['Enerji verir'], isPublished: true, publishedAt: new Date('2024-01-12') },
+    { id: 'med-mindfulness-present', title: 'Şimdiye Dönüş', titleEn: 'Return to Present', slug: 'simdiye-donus', description: 'Şimdiki ana dönün.', audioUrl: 'https://cdn.pixabay.com/audio/2022/05/27/audio_1808fbf07a.mp3', coverImage: 'https://images.unsplash.com/photo-1508672019048-805c876b67e2?w=800', duration: 480, categoryId: 'med-cat-mindfulness', difficulty: 'BEGINNER' as const, instructorId: instructorProfileAlex.id, isPremium: false, playCount: 16780, averageRating: 4.75, tags: ['farkındalık', 'şimdi'], benefits: ['Zihinsel netlik'], isPublished: true, publishedAt: new Date('2024-01-08') },
+    { id: 'med-yoga-nidra', title: 'Yoga Nidra - Uyku Yogası', titleEn: 'Yoga Nidra', slug: 'yoga-nidra', description: 'Derin bilinçaltı gevşeme.', audioUrl: 'https://cdn.pixabay.com/audio/2024/01/08/audio_ed0b7e45a5.mp3', coverImage: 'https://images.unsplash.com/photo-1545389336-cf090694435e?w=800', duration: 2700, categoryId: 'med-cat-sleep', difficulty: 'INTERMEDIATE' as const, instructorId: instructorProfileAlex.id, isPremium: true, playCount: 9450, averageRating: 4.95, tags: ['yoga nidra', 'uyku'], benefits: ['45 dakika = 3 saat uyku'], isPublished: true, publishedAt: new Date('2024-02-15') },
+    { id: 'med-anxiety-calm', title: 'Kaygı Yatıştırma', titleEn: 'Anxiety Calming', slug: 'kaygi-yatistirma', description: 'Kaygı ve endişeyi sakinleştiren meditasyon.', audioUrl: 'https://cdn.pixabay.com/audio/2023/05/16/audio_166b9c9e42.mp3', coverImage: 'https://images.unsplash.com/photo-1499209974431-9dddcece7f88?w=800', duration: 600, categoryId: 'med-cat-anxiety', difficulty: 'BEGINNER' as const, instructorId: instructorProfileAlex.id, isPremium: false, playCount: 21340, averageRating: 4.82, tags: ['kaygı', 'sakinlik'], benefits: ['Kaygıyı azaltır'], isPublished: true, publishedAt: new Date('2024-01-20') },
+    { id: 'med-focus-deep', title: 'Derin Odaklanma', titleEn: 'Deep Focus', slug: 'derin-odaklanma', description: 'Çalışma ve öğrenme için konsantrasyon.', audioUrl: 'https://cdn.pixabay.com/audio/2022/10/18/audio_5eb0bf8f61.mp3', coverImage: 'https://images.unsplash.com/photo-1434030216411-0b793f4b4173?w=800', duration: 720, categoryId: 'med-cat-focus', difficulty: 'INTERMEDIATE' as const, instructorId: instructorProfileAlex.id, isPremium: true, playCount: 14560, averageRating: 4.78, tags: ['odak', 'çalışma'], benefits: ['Konsantrasyonu artırır'], isPublished: true, publishedAt: new Date('2024-02-01') },
+    { id: 'med-body-scan', title: 'Vücut Taraması', titleEn: 'Body Scan', slug: 'vucut-taramasi', description: 'Tüm vücudu farkındalıkla tarayın.', audioUrl: 'https://cdn.pixabay.com/audio/2023/10/30/audio_5ec52ddd53.mp3', coverImage: 'https://images.unsplash.com/photo-1552196563-55cd4e45efb3?w=800', duration: 900, categoryId: 'med-cat-mindfulness', difficulty: 'BEGINNER' as const, instructorId: instructorProfileAlex.id, isPremium: false, playCount: 19870, averageRating: 4.88, tags: ['vücut', 'farkındalık'], benefits: ['Gerginliği fark eder'], isPublished: true, publishedAt: new Date('2024-01-25') },
   ];
 
   for (const meditation of meditations) {
@@ -410,14 +412,14 @@ async function main() {
   // BREATHWORK PATTERNS
   // ============================================
   const breathworks = [
-    { id: 'breath-box', title: 'Kutu Nefesi', titleEn: 'Box Breathing', slug: 'kutu-nefesi', description: 'Navy SEAL\'ların kullandığı teknik.', pattern: 'BOX_BREATHING' as const, inhale: 4, hold1: 4, exhale: 4, hold2: 4, cycles: 4, audioUrl: 'https://audio.wellness-app.local/breathwork/box-breathing.mp3', totalDuration: 256, category: 'CALM' as const, difficulty: 'BEGINNER' as const, benefits: ['Stresi azaltır', 'Odaklanmayı artırır'], isPremium: false, animationType: 'CIRCLE' as const, playCount: 24580, isPublished: true },
-    { id: 'breath-478', title: '4-7-8 Nefesi', titleEn: '4-7-8 Breathing', slug: '4-7-8-nefesi', description: 'Dr. Andrew Weil tarafından geliştirilen teknik.', pattern: 'FOUR_SEVEN_EIGHT' as const, inhale: 4, hold1: 7, exhale: 8, hold2: 0, cycles: 4, audioUrl: 'https://audio.wellness-app.local/breathwork/478-breathing.mp3', totalDuration: 304, category: 'SLEEP' as const, difficulty: 'BEGINNER' as const, benefits: ['Uykuya dalmayı kolaylaştırır'], isPremium: false, animationType: 'CIRCLE' as const, playCount: 31240, isPublished: true },
-    { id: 'breath-relaxing', title: 'Gevşeme Nefesi', titleEn: 'Relaxing Breath', slug: 'gevseme-nefesi', description: 'Uzun nefes verme ile gevşeme.', pattern: 'RELAXING_BREATH' as const, inhale: 4, hold1: 2, exhale: 6, hold2: 0, cycles: 6, audioUrl: 'https://audio.wellness-app.local/breathwork/relaxing-breath.mp3', totalDuration: 288, category: 'CALM' as const, difficulty: 'BEGINNER' as const, benefits: ['Anında sakinlik'], isPremium: false, animationType: 'WAVE' as const, playCount: 18920, isPublished: true },
-    { id: 'breath-energizing', title: 'Enerji Nefesi', titleEn: 'Energizing Breath', slug: 'enerji-nefesi', description: 'Enerji seviyenizi yükseltin.', pattern: 'ENERGIZING_BREATH' as const, inhale: 2, hold1: 0, exhale: 2, hold2: 0, cycles: 20, audioUrl: 'https://audio.wellness-app.local/breathwork/energizing-breath.mp3', totalDuration: 160, category: 'ENERGY' as const, difficulty: 'INTERMEDIATE' as const, benefits: ['Enerji verir'], isPremium: true, animationType: 'PULSE' as const, playCount: 12340, isPublished: true },
-    { id: 'breath-quick-calm', title: 'Hızlı Sakinleşme', titleEn: 'Quick Calm', slug: 'hizli-sakinlesme', description: '1 dakikada sakinleşin.', pattern: 'RELAXING_BREATH' as const, inhale: 3, hold1: 0, exhale: 6, hold2: 0, cycles: 6, audioUrl: 'https://audio.wellness-app.local/breathwork/quick-calm.mp3', totalDuration: 54, category: 'QUICK' as const, difficulty: 'BEGINNER' as const, benefits: ['Anında sakinlik'], isPremium: false, animationType: 'WAVE' as const, playCount: 28650, isPublished: true },
-    { id: 'breath-morning-wake', title: 'Sabah Uyanış Nefesi', titleEn: 'Morning Wake-Up', slug: 'sabah-uyanis', description: 'Güne hazırlanın.', pattern: 'ENERGIZING_BREATH' as const, inhale: 3, hold1: 3, exhale: 3, hold2: 0, cycles: 8, audioUrl: 'https://audio.wellness-app.local/breathwork/morning-wake.mp3', totalDuration: 144, category: 'MORNING' as const, difficulty: 'BEGINNER' as const, benefits: ['Güne enerjik başlatır'], isPremium: false, animationType: 'PULSE' as const, playCount: 15230, isPublished: true },
-    { id: 'breath-bedtime', title: 'Yatağa Hazırlık Nefesi', titleEn: 'Bedtime Breath', slug: 'yataga-hazirlik', description: 'Uyumadan önce zihninizi uyku moduna alın.', pattern: 'FOUR_SEVEN_EIGHT' as const, inhale: 4, hold1: 7, exhale: 8, hold2: 2, cycles: 3, audioUrl: 'https://audio.wellness-app.local/breathwork/bedtime-breath.mp3', totalDuration: 126, category: 'EVENING' as const, difficulty: 'BEGINNER' as const, benefits: ['Uyku hazırlığı'], isPremium: false, animationType: 'WAVE' as const, playCount: 22180, isPublished: true },
-    { id: 'breath-anxiety-relief', title: 'Kaygı Giderici Nefes', titleEn: 'Anxiety Relief', slug: 'kaygi-giderici', description: 'Kaygı anında uygulayın.', pattern: 'RELAXING_BREATH' as const, inhale: 4, hold1: 4, exhale: 8, hold2: 0, cycles: 5, audioUrl: 'https://audio.wellness-app.local/breathwork/anxiety-relief.mp3', totalDuration: 160, category: 'ANXIETY' as const, difficulty: 'BEGINNER' as const, benefits: ['Kaygıyı azaltır'], isPremium: false, animationType: 'WAVE' as const, playCount: 19870, isPublished: true },
+    { id: 'breath-box', title: 'Kutu Nefesi', titleEn: 'Box Breathing', slug: 'kutu-nefesi', description: 'Navy SEAL\'ların kullandığı teknik.', pattern: 'BOX_BREATHING' as const, inhale: 4, hold1: 4, exhale: 4, hold2: 4, cycles: 4, audioUrl: 'https://cdn.pixabay.com/audio/2022/03/10/audio_8c2be3451f.mp3', coverImage: 'https://images.unsplash.com/photo-1506126613408-eca07ce68773?w=400', totalDuration: 256, category: 'CALM' as const, difficulty: 'BEGINNER' as const, benefits: ['Stresi azaltır', 'Odaklanmayı artırır'], isPremium: false, animationType: 'CIRCLE' as const, playCount: 24580, isPublished: true },
+    { id: 'breath-478', title: '4-7-8 Nefesi', titleEn: '4-7-8 Breathing', slug: '4-7-8-nefesi', description: 'Dr. Andrew Weil tarafından geliştirilen teknik.', pattern: 'FOUR_SEVEN_EIGHT' as const, inhale: 4, hold1: 7, exhale: 8, hold2: 0, cycles: 4, audioUrl: 'https://cdn.pixabay.com/audio/2022/08/02/audio_2dae70d4f5.mp3', coverImage: 'https://images.unsplash.com/photo-1511295742362-92c96b1cf484?w=400', totalDuration: 304, category: 'SLEEP' as const, difficulty: 'BEGINNER' as const, benefits: ['Uykuya dalmayı kolaylaştırır'], isPremium: false, animationType: 'CIRCLE' as const, playCount: 31240, isPublished: true },
+    { id: 'breath-relaxing', title: 'Gevşeme Nefesi', titleEn: 'Relaxing Breath', slug: 'gevseme-nefesi', description: 'Uzun nefes verme ile gevşeme.', pattern: 'RELAXING_BREATH' as const, inhale: 4, hold1: 2, exhale: 6, hold2: 0, cycles: 6, audioUrl: 'https://cdn.pixabay.com/audio/2022/05/27/audio_1808fbf07a.mp3', coverImage: 'https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?w=400', totalDuration: 288, category: 'CALM' as const, difficulty: 'BEGINNER' as const, benefits: ['Anında sakinlik'], isPremium: false, animationType: 'WAVE' as const, playCount: 18920, isPublished: true },
+    { id: 'breath-energizing', title: 'Enerji Nefesi', titleEn: 'Energizing Breath', slug: 'enerji-nefesi', description: 'Enerji seviyenizi yükseltin.', pattern: 'ENERGIZING_BREATH' as const, inhale: 2, hold1: 0, exhale: 2, hold2: 0, cycles: 20, audioUrl: 'https://cdn.pixabay.com/audio/2023/09/04/audio_9f9aa6dec5.mp3', coverImage: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400', totalDuration: 160, category: 'ENERGY' as const, difficulty: 'INTERMEDIATE' as const, benefits: ['Enerji verir'], isPremium: true, animationType: 'PULSE' as const, playCount: 12340, isPublished: true },
+    { id: 'breath-quick-calm', title: 'Hızlı Sakinleşme', titleEn: 'Quick Calm', slug: 'hizli-sakinlesme', description: '1 dakikada sakinleşin.', pattern: 'RELAXING_BREATH' as const, inhale: 3, hold1: 0, exhale: 6, hold2: 0, cycles: 6, audioUrl: 'https://cdn.pixabay.com/audio/2022/10/25/audio_946b0939c5.mp3', coverImage: 'https://images.unsplash.com/photo-1499209974431-9dddcece7f88?w=400', totalDuration: 54, category: 'QUICK' as const, difficulty: 'BEGINNER' as const, benefits: ['Anında sakinlik'], isPremium: false, animationType: 'WAVE' as const, playCount: 28650, isPublished: true },
+    { id: 'breath-morning-wake', title: 'Sabah Uyanış Nefesi', titleEn: 'Morning Wake-Up', slug: 'sabah-uyanis', description: 'Güne hazırlanın.', pattern: 'ENERGIZING_BREATH' as const, inhale: 3, hold1: 3, exhale: 3, hold2: 0, cycles: 8, audioUrl: 'https://cdn.pixabay.com/audio/2024/02/14/audio_0e0c3f5db2.mp3', coverImage: 'https://images.unsplash.com/photo-1508672019048-805c876b67e2?w=400', totalDuration: 144, category: 'MORNING' as const, difficulty: 'BEGINNER' as const, benefits: ['Güne enerjik başlatır'], isPremium: false, animationType: 'PULSE' as const, playCount: 15230, isPublished: true },
+    { id: 'breath-bedtime', title: 'Yatağa Hazırlık Nefesi', titleEn: 'Bedtime Breath', slug: 'yataga-hazirlik', description: 'Uyumadan önce zihninizi uyku moduna alın.', pattern: 'FOUR_SEVEN_EIGHT' as const, inhale: 4, hold1: 7, exhale: 8, hold2: 2, cycles: 3, audioUrl: 'https://cdn.pixabay.com/audio/2022/03/10/audio_0c2b46c1bb.mp3', coverImage: 'https://images.unsplash.com/photo-1545389336-cf090694435e?w=400', totalDuration: 126, category: 'EVENING' as const, difficulty: 'BEGINNER' as const, benefits: ['Uyku hazırlığı'], isPremium: false, animationType: 'WAVE' as const, playCount: 22180, isPublished: true },
+    { id: 'breath-anxiety-relief', title: 'Kaygı Giderici Nefes', titleEn: 'Anxiety Relief', slug: 'kaygi-giderici', description: 'Kaygı anında uygulayın.', pattern: 'RELAXING_BREATH' as const, inhale: 4, hold1: 4, exhale: 8, hold2: 0, cycles: 5, audioUrl: 'https://cdn.pixabay.com/audio/2023/05/16/audio_166b9c9e42.mp3', coverImage: 'https://images.unsplash.com/photo-1552196563-55cd4e45efb3?w=400', totalDuration: 160, category: 'ANXIETY' as const, difficulty: 'BEGINNER' as const, benefits: ['Kaygıyı azaltır'], isPremium: false, animationType: 'WAVE' as const, playCount: 19870, isPublished: true },
   ];
 
   for (const breathwork of breathworks) {
@@ -433,16 +435,18 @@ async function main() {
   // SOUNDSCAPES
   // ============================================
   const soundscapes = [
-    { id: 'sound-rain-soft', title: 'Yumuşak Yağmur', titleEn: 'Soft Rain', slug: 'yumusak-yagmur', audioUrl: 'https://audio.wellness-app.local/sounds/rain-soft.mp3', isLoop: true, category: 'RAIN' as const, isPremium: false, isMixable: true, defaultVolume: 50, playCount: 45620, tags: ['yağmur', 'doğa'], isPublished: true },
-    { id: 'sound-rain-heavy', title: 'Şiddetli Yağmur', titleEn: 'Heavy Rain', slug: 'siddetli-yagmur', audioUrl: 'https://audio.wellness-app.local/sounds/rain-heavy.mp3', isLoop: true, category: 'RAIN' as const, isPremium: false, isMixable: true, defaultVolume: 40, playCount: 32450, tags: ['yağmur'], isPublished: true },
-    { id: 'sound-thunder', title: 'Gök Gürültüsü', titleEn: 'Thunder', slug: 'gok-gurultusu', audioUrl: 'https://audio.wellness-app.local/sounds/thunder.mp3', isLoop: true, category: 'THUNDER' as const, isPremium: false, isMixable: true, defaultVolume: 30, playCount: 25890, tags: ['gök gürültüsü'], isPublished: true },
-    { id: 'sound-ocean-waves', title: 'Okyanus Dalgaları', titleEn: 'Ocean Waves', slug: 'okyanus-dalgalari', audioUrl: 'https://audio.wellness-app.local/sounds/ocean-waves.mp3', isLoop: true, category: 'OCEAN' as const, isPremium: false, isMixable: true, defaultVolume: 50, playCount: 52340, tags: ['okyanus', 'dalga'], isPublished: true },
-    { id: 'sound-forest', title: 'Orman Sesleri', titleEn: 'Forest Sounds', slug: 'orman-sesleri', audioUrl: 'https://audio.wellness-app.local/sounds/forest.mp3', isLoop: true, category: 'FOREST' as const, isPremium: false, isMixable: true, defaultVolume: 50, playCount: 41230, tags: ['orman', 'doğa'], isPublished: true },
-    { id: 'sound-birds', title: 'Kuş Cıvıltıları', titleEn: 'Bird Songs', slug: 'kus-civiltilari', audioUrl: 'https://audio.wellness-app.local/sounds/birds.mp3', isLoop: true, category: 'BIRDS' as const, isPremium: false, isMixable: true, defaultVolume: 40, playCount: 35670, tags: ['kuş', 'sabah'], isPublished: true },
-    { id: 'sound-fire', title: 'Şömine Ateşi', titleEn: 'Fireplace', slug: 'somine-atesi', audioUrl: 'https://audio.wellness-app.local/sounds/fire.mp3', isLoop: true, category: 'FIRE' as const, isPremium: false, isMixable: true, defaultVolume: 45, playCount: 48920, tags: ['ateş', 'şömine'], isPublished: true },
-    { id: 'sound-white-noise', title: 'Beyaz Gürültü', titleEn: 'White Noise', slug: 'beyaz-gurultu', audioUrl: 'https://audio.wellness-app.local/sounds/white-noise.mp3', isLoop: true, category: 'WHITE_NOISE' as const, isPremium: false, isMixable: true, defaultVolume: 40, playCount: 56780, tags: ['beyaz gürültü', 'uyku'], isPublished: true },
-    { id: 'sound-cafe', title: 'Kafe Ortamı', titleEn: 'Coffee Shop', slug: 'kafe-ortami', audioUrl: 'https://audio.wellness-app.local/sounds/cafe.mp3', isLoop: true, category: 'CAFE' as const, isPremium: false, isMixable: true, defaultVolume: 35, playCount: 38920, tags: ['kafe', 'çalışma'], isPublished: true },
-    { id: 'sound-tibetan-bowls', title: 'Tibet Çanakları', titleEn: 'Tibetan Singing Bowls', slug: 'tibet-canaklari', audioUrl: 'https://audio.wellness-app.local/sounds/tibetan-bowls.mp3', isLoop: true, category: 'TIBETAN_BOWLS' as const, isPremium: true, isMixable: true, defaultVolume: 40, playCount: 35670, tags: ['tibet', 'meditasyon'], isPublished: true },
+    { id: 'sound-rain-soft', title: 'Yumuşak Yağmur', titleEn: 'Soft Rain', slug: 'yumusak-yagmur', audioUrl: 'https://cdn.pixabay.com/audio/2022/05/16/audio_f2d0a5d8a5.mp3', coverImage: 'https://images.unsplash.com/photo-1519692933481-e162a57d6721?w=400', isLoop: true, category: 'RAIN' as const, isPremium: false, isMixable: true, defaultVolume: 50, playCount: 45620, tags: ['yağmur', 'doğa'], isPublished: true },
+    { id: 'sound-rain-heavy', title: 'Şiddetli Yağmur', titleEn: 'Heavy Rain', slug: 'siddetli-yagmur', audioUrl: 'https://cdn.pixabay.com/audio/2022/03/24/audio_ebacd6e2ad.mp3', coverImage: 'https://images.unsplash.com/photo-1534274988757-a28bf1a57c17?w=400', isLoop: true, category: 'RAIN' as const, isPremium: false, isMixable: true, defaultVolume: 40, playCount: 32450, tags: ['yağmur'], isPublished: true },
+    { id: 'sound-thunder', title: 'Gök Gürültüsü', titleEn: 'Thunder', slug: 'gok-gurultusu', audioUrl: 'https://cdn.pixabay.com/audio/2022/03/15/audio_3271b4d440.mp3', coverImage: 'https://images.unsplash.com/photo-1605727216801-e27ce1d0cc28?w=400', isLoop: true, category: 'THUNDER' as const, isPremium: false, isMixable: true, defaultVolume: 30, playCount: 25890, tags: ['gök gürültüsü'], isPublished: true },
+    { id: 'sound-ocean-waves', title: 'Okyanus Dalgaları', titleEn: 'Ocean Waves', slug: 'okyanus-dalgalari', audioUrl: 'https://cdn.pixabay.com/audio/2022/06/07/audio_b9bd4170e4.mp3', coverImage: 'https://images.unsplash.com/photo-1505118380757-91f5f5632de0?w=400', isLoop: true, category: 'OCEAN' as const, isPremium: false, isMixable: true, defaultVolume: 50, playCount: 52340, tags: ['okyanus', 'dalga'], isPublished: true },
+    { id: 'sound-forest', title: 'Orman Sesleri', titleEn: 'Forest Sounds', slug: 'orman-sesleri', audioUrl: 'https://cdn.pixabay.com/audio/2022/01/18/audio_d0c6ff38c2.mp3', coverImage: 'https://images.unsplash.com/photo-1448375240586-882707db888b?w=400', isLoop: true, category: 'FOREST' as const, isPremium: false, isMixable: true, defaultVolume: 50, playCount: 41230, tags: ['orman', 'doğa'], isPublished: true },
+    { id: 'sound-birds', title: 'Kuş Cıvıltıları', titleEn: 'Bird Songs', slug: 'kus-civiltilari', audioUrl: 'https://cdn.pixabay.com/audio/2022/03/12/audio_b11a1f9c59.mp3', coverImage: 'https://images.unsplash.com/photo-1444464666168-49d633b86797?w=400', isLoop: true, category: 'BIRDS' as const, isPremium: false, isMixable: true, defaultVolume: 40, playCount: 35670, tags: ['kuş', 'sabah'], isPublished: true },
+    { id: 'sound-fire', title: 'Şömine Ateşi', titleEn: 'Fireplace', slug: 'somine-atesi', audioUrl: 'https://cdn.pixabay.com/audio/2021/08/09/audio_dc39bea8c6.mp3', coverImage: 'https://images.unsplash.com/photo-1543285198-3af15c4592ce?w=400', isLoop: true, category: 'FIRE' as const, isPremium: false, isMixable: true, defaultVolume: 45, playCount: 48920, tags: ['ateş', 'şömine'], isPublished: true },
+    { id: 'sound-white-noise', title: 'Beyaz Gürültü', titleEn: 'White Noise', slug: 'beyaz-gurultu', audioUrl: 'https://cdn.pixabay.com/audio/2022/04/27/audio_67bcb98b1b.mp3', coverImage: 'https://images.unsplash.com/photo-1557683316-973673baf926?w=400', isLoop: true, category: 'WHITE_NOISE' as const, isPremium: false, isMixable: true, defaultVolume: 40, playCount: 56780, tags: ['beyaz gürültü', 'uyku'], isPublished: true },
+    { id: 'sound-cafe', title: 'Kafe Ortamı', titleEn: 'Coffee Shop', slug: 'kafe-ortami', audioUrl: 'https://cdn.pixabay.com/audio/2022/11/22/audio_c914eb2fd5.mp3', coverImage: 'https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?w=400', isLoop: true, category: 'CAFE' as const, isPremium: false, isMixable: true, defaultVolume: 35, playCount: 38920, tags: ['kafe', 'çalışma'], isPublished: true },
+    { id: 'sound-tibetan-bowls', title: 'Tibet Çanakları', titleEn: 'Tibetan Singing Bowls', slug: 'tibet-canaklari', audioUrl: 'https://cdn.pixabay.com/audio/2022/03/10/audio_8c2be3451f.mp3', coverImage: 'https://images.unsplash.com/photo-1593811167562-9cef47bfc4d7?w=400', isLoop: true, category: 'TIBETAN_BOWLS' as const, isPremium: true, isMixable: true, defaultVolume: 40, playCount: 35670, tags: ['tibet', 'meditasyon'], isPublished: true },
+    { id: 'sound-wind', title: 'Rüzgar Sesi', titleEn: 'Wind', slug: 'ruzgar-sesi', audioUrl: 'https://cdn.pixabay.com/audio/2022/11/17/audio_fae2dde9cc.mp3', coverImage: 'https://images.unsplash.com/photo-1527482797697-8795b05a13fe?w=400', isLoop: true, category: 'WIND' as const, isPremium: false, isMixable: true, defaultVolume: 35, playCount: 28540, tags: ['rüzgar', 'doğa'], isPublished: true },
+    { id: 'sound-creek', title: 'Dere Suyu', titleEn: 'Creek Water', slug: 'dere-suyu', audioUrl: 'https://cdn.pixabay.com/audio/2022/08/31/audio_419263a638.mp3', coverImage: 'https://images.unsplash.com/photo-1432405972618-c60b0225b8f9?w=400', isLoop: true, category: 'WATER' as const, isPremium: false, isMixable: true, defaultVolume: 45, playCount: 31250, tags: ['dere', 'su'], isPublished: true },
   ];
 
   for (const sound of soundscapes) {
@@ -458,11 +462,13 @@ async function main() {
   // SLEEP STORIES
   // ============================================
   const sleepStories = [
-    { id: 'sleep-story-forest', title: 'Gizemli Orman Yolculuğu', titleEn: 'Mysterious Forest Journey', slug: 'gizemli-orman', description: 'Huzurlu bir orman yolculuğuna çıkın.', audioUrl: 'https://audio.wellness-app.local/sleep-stories/forest-journey.mp3', duration: 1800, category: 'NATURE' as const, narratorName: 'Elif Yıldız', coverImageUrl: 'https://images.wellness-app.local/sleep-stories/forest.jpg', isPremium: false, playCount: 15620, averageRating: 4.85, tags: ['orman', 'doğa'], isPublished: true },
-    { id: 'sleep-story-sea', title: 'Ege Kıyılarında', titleEn: 'On the Aegean Coast', slug: 'ege-kiyilari', description: 'Ege\'nin masmavi sularında sakin bir gece.', audioUrl: 'https://audio.wellness-app.local/sleep-stories/aegean-coast.mp3', duration: 2100, category: 'NATURE' as const, narratorName: 'Ahmet Kaya', coverImageUrl: 'https://images.wellness-app.local/sleep-stories/sea.jpg', isPremium: true, playCount: 12340, averageRating: 4.9, tags: ['deniz', 'ege'], isPublished: true },
-    { id: 'sleep-story-kapadokya', title: 'Kapadokya Gecesi', titleEn: 'Cappadocia Night', slug: 'kapadokya-gecesi', description: 'Peri bacaları arasında yıldızların altında.', audioUrl: 'https://audio.wellness-app.local/sleep-stories/cappadocia.mp3', duration: 2400, category: 'FANTASY' as const, narratorName: 'Merve Demir', coverImageUrl: 'https://images.wellness-app.local/sleep-stories/cappadocia.jpg', isPremium: true, playCount: 9870, averageRating: 4.95, tags: ['kapadokya', 'gece'], isPublished: true },
-    { id: 'sleep-story-istanbul', title: 'İstanbul Akşamı', titleEn: 'Istanbul Evening', slug: 'istanbul-aksami', description: 'Boğaz\'ın ışıltılı sularında sakin bir akşam.', audioUrl: 'https://audio.wellness-app.local/sleep-stories/istanbul.mp3', duration: 1800, category: 'CITY' as const, narratorName: 'Can Öz', coverImageUrl: 'https://images.wellness-app.local/sleep-stories/istanbul.jpg', isPremium: false, playCount: 18450, averageRating: 4.8, tags: ['istanbul', 'boğaz'], isPublished: true },
-    { id: 'sleep-story-rain', title: 'Yağmurlu Gece', titleEn: 'Rainy Night', slug: 'yagmurlu-gece', description: 'Pencereye vuran yağmur sesi eşliğinde.', audioUrl: 'https://audio.wellness-app.local/sleep-stories/rainy-night.mp3', duration: 2700, category: 'AMBIENT' as const, narratorName: 'Zeynep Arslan', coverImageUrl: 'https://images.wellness-app.local/sleep-stories/rain.jpg', isPremium: true, playCount: 21560, averageRating: 4.9, tags: ['yağmur', 'gece'], isPublished: true },
+    { id: 'sleep-story-forest', title: 'Gizemli Orman Yolculuğu', titleEn: 'Mysterious Forest Journey', slug: 'gizemli-orman', description: 'Huzurlu bir orman yolculuğuna çıkın.', audioUrl: 'https://cdn.pixabay.com/audio/2022/01/18/audio_d0c6ff38c2.mp3', duration: 1800, category: 'NATURE' as const, narratorName: 'Elif Yıldız', coverImageUrl: 'https://images.unsplash.com/photo-1448375240586-882707db888b?w=800', isPremium: false, playCount: 15620, averageRating: 4.85, tags: ['orman', 'doğa'], isPublished: true },
+    { id: 'sleep-story-sea', title: 'Ege Kıyılarında', titleEn: 'On the Aegean Coast', slug: 'ege-kiyilari', description: 'Ege\'nin masmavi sularında sakin bir gece.', audioUrl: 'https://cdn.pixabay.com/audio/2022/06/07/audio_b9bd4170e4.mp3', duration: 2100, category: 'NATURE' as const, narratorName: 'Ahmet Kaya', coverImageUrl: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=800', isPremium: true, playCount: 12340, averageRating: 4.9, tags: ['deniz', 'ege'], isPublished: true },
+    { id: 'sleep-story-kapadokya', title: 'Kapadokya Gecesi', titleEn: 'Cappadocia Night', slug: 'kapadokya-gecesi', description: 'Peri bacaları arasında yıldızların altında.', audioUrl: 'https://cdn.pixabay.com/audio/2024/02/14/audio_0e0c3f5db2.mp3', duration: 2400, category: 'FANTASY' as const, narratorName: 'Merve Demir', coverImageUrl: 'https://images.unsplash.com/photo-1641128324972-af3212f0f6bd?w=800', isPremium: true, playCount: 9870, averageRating: 4.95, tags: ['kapadokya', 'gece'], isPublished: true },
+    { id: 'sleep-story-istanbul', title: 'İstanbul Akşamı', titleEn: 'Istanbul Evening', slug: 'istanbul-aksami', description: 'Boğaz\'ın ışıltılı sularında sakin bir akşam.', audioUrl: 'https://cdn.pixabay.com/audio/2022/08/02/audio_2dae70d4f5.mp3', duration: 1800, category: 'CITY' as const, narratorName: 'Can Öz', coverImageUrl: 'https://images.unsplash.com/photo-1524231757912-21f4fe3a7200?w=800', isPremium: false, playCount: 18450, averageRating: 4.8, tags: ['istanbul', 'boğaz'], isPublished: true },
+    { id: 'sleep-story-rain', title: 'Yağmurlu Gece', titleEn: 'Rainy Night', slug: 'yagmurlu-gece', description: 'Pencereye vuran yağmur sesi eşliğinde.', audioUrl: 'https://cdn.pixabay.com/audio/2022/05/16/audio_f2d0a5d8a5.mp3', duration: 2700, category: 'AMBIENT' as const, narratorName: 'Zeynep Arslan', coverImageUrl: 'https://images.unsplash.com/photo-1519692933481-e162a57d6721?w=800', isPremium: true, playCount: 21560, averageRating: 4.9, tags: ['yağmur', 'gece'], isPublished: true },
+    { id: 'sleep-story-mountain', title: 'Dağ Kulübesi', titleEn: 'Mountain Cabin', slug: 'dag-kulubesi', description: 'Karlı dağlarda sıcak bir kulübede gece.', audioUrl: 'https://cdn.pixabay.com/audio/2021/08/09/audio_dc39bea8c6.mp3', duration: 2100, category: 'NATURE' as const, narratorName: 'Ali Koç', coverImageUrl: 'https://images.unsplash.com/photo-1542718610-a1d656d1884c?w=800', isPremium: false, playCount: 14230, averageRating: 4.87, tags: ['dağ', 'kış'], isPublished: true },
+    { id: 'sleep-story-train', title: 'Gece Treni', titleEn: 'Night Train', slug: 'gece-treni', description: 'Ritmik tren seslerinde uyku yolculuğu.', audioUrl: 'https://cdn.pixabay.com/audio/2023/09/04/audio_9f9aa6dec5.mp3', duration: 2400, category: 'TRAVEL' as const, narratorName: 'Deniz Ak', coverImageUrl: 'https://images.unsplash.com/photo-1474487548417-781cb71495f3?w=800', isPremium: true, playCount: 11890, averageRating: 4.92, tags: ['tren', 'yolculuk'], isPublished: true },
   ];
 
   for (const story of sleepStories) {
@@ -1480,6 +1486,439 @@ async function main() {
     },
   });
   console.log('🎓 User onboarding ensured');
+
+  // ============================================
+  // YOGA POSES
+  // ============================================
+  const poses = [
+    { englishName: 'Mountain Pose', sanskritName: 'Tadasana', difficulty: 'BEGINNER' as const, bodyArea: 'Full Body', description: 'A foundational standing pose that improves posture and balance.', imageUrl: 'https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?w=600' },
+    { englishName: 'Downward Dog', sanskritName: 'Adho Mukha Svanasana', difficulty: 'BEGINNER' as const, bodyArea: 'Full Body', description: 'A classic yoga pose that stretches the entire body.', imageUrl: 'https://images.unsplash.com/photo-1506126613408-eca07ce68773?w=600' },
+    { englishName: 'Warrior I', sanskritName: 'Virabhadrasana I', difficulty: 'BEGINNER' as const, bodyArea: 'Legs', description: 'A powerful standing pose that builds strength and stability.', imageUrl: 'https://images.unsplash.com/photo-1575052814086-f385e2e2ad1b?w=600' },
+    { englishName: 'Warrior II', sanskritName: 'Virabhadrasana II', difficulty: 'BEGINNER' as const, bodyArea: 'Legs', description: 'Opens the hips and strengthens the legs.', imageUrl: 'https://images.unsplash.com/photo-1573590330099-d6c7355ec595?w=600' },
+    { englishName: 'Tree Pose', sanskritName: 'Vrksasana', difficulty: 'BEGINNER' as const, bodyArea: 'Legs', description: 'A balancing pose that builds focus and leg strength.', imageUrl: 'https://images.unsplash.com/photo-1510894347713-fc3ed6fdf539?w=600' },
+    { englishName: 'Child\'s Pose', sanskritName: 'Balasana', difficulty: 'BEGINNER' as const, bodyArea: 'Back', description: 'A restful pose that gently stretches the back.', imageUrl: 'https://images.unsplash.com/photo-1552196563-55cd4e45efb3?w=600' },
+    { englishName: 'Cobra Pose', sanskritName: 'Bhujangasana', difficulty: 'BEGINNER' as const, bodyArea: 'Back', description: 'A backbend that strengthens the spine.', imageUrl: 'https://images.unsplash.com/photo-1599901860904-17e6ed7083a0?w=600' },
+    { englishName: 'Triangle Pose', sanskritName: 'Trikonasana', difficulty: 'INTERMEDIATE' as const, bodyArea: 'Legs', description: 'Stretches the legs, hips, and spine.', imageUrl: 'https://images.unsplash.com/photo-1518611012118-696072aa579a?w=600' },
+    { englishName: 'Crow Pose', sanskritName: 'Bakasana', difficulty: 'ADVANCED' as const, bodyArea: 'Arms', description: 'An arm balance that builds upper body strength.', imageUrl: 'https://images.unsplash.com/photo-1593811167562-9cef47bfc4d7?w=600' },
+    { englishName: 'Headstand', sanskritName: 'Sirsasana', difficulty: 'ADVANCED' as const, bodyArea: 'Full Body', description: 'An inversion that builds core strength and balance.', imageUrl: 'https://images.unsplash.com/photo-1545389336-cf090694435e?w=600' },
+    { englishName: 'Plank Pose', sanskritName: 'Phalakasana', difficulty: 'BEGINNER' as const, bodyArea: 'Core', description: 'A core strengthening pose.', imageUrl: 'https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?w=600' },
+    { englishName: 'Bridge Pose', sanskritName: 'Setu Bandhasana', difficulty: 'BEGINNER' as const, bodyArea: 'Back', description: 'A gentle backbend that opens the chest.', imageUrl: 'https://images.unsplash.com/photo-1508672019048-805c876b67e2?w=600' },
+    { englishName: 'Lotus Pose', sanskritName: 'Padmasana', difficulty: 'ADVANCED' as const, bodyArea: 'Hips', description: 'A seated meditation pose that opens the hips.', imageUrl: 'https://images.unsplash.com/photo-1499209974431-9dddcece7f88?w=600' },
+    { englishName: 'Cat-Cow Pose', sanskritName: 'Marjaryasana-Bitilasana', difficulty: 'BEGINNER' as const, bodyArea: 'Spine', description: 'A flowing movement that warms up the spine.', imageUrl: 'https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?w=600' },
+    { englishName: 'Corpse Pose', sanskritName: 'Savasana', difficulty: 'BEGINNER' as const, bodyArea: 'Full Body', description: 'A relaxation pose that concludes every yoga session.', imageUrl: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=600' },
+  ];
+
+  for (const pose of poses) {
+    await prisma.poses.upsert({
+      where: { id: `pose-${pose.englishName.toLowerCase().replace(/\s+/g, '-')}` },
+      update: {},
+      create: {
+        id: `pose-${pose.englishName.toLowerCase().replace(/\s+/g, '-')}`,
+        ...pose,
+      },
+    });
+  }
+  console.log('🧘 Yoga poses ensured');
+
+  // ============================================
+  // PROGRAMS
+  // ============================================
+  const programsData = [
+    {
+      id: 'program-yoga-fundamentals',
+      title: '30 Günlük Yoga Temelleri',
+      description: 'Yoga\'ya yeni başlayanlar için kapsamlı bir program. Temel pozları, nefes tekniklerini ve meditasyonu öğrenin.',
+      level: 'BEGINNER' as const,
+      durationMin: 30,
+      durationWeeks: 4,
+      status: 'PUBLISHED' as const,
+      accessType: 'FREE' as const,
+      isPublished: true,
+      categories: ['yoga', 'beginner'],
+      promoVideoUrl: 'https://www.youtube.com/watch?v=v7AYKMP6rOE',
+      promoVideoSource: 'YOUTUBE' as const,
+      promoVideoId: 'v7AYKMP6rOE',
+      thumbnailUrl: 'https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?w=400',
+      coverUrl: 'https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?w=1200',
+    },
+    {
+      id: 'program-vinyasa-flow',
+      title: 'Vinyasa Flow Serisi',
+      description: 'Dinamik ve akışkan bir yoga deneyimi. Nefes ve hareket senkronizasyonu ile güçlenin.',
+      level: 'INTERMEDIATE' as const,
+      durationMin: 45,
+      durationWeeks: 6,
+      status: 'PUBLISHED' as const,
+      accessType: 'PREMIUM' as const,
+      isPublished: true,
+      categories: ['yoga', 'vinyasa'],
+      promoVideoUrl: 'https://www.youtube.com/watch?v=Eml2xnoLpYE',
+      promoVideoSource: 'YOUTUBE' as const,
+      promoVideoId: 'Eml2xnoLpYE',
+      thumbnailUrl: 'https://images.unsplash.com/photo-1506126613408-eca07ce68773?w=400',
+      coverUrl: 'https://images.unsplash.com/photo-1506126613408-eca07ce68773?w=1200',
+    },
+    {
+      id: 'program-pilates-core',
+      title: 'Pilates Core Güçlendirme',
+      description: '8 haftalık core güçlendirme programı. Karın kaslarınızı ve duruşunuzu geliştirin.',
+      level: 'INTERMEDIATE' as const,
+      durationMin: 40,
+      durationWeeks: 8,
+      status: 'PUBLISHED' as const,
+      accessType: 'PREMIUM' as const,
+      isPublished: true,
+      categories: ['pilates', 'core'],
+      promoVideoUrl: 'https://www.youtube.com/watch?v=2MoGxae-zyo',
+      promoVideoSource: 'YOUTUBE' as const,
+      promoVideoId: '2MoGxae-zyo',
+      thumbnailUrl: 'https://images.unsplash.com/photo-1518611012118-696072aa579a?w=400',
+      coverUrl: 'https://images.unsplash.com/photo-1518611012118-696072aa579a?w=1200',
+    },
+    {
+      id: 'program-meditation-basics',
+      title: 'Meditasyon Başlangıç',
+      description: 'Meditasyona giriş programı. Zihinsel berraklık ve iç huzur için rehberli seanslar.',
+      level: 'BEGINNER' as const,
+      durationMin: 15,
+      durationWeeks: 3,
+      status: 'PUBLISHED' as const,
+      accessType: 'FREE' as const,
+      isPublished: true,
+      categories: ['meditation', 'mindfulness'],
+      promoVideoUrl: 'https://www.youtube.com/watch?v=inpok4MKVLM',
+      promoVideoSource: 'YOUTUBE' as const,
+      promoVideoId: 'inpok4MKVLM',
+      thumbnailUrl: 'https://images.unsplash.com/photo-1593811167562-9cef47bfc4d7?w=400',
+      coverUrl: 'https://images.unsplash.com/photo-1593811167562-9cef47bfc4d7?w=1200',
+    },
+    {
+      id: 'program-advanced-yoga',
+      title: 'İleri Seviye Yoga',
+      description: 'Deneyimli yogiler için zorlayıcı pozlar ve gelişmiş teknikler.',
+      level: 'ADVANCED' as const,
+      durationMin: 60,
+      durationWeeks: 12,
+      status: 'PUBLISHED' as const,
+      accessType: 'PAID' as const,
+      price: 299,
+      isPublished: true,
+      categories: ['yoga', 'advanced'],
+      promoVideoUrl: 'https://www.youtube.com/watch?v=9kOCY0KNByw',
+      promoVideoSource: 'YOUTUBE' as const,
+      promoVideoId: '9kOCY0KNByw',
+      thumbnailUrl: 'https://images.unsplash.com/photo-1599901860904-17e6ed7083a0?w=400',
+      coverUrl: 'https://images.unsplash.com/photo-1599901860904-17e6ed7083a0?w=1200',
+    },
+    {
+      id: 'program-stress-relief',
+      title: 'Stres Yönetimi Programı',
+      description: 'Yoga, nefes çalışmaları ve meditasyon ile stresi azaltın.',
+      level: 'BEGINNER' as const,
+      durationMin: 20,
+      durationWeeks: 4,
+      status: 'DRAFT' as const,
+      accessType: 'PREMIUM' as const,
+      isPublished: false,
+      categories: ['wellness', 'stress-relief'],
+      promoVideoUrl: 'https://www.youtube.com/watch?v=COp7BR_Dvps',
+      promoVideoSource: 'YOUTUBE' as const,
+      promoVideoId: 'COp7BR_Dvps',
+      thumbnailUrl: 'https://images.unsplash.com/photo-1545389336-cf090694435e?w=400',
+      coverUrl: 'https://images.unsplash.com/photo-1545389336-cf090694435e?w=1200',
+    },
+  ];
+
+  for (const program of programsData) {
+    await prisma.programs.upsert({
+      where: { id: program.id },
+      update: {},
+      create: {
+        ...program,
+        instructorId: teacher.id,
+      },
+    });
+  }
+  console.log('📚 Programs ensured');
+
+  // ============================================
+  // CLASSES
+  // ============================================
+  const classesData = [
+    {
+      id: 'class-morning-yoga',
+      title: 'Sabah Yoga Akışı',
+      description: 'Güne enerjik başlamak için 30 dakikalık canlandırıcı yoga dersi.',
+      duration: 30,
+      level: 'BEGINNER' as const,
+      status: 'PUBLISHED' as const,
+      category: 'yoga',
+      isFree: true,
+      videoUrl: 'https://www.youtube.com/watch?v=4pKly2JojMw',
+      videoSource: 'YOUTUBE' as const,
+      videoId: '4pKly2JojMw',
+      videoDuration: 1800,
+      thumbnailUrl: 'https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?w=400',
+    },
+    {
+      id: 'class-power-vinyasa',
+      title: 'Power Vinyasa',
+      description: 'Yoğun tempolu, güç odaklı vinyasa dersi.',
+      duration: 45,
+      level: 'INTERMEDIATE' as const,
+      status: 'PUBLISHED' as const,
+      category: 'yoga',
+      isFree: false,
+      videoUrl: 'https://www.youtube.com/watch?v=Eml2xnoLpYE',
+      videoSource: 'YOUTUBE' as const,
+      videoId: 'Eml2xnoLpYE',
+      videoDuration: 2700,
+      thumbnailUrl: 'https://images.unsplash.com/photo-1506126613408-eca07ce68773?w=400',
+    },
+    {
+      id: 'class-gentle-stretch',
+      title: 'Hafif Esneme',
+      description: 'Kasları gevşeten, sakinleştirici esneme dersi.',
+      duration: 25,
+      level: 'BEGINNER' as const,
+      status: 'PUBLISHED' as const,
+      category: 'yoga',
+      isFree: true,
+      videoUrl: 'https://www.youtube.com/watch?v=g_tea8ZNk5A',
+      videoSource: 'YOUTUBE' as const,
+      videoId: 'g_tea8ZNk5A',
+      videoDuration: 1500,
+      thumbnailUrl: 'https://images.unsplash.com/photo-1552196563-55cd4e45efb3?w=400',
+    },
+    {
+      id: 'class-pilates-mat',
+      title: 'Mat Pilates',
+      description: 'Core güçlendirme ve esneklik için mat pilates.',
+      duration: 40,
+      level: 'INTERMEDIATE' as const,
+      status: 'PUBLISHED' as const,
+      category: 'pilates',
+      isFree: false,
+      videoUrl: 'https://www.youtube.com/watch?v=2MoGxae-zyo',
+      videoSource: 'YOUTUBE' as const,
+      videoId: '2MoGxae-zyo',
+      videoDuration: 2400,
+      thumbnailUrl: 'https://images.unsplash.com/photo-1518611012118-696072aa579a?w=400',
+    },
+    {
+      id: 'class-yin-yoga',
+      title: 'Yin Yoga',
+      description: 'Derin esneme ve rahatlama için yavaş tempolu yoga.',
+      duration: 50,
+      level: 'ALL' as const,
+      status: 'PUBLISHED' as const,
+      category: 'yoga',
+      isFree: false,
+      videoUrl: 'https://www.youtube.com/watch?v=yVMvOXGMfWc',
+      videoSource: 'YOUTUBE' as const,
+      videoId: 'yVMvOXGMfWc',
+      videoDuration: 3000,
+      thumbnailUrl: 'https://images.unsplash.com/photo-1599901860904-17e6ed7083a0?w=400',
+    },
+    {
+      id: 'class-breathwork',
+      title: 'Nefes Çalışması',
+      description: 'Pranayama teknikleri ile nefes farkındalığı.',
+      duration: 20,
+      level: 'BEGINNER' as const,
+      status: 'PUBLISHED' as const,
+      category: 'breathwork',
+      isFree: true,
+      videoUrl: 'https://www.youtube.com/watch?v=tybOi4hjZFQ',
+      videoSource: 'YOUTUBE' as const,
+      videoId: 'tybOi4hjZFQ',
+      videoDuration: 1200,
+      thumbnailUrl: 'https://images.unsplash.com/photo-1593811167562-9cef47bfc4d7?w=400',
+    },
+    {
+      id: 'class-evening-relax',
+      title: 'Akşam Rahatlama',
+      description: 'Gün sonunda rahatlamak için restoratif yoga.',
+      duration: 35,
+      level: 'BEGINNER' as const,
+      status: 'DRAFT' as const,
+      category: 'yoga',
+      isFree: false,
+      videoUrl: 'https://www.youtube.com/watch?v=COp7BR_Dvps',
+      videoSource: 'YOUTUBE' as const,
+      videoId: 'COp7BR_Dvps',
+      videoDuration: 2100,
+      thumbnailUrl: 'https://images.unsplash.com/photo-1545389336-cf090694435e?w=400',
+    },
+    {
+      id: 'class-hiit-yoga',
+      title: 'HIIT Yoga Fusion',
+      description: 'Yüksek yoğunluklu interval antrenmanı ve yoga birleşimi.',
+      duration: 40,
+      level: 'ADVANCED' as const,
+      status: 'PUBLISHED' as const,
+      category: 'yoga',
+      isFree: false,
+      videoUrl: 'https://www.youtube.com/watch?v=9kOCY0KNByw',
+      videoSource: 'YOUTUBE' as const,
+      videoId: '9kOCY0KNByw',
+      videoDuration: 2400,
+      thumbnailUrl: 'https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?w=400',
+    },
+  ];
+
+  for (const classData of classesData) {
+    await prisma.classes.upsert({
+      where: { id: classData.id },
+      update: {},
+      create: {
+        ...classData,
+        instructorId: teacher.id,
+        schedule: new Date(),
+      },
+    });
+  }
+  console.log('🎓 Classes ensured');
+
+  // ============================================
+  // CHALLENGES
+  // ============================================
+  const now = new Date();
+  const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+  const oneWeekLater = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+  const twoWeeksLater = new Date(now.getTime() + 14 * 24 * 60 * 60 * 1000);
+  const oneMonthLater = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+
+  const challengesData = [
+    {
+      id: 'challenge-30-day-yoga',
+      title: '30 Günlük Yoga Challenge',
+      description: 'Her gün en az 15 dakika yoga yaparak sağlıklı bir alışkanlık edinin.',
+      difficulty: 'BEGINNER' as const,
+      categories: ['Yoga', 'Esneklik'],
+      startAt: oneWeekAgo,
+      endAt: oneMonthLater,
+      targetDays: 30,
+      dailyGoalMinutes: 15,
+      dailyGoalType: 'DURATION' as const,
+      xpReward: 1000,
+      showLeaderboard: true,
+      isActive: true,
+      coverUrl: 'https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?w=800',
+      thumbnailUrl: 'https://cdn-icons-png.flaticon.com/512/3176/3176395.png',
+    },
+    {
+      id: 'challenge-meditation-week',
+      title: 'Meditasyon Haftası',
+      description: '7 gün boyunca günde 10 dakika meditasyon yapın ve zihninizi dinlendirin.',
+      difficulty: 'BEGINNER' as const,
+      categories: ['Meditasyon', 'Stres Azaltma'],
+      startAt: now,
+      endAt: oneWeekLater,
+      targetDays: 7,
+      dailyGoalMinutes: 10,
+      dailyGoalType: 'DURATION' as const,
+      xpReward: 500,
+      showLeaderboard: true,
+      isActive: true,
+      coverUrl: 'https://images.unsplash.com/photo-1593811167562-9cef47bfc4d7?w=800',
+      thumbnailUrl: 'https://cdn-icons-png.flaticon.com/512/2647/2647625.png',
+    },
+    {
+      id: 'challenge-pilates-core',
+      title: 'Pilates Core Challenge',
+      description: '2 haftalık yoğun core güçlendirme programı.',
+      difficulty: 'INTERMEDIATE' as const,
+      categories: ['Pilates', 'Güç'],
+      startAt: oneWeekLater,
+      endAt: twoWeeksLater,
+      targetDays: 14,
+      dailyGoalMinutes: 20,
+      dailyGoalType: 'DURATION' as const,
+      xpReward: 750,
+      showLeaderboard: true,
+      isActive: true,
+      coverUrl: 'https://images.unsplash.com/photo-1518611012118-696072aa579a?w=800',
+      thumbnailUrl: 'https://cdn-icons-png.flaticon.com/512/2583/2583344.png',
+    },
+    {
+      id: 'challenge-breathwork-master',
+      title: 'Nefes Ustası',
+      description: 'Pranayama tekniklerini öğrenin ve ustalaşın.',
+      difficulty: 'ADVANCED' as const,
+      categories: ['Nefes', 'Meditasyon'],
+      startAt: now,
+      endAt: twoWeeksLater,
+      targetDays: 14,
+      dailyGoalMinutes: 15,
+      dailyGoalType: 'DURATION' as const,
+      xpReward: 800,
+      showLeaderboard: false,
+      isActive: true,
+      coverUrl: 'https://images.unsplash.com/photo-1506126613408-eca07ce68773?w=800',
+      thumbnailUrl: 'https://cdn-icons-png.flaticon.com/512/2917/2917995.png',
+    },
+    {
+      id: 'challenge-flexibility-boost',
+      title: 'Esneklik Artırma',
+      description: '21 günde esnekliğinizi artırın.',
+      difficulty: 'INTERMEDIATE' as const,
+      categories: ['Yoga', 'Esneklik'],
+      startAt: oneWeekLater,
+      endAt: oneMonthLater,
+      targetDays: 21,
+      dailyGoalMinutes: 25,
+      dailyGoalType: 'DURATION' as const,
+      xpReward: 900,
+      showLeaderboard: true,
+      isActive: true,
+      coverUrl: 'https://images.unsplash.com/photo-1552196563-55cd4e45efb3?w=800',
+      thumbnailUrl: 'https://cdn-icons-png.flaticon.com/512/3176/3176363.png',
+    },
+    {
+      id: 'challenge-morning-ritual',
+      title: 'Sabah Ritüeli',
+      description: '14 gün boyunca sabah rutini oluşturun.',
+      difficulty: 'BEGINNER' as const,
+      categories: ['Sabah', 'Alışkanlık'],
+      startAt: now,
+      endAt: twoWeeksLater,
+      targetDays: 14,
+      dailyGoalMinutes: 20,
+      dailyGoalType: 'DURATION' as const,
+      xpReward: 700,
+      showLeaderboard: true,
+      isActive: true,
+      coverUrl: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800',
+      thumbnailUrl: 'https://cdn-icons-png.flaticon.com/512/869/869869.png',
+    },
+    {
+      id: 'challenge-sleep-better',
+      title: 'Daha İyi Uyku',
+      description: '7 gece uyku öncesi meditasyon ile uyku kalitenizi artırın.',
+      difficulty: 'BEGINNER' as const,
+      categories: ['Uyku', 'Meditasyon'],
+      startAt: now,
+      endAt: oneWeekLater,
+      targetDays: 7,
+      dailyGoalMinutes: 15,
+      dailyGoalType: 'DURATION' as const,
+      xpReward: 450,
+      showLeaderboard: false,
+      isActive: true,
+      coverUrl: 'https://images.unsplash.com/photo-1511295742362-92c96b1cf484?w=800',
+      thumbnailUrl: 'https://cdn-icons-png.flaticon.com/512/3236/3236952.png',
+    },
+  ];
+
+  for (const challenge of challengesData) {
+    await prisma.challenges.upsert({
+      where: { id: challenge.id },
+      update: {},
+      create: challenge,
+    });
+  }
+  console.log('🏆 Challenges ensured');
 
   console.log('✅ All seed data created successfully!');
 }

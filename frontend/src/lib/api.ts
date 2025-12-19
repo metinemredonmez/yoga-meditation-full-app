@@ -1451,12 +1451,12 @@ export async function getAdminProgramById(id: string) {
 }
 
 export async function publishProgram(id: string) {
-  const { data } = await api.post(`/api/admin/dashboard/content/programs/${id}/publish`);
+  const { data } = await api.post(`/api/admin/content/programs/${id}/publish`);
   return data;
 }
 
 export async function unpublishProgram(id: string) {
-  const { data } = await api.post(`/api/admin/dashboard/content/programs/${id}/unpublish`);
+  const { data } = await api.post(`/api/admin/content/programs/${id}/unpublish`);
   return data;
 }
 

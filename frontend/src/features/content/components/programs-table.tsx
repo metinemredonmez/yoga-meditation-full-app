@@ -225,8 +225,8 @@ export function ProgramsTable() {
   const extractVideoInfo = (url: string): { source: VideoSourceType; videoId: string } | null => {
     if (!url) return null;
 
-    // YouTube
-    const youtubeMatch = url.match(/(?:youtube\.com\/(?:watch\?v=|embed\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
+    // YouTube (watch, embed, shorts, youtu.be)
+    const youtubeMatch = url.match(/(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
     if (youtubeMatch) return { source: 'YOUTUBE', videoId: youtubeMatch[1] };
 
     // Vimeo

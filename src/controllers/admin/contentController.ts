@@ -1,8 +1,8 @@
 import { Request, Response, NextFunction } from 'express';
 import * as contentService from '../../services/admin/contentManagementService';
-import * as programService from '../../services/programService';
 import * as auditService from '../../services/admin/auditService';
 import { AdminAction, ProgramLevel } from '@prisma/client';
+import { prisma } from '../../utils/database';
 
 // ============================================
 // Programs
@@ -38,15 +38,51 @@ export async function getProgramDetails(req: Request, res: Response, next: NextF
 export async function createProgram(req: Request, res: Response, next: NextFunction) {
   try {
     const adminId = req.user!.id;
-    const { title, description, level, durationWeeks, thumbnailUrl, coverImageUrl } = req.body;
-
-    const program = await programService.createProgram({
+    const {
       title,
       description,
-      level: level || 'BEGINNER',
-      durationMin: (durationWeeks || 4) * 7 * 60, // Convert weeks to minutes (approximate)
-      tags: [],
-      coverUrl: coverImageUrl || thumbnailUrl,
+      level,
+      durationWeeks,
+      thumbnailUrl,
+      coverUrl,
+      coverImageUrl,
+      instructorId,
+      status,
+      accessType,
+      price,
+      currency,
+      categories,
+      promoVideoUrl,
+      promoVideoSource,
+      promoVideoId,
+      isPublished,
+    } = req.body;
+
+    const program = await prisma.programs.create({
+      data: {
+        title,
+        description,
+        level: level || 'BEGINNER',
+        durationMin: (durationWeeks || 4) * 7 * 60, // Convert weeks to minutes (approximate)
+        durationWeeks: durationWeeks || 4,
+        coverUrl: coverUrl || coverImageUrl || thumbnailUrl || null,
+        thumbnailUrl: thumbnailUrl || null,
+        instructorId: instructorId || null,
+        status: status || 'DRAFT',
+        accessType: accessType || 'FREE',
+        price: price ?? null,
+        currency: currency || 'TRY',
+        categories: categories || [],
+        promoVideoUrl: promoVideoUrl || null,
+        promoVideoSource: promoVideoSource || null,
+        promoVideoId: promoVideoId || null,
+        isPublished: isPublished ?? false,
+      },
+      include: {
+        instructor: { select: { id: true, firstName: true, lastName: true } },
+        tags: true,
+        _count: { select: { sessions: true, comments: true } },
+      },
     });
 
     await auditService.logAdminAction(
@@ -68,14 +104,60 @@ export async function updateProgram(req: Request, res: Response, next: NextFunct
     const adminId = req.user!.id;
     const programId = req.params.id!;
 
-    // Map frontend field names to database field names
-    const { coverImageUrl, ...rest } = req.body;
-    const updateData = {
-      ...rest,
-      ...(coverImageUrl !== undefined && { coverUrl: coverImageUrl }),
-    };
+    const {
+      title,
+      description,
+      level,
+      durationWeeks,
+      thumbnailUrl,
+      coverUrl,
+      coverImageUrl,
+      instructorId,
+      status,
+      accessType,
+      price,
+      currency,
+      categories,
+      promoVideoUrl,
+      promoVideoSource,
+      promoVideoId,
+      isPublished,
+    } = req.body;
 
-    const program = await contentService.updateProgram(programId, updateData);
+    // Build update data - only include defined fields
+    const updateData: Record<string, unknown> = {};
+
+    if (title !== undefined) updateData.title = title;
+    if (description !== undefined) updateData.description = description;
+    if (level !== undefined) updateData.level = level;
+    if (durationWeeks !== undefined) {
+      updateData.durationWeeks = durationWeeks;
+      updateData.durationMin = durationWeeks * 7 * 60;
+    }
+    if (thumbnailUrl !== undefined) updateData.thumbnailUrl = thumbnailUrl || null;
+    if (coverUrl !== undefined || coverImageUrl !== undefined) {
+      updateData.coverUrl = coverUrl || coverImageUrl || null;
+    }
+    if (instructorId !== undefined) updateData.instructorId = instructorId || null;
+    if (status !== undefined) updateData.status = status;
+    if (accessType !== undefined) updateData.accessType = accessType;
+    if (price !== undefined) updateData.price = price;
+    if (currency !== undefined) updateData.currency = currency;
+    if (categories !== undefined) updateData.categories = categories || [];
+    if (promoVideoUrl !== undefined) updateData.promoVideoUrl = promoVideoUrl || null;
+    if (promoVideoSource !== undefined) updateData.promoVideoSource = promoVideoSource || null;
+    if (promoVideoId !== undefined) updateData.promoVideoId = promoVideoId || null;
+    if (isPublished !== undefined) updateData.isPublished = isPublished;
+
+    const program = await prisma.programs.update({
+      where: { id: programId },
+      data: updateData,
+      include: {
+        instructor: { select: { id: true, firstName: true, lastName: true } },
+        tags: true,
+        _count: { select: { sessions: true, comments: true } },
+      },
+    });
 
     await auditService.logAdminAction(
       adminId,
@@ -95,7 +177,15 @@ export async function publishProgram(req: Request, res: Response, next: NextFunc
   try {
     const adminId = req.user!.id;
     const programId = req.params.id!;
-    const program = await contentService.updateProgram(programId, { isPublished: true });
+    const program = await prisma.programs.update({
+      where: { id: programId },
+      data: { isPublished: true, status: 'PUBLISHED' },
+      include: {
+        instructor: { select: { id: true, firstName: true, lastName: true } },
+        tags: true,
+        _count: { select: { sessions: true, comments: true } },
+      },
+    });
 
     await auditService.logAdminAction(
       adminId,
@@ -115,7 +205,15 @@ export async function unpublishProgram(req: Request, res: Response, next: NextFu
   try {
     const adminId = req.user!.id;
     const programId = req.params.id!;
-    const program = await contentService.updateProgram(programId, { isPublished: false });
+    const program = await prisma.programs.update({
+      where: { id: programId },
+      data: { isPublished: false, status: 'DRAFT' },
+      include: {
+        instructor: { select: { id: true, firstName: true, lastName: true } },
+        tags: true,
+        _count: { select: { sessions: true, comments: true } },
+      },
+    });
 
     await auditService.logAdminAction(
       adminId,

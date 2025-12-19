@@ -82,8 +82,10 @@ const {
   ignoredMethods: ['GET', 'HEAD', 'OPTIONS'],
 });
 
-// Enable CSRF in all environments (was only production before)
-export const csrfProtection: RequestHandler = doubleCsrfProtection;
+// Disable CSRF in development for easier testing
+export const csrfProtection: RequestHandler = config.NODE_ENV === 'production'
+  ? doubleCsrfProtection
+  : ((_req, _res, next) => next());
 
 export const attachCsrfToken: RequestHandler = (req: Request, res: Response, next: NextFunction) => {
   try {
