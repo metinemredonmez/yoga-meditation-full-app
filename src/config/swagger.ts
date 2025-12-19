@@ -79,7 +79,7 @@ const definition = {
         type: 'object',
         properties: {
           message: { type: 'string' },
-          user: { $ref: '#/components/schemas/User' },
+          users: { $ref: '#/components/schemas/User' },
           tokens: { $ref: '#/components/schemas/AuthTokens' },
         },
       },

@@ -14,7 +14,7 @@ const googleLoginSchema = z.object({
 
 const appleLoginSchema = z.object({
   identityToken: z.string().min(1, 'Identity token is required'),
-  user: z
+  users: z
     .object({
       firstName: z.string().optional(),
       lastName: z.string().optional(),
@@ -127,7 +127,7 @@ export async function googleLogin(req: Request, res: Response) {
     });
 
     return res.json({
-      user: {
+      users: {
         id: user.id,
         email: user.email,
         firstName: user.firstName,
@@ -155,7 +155,7 @@ export async function googleLogin(req: Request, res: Response) {
  */
 export async function appleLogin(req: Request, res: Response) {
   try {
-    const { identityToken, user: appleUser } = appleLoginSchema.parse(req.body);
+    const { identityToken, users: appleUser } = appleLoginSchema.parse(req.body);
 
     if (!config.apple?.clientId) {
       return res.status(500).json({ error: 'Apple Sign In is not configured' });
@@ -243,7 +243,7 @@ export async function appleLogin(req: Request, res: Response) {
     });
 
     return res.json({
-      user: {
+      users: {
         id: user.id,
         email: user.email,
         firstName: user.firstName,

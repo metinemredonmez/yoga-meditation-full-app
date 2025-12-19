@@ -44,12 +44,12 @@ export async function getComments(filters: {
   const { page = 1, limit = 20 } = filters;
 
   const [comments, total] = await Promise.all([
-    prisma.comment.findMany({
+    prisma.comments.findMany({
       skip: (page - 1) * limit,
       take: limit,
       orderBy: { createdAt: 'desc' },
     }),
-    prisma.comment.count(),
+    prisma.comments.count(),
   ]);
 
   return {
@@ -60,7 +60,7 @@ export async function getComments(filters: {
 
 // Delete comment
 export async function deleteComment(commentId: string) {
-  await prisma.comment.delete({ where: { id: commentId } });
+  await prisma.comments.delete({ where: { id: commentId } });
 }
 
 // Hide comment - stub (no isHidden field in Comment schema)
@@ -71,7 +71,7 @@ export async function hideComment(_commentId: string) {
 
 // Bulk delete comments
 export async function bulkDeleteComments(commentIds: string[]) {
-  const result = await prisma.comment.deleteMany({
+  const result = await prisma.comments.deleteMany({
     where: { id: { in: commentIds } },
   });
   return { deleted: result.count };
@@ -88,12 +88,12 @@ export async function getForumPosts(filters: {
   const { page = 1, limit = 20 } = filters;
 
   const [posts, total] = await Promise.all([
-    prisma.forumPost.findMany({
+    prisma.forum_posts.findMany({
       skip: (page - 1) * limit,
       take: limit,
       orderBy: { createdAt: 'desc' },
     }),
-    prisma.forumPost.count(),
+    prisma.forum_posts.count(),
   ]);
 
   return {
@@ -104,7 +104,7 @@ export async function getForumPosts(filters: {
 
 // Delete forum post
 export async function deleteForumPost(postId: string) {
-  await prisma.forumPost.delete({ where: { id: postId } });
+  await prisma.forum_posts.delete({ where: { id: postId } });
 }
 
 // Lock forum post - stub (no status field in ForumPost schema)
@@ -122,8 +122,8 @@ export async function pinForumPost(_postId: string, _isPinned: boolean) {
 // Get moderation stats
 export async function getModerationStats() {
   const [totalComments, totalPosts] = await Promise.all([
-    prisma.comment.count(),
-    prisma.forumPost.count(),
+    prisma.comments.count(),
+    prisma.forum_posts.count(),
   ]);
 
   return {

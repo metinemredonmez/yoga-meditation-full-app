@@ -41,12 +41,12 @@ interface RequestPayoutInput {
  * Get or create payout settings for instructor
  */
 export async function getPayoutSettings(instructorId: string) {
-  let settings = await prisma.instructorPayoutSettings.findUnique({
+  let settings = await prisma.instructor_payout_settings.findUnique({
     where: { instructorId },
   });
 
   if (!settings) {
-    settings = await prisma.instructorPayoutSettings.create({
+    settings = await prisma.instructor_payout_settings.create({
       data: {
         instructorId,
         preferredMethod: 'BANK_TRANSFER',
@@ -64,7 +64,7 @@ export async function updatePayoutSettings(
   instructorId: string,
   input: PayoutSettingsInput,
 ) {
-  const settings = await prisma.instructorPayoutSettings.upsert({
+  const settings = await prisma.instructor_payout_settings.upsert({
     where: { instructorId },
     update: {
       preferredMethod: input.preferredMethod,
@@ -104,9 +104,9 @@ export async function updatePayoutSettings(
  * Generate Stripe Connect onboarding URL
  */
 export async function setupStripeConnect(instructorId: string): Promise<string> {
-  const instructor = await prisma.instructorProfile.findUnique({
+  const instructor = await prisma.instructor_profiles.findUnique({
     where: { id: instructorId },
-    include: { user: true },
+    include: { users: true },
   });
 
   if (!instructor) {
@@ -118,7 +118,7 @@ export async function setupStripeConnect(instructorId: string): Promise<string> 
   const accountId = `acct_${instructor.id.substring(0, 16)}`;
 
   // Store the account ID
-  await prisma.instructorPayoutSettings.upsert({
+  await prisma.instructor_payout_settings.upsert({
     where: { instructorId },
     update: { stripeConnectId: accountId },
     create: {
@@ -146,7 +146,7 @@ export async function verifyStripeConnect(
   // This is a placeholder - you would verify with Stripe API
   // In production, exchange the code for access token and verify account status
 
-  await prisma.instructorPayoutSettings.update({
+  await prisma.instructor_payout_settings.update({
     where: { instructorId },
     data: {
       stripeConnectOnboarded: true,
@@ -166,9 +166,9 @@ export async function verifyStripeConnect(
  * Request a payout
  */
 export async function requestPayout(input: RequestPayoutInput) {
-  const instructor = await prisma.instructorProfile.findUnique({
+  const instructor = await prisma.instructor_profiles.findUnique({
     where: { id: input.instructorId },
-    include: { payoutSettings: true },
+    include: { instructor_payout_settings: true },
   });
 
   if (!instructor) {
@@ -194,7 +194,7 @@ export async function requestPayout(input: RequestPayoutInput) {
   }
 
   // Validate payout method settings
-  const settings = instructor.payoutSettings;
+  const settings = instructor.instructor_payout_settings;
   if (input.method === 'BANK_TRANSFER' && !settings?.bankDetails) {
     throw new Error('Bank details not configured');
   }
@@ -209,7 +209,7 @@ export async function requestPayout(input: RequestPayoutInput) {
   }
 
   // Create payout request
-  const payout = await prisma.instructorPayout.create({
+  const payout = await prisma.instructor_payouts.create({
     data: {
       instructorId: input.instructorId,
       amount: input.amount,
@@ -236,9 +236,9 @@ export async function requestPayout(input: RequestPayoutInput) {
  * Process a payout (admin action)
  */
 export async function processPayout(payoutId: string, adminId: string) {
-  const payout = await prisma.instructorPayout.findUnique({
+  const payout = await prisma.instructor_payouts.findUnique({
     where: { id: payoutId },
-    include: { instructor: true },
+    include: { instructor_profiles: true },
   });
 
   if (!payout) {
@@ -264,7 +264,7 @@ export async function processPayout(payoutId: string, adminId: string) {
   }
 
   // Update payout status
-  const updatedPayout = await prisma.instructorPayout.update({
+  const updatedPayout = await prisma.instructor_payouts.update({
     where: { id: payoutId },
     data: {
       status: 'PROCESSING',
@@ -273,13 +273,13 @@ export async function processPayout(payoutId: string, adminId: string) {
   });
 
   // Mark earnings as associated with this payout
-  await prisma.instructorEarning.updateMany({
+  await prisma.instructor_earnings.updateMany({
     where: { id: { in: earningIds } },
     data: { payoutId },
   });
 
   // Create audit log
-  await prisma.auditLog.create({
+  await prisma.audit_logs.create({
     data: {
       userId: adminId,
       action: 'PAYOUT_PROCESSED',
@@ -309,7 +309,7 @@ export async function completePayout(
   transactionId: string,
   taxWithheld?: number,
 ) {
-  const payout = await prisma.instructorPayout.findUnique({
+  const payout = await prisma.instructor_payouts.findUnique({
     where: { id: payoutId },
   });
 
@@ -322,7 +322,7 @@ export async function completePayout(
   }
 
   // Update payout status
-  const updatedPayout = await prisma.instructorPayout.update({
+  const updatedPayout = await prisma.instructor_payouts.update({
     where: { id: payoutId },
     data: {
       status: 'COMPLETED',
@@ -335,7 +335,7 @@ export async function completePayout(
   // Mark associated earnings as paid
   await instructorEarningsService.markEarningsAsPaid(
     (
-      await prisma.instructorEarning.findMany({
+      await prisma.instructor_earnings.findMany({
         where: { payoutId },
         select: { id: true },
       })
@@ -352,7 +352,7 @@ export async function completePayout(
  * Cancel a payout
  */
 export async function cancelPayout(payoutId: string, adminId: string, reason: string) {
-  const payout = await prisma.instructorPayout.findUnique({
+  const payout = await prisma.instructor_payouts.findUnique({
     where: { id: payoutId },
   });
 
@@ -365,7 +365,7 @@ export async function cancelPayout(payoutId: string, adminId: string, reason: st
   }
 
   // Update payout status
-  const updatedPayout = await prisma.instructorPayout.update({
+  const updatedPayout = await prisma.instructor_payouts.update({
     where: { id: payoutId },
     data: {
       status: 'CANCELLED',
@@ -374,7 +374,7 @@ export async function cancelPayout(payoutId: string, adminId: string, reason: st
   });
 
   // Reset associated earnings back to confirmed
-  await prisma.instructorEarning.updateMany({
+  await prisma.instructor_earnings.updateMany({
     where: { payoutId },
     data: {
       payoutId: null,
@@ -382,7 +382,7 @@ export async function cancelPayout(payoutId: string, adminId: string, reason: st
     },
   });
 
-  await prisma.auditLog.create({
+  await prisma.audit_logs.create({
     data: {
       userId: adminId,
       action: 'PAYOUT_CANCELLED',
@@ -399,7 +399,7 @@ export async function cancelPayout(payoutId: string, adminId: string, reason: st
  * Fail a payout (when transfer fails)
  */
 export async function failPayout(payoutId: string, _adminId: string, reason: string) {
-  const payout = await prisma.instructorPayout.findUnique({
+  const payout = await prisma.instructor_payouts.findUnique({
     where: { id: payoutId },
   });
 
@@ -408,7 +408,7 @@ export async function failPayout(payoutId: string, _adminId: string, reason: str
   }
 
   // Update payout status
-  const updatedPayout = await prisma.instructorPayout.update({
+  const updatedPayout = await prisma.instructor_payouts.update({
     where: { id: payoutId },
     data: {
       status: 'FAILED',
@@ -417,7 +417,7 @@ export async function failPayout(payoutId: string, _adminId: string, reason: str
   });
 
   // Reset associated earnings back to confirmed
-  await prisma.instructorEarning.updateMany({
+  await prisma.instructor_earnings.updateMany({
     where: { payoutId },
     data: {
       payoutId: null,
@@ -445,13 +445,13 @@ export async function getPayoutHistory(
   const { page = 1, limit = 20 } = pagination;
 
   const [items, total] = await Promise.all([
-    prisma.instructorPayout.findMany({
+    prisma.instructor_payouts.findMany({
       where: { instructorId },
       orderBy: { requestedAt: 'desc' },
       skip: (page - 1) * limit,
       take: limit,
     }),
-    prisma.instructorPayout.count({ where: { instructorId } }),
+    prisma.instructor_payouts.count({ where: { instructorId } }),
   ]);
 
   return {
@@ -469,13 +469,13 @@ export async function getPayoutHistory(
 export async function getPendingPayouts(
   _pagination?: { page?: number; limit?: number },
 ) {
-  return prisma.instructorPayout.findMany({
+  return prisma.instructor_payouts.findMany({
     where: { status: 'PENDING' },
     orderBy: { requestedAt: 'asc' },
     include: {
-      instructor: {
+      instructor_profiles: {
         include: {
-          user: {
+          users: {
             select: { email: true, firstName: true, lastName: true },
           },
         },
@@ -490,13 +490,13 @@ export async function getPendingPayouts(
 export async function getProcessingPayouts(
   _pagination?: { page?: number; limit?: number },
 ) {
-  return prisma.instructorPayout.findMany({
+  return prisma.instructor_payouts.findMany({
     where: { status: 'PROCESSING' },
     orderBy: { processedAt: 'asc' },
     include: {
-      instructor: {
+      instructor_profiles: {
         include: {
-          user: {
+          users: {
             select: { email: true, firstName: true, lastName: true },
           },
         },
@@ -509,17 +509,17 @@ export async function getProcessingPayouts(
  * Get payout by ID
  */
 export async function getPayoutById(payoutId: string) {
-  return prisma.instructorPayout.findUnique({
+  return prisma.instructor_payouts.findUnique({
     where: { id: payoutId },
     include: {
-      instructor: {
+      instructor_profiles: {
         include: {
-          user: {
+          users: {
             select: { email: true, firstName: true, lastName: true },
           },
         },
       },
-      earnings: true,
+      instructor_earnings: true,
     },
   });
 }
@@ -536,13 +536,13 @@ export async function processAutomaticPayouts() {
   const dayOfMonth = today.getDate();
 
   // Get instructors with auto-payout enabled for today
-  const settings = await prisma.instructorPayoutSettings.findMany({
+  const settings = await prisma.instructor_payout_settings.findMany({
     where: {
       autoPayoutEnabled: true,
       autoPayoutDay: dayOfMonth,
     },
     include: {
-      instructor: true,
+      instructor_profiles: true,
     },
   });
 
@@ -554,7 +554,7 @@ export async function processAutomaticPayouts() {
 
   for (const setting of settings) {
     try {
-      const instructor = setting.instructor;
+      const instructor = setting.instructor_profiles;
 
       // Get available balance
       const availableBalance = await instructorEarningsService.getPendingAmount(
@@ -602,7 +602,7 @@ export async function processAutomaticPayouts() {
 export async function checkStalePendingPayouts() {
   const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
 
-  const stalePayouts = await prisma.instructorPayout.findMany({
+  const stalePayouts = await prisma.instructor_payouts.findMany({
     where: {
       status: 'PENDING',
       requestedAt: {
@@ -610,9 +610,9 @@ export async function checkStalePendingPayouts() {
       },
     },
     include: {
-      instructor: {
+      instructor_profiles: {
         include: {
-          user: {
+          users: {
             select: { email: true, firstName: true, lastName: true },
           },
         },
@@ -649,17 +649,17 @@ export async function getPayoutStats() {
     completedThisMonth,
     completedAmountThisMonth,
   ] = await Promise.all([
-    prisma.instructorPayout.count({ where: { status: 'PENDING' } }),
-    prisma.instructorPayout.count({ where: { status: 'PROCESSING' } }),
-    prisma.instructorPayout.aggregate({
+    prisma.instructor_payouts.count({ where: { status: 'PENDING' } }),
+    prisma.instructor_payouts.count({ where: { status: 'PROCESSING' } }),
+    prisma.instructor_payouts.aggregate({
       where: { status: 'PENDING' },
       _sum: { amount: true },
     }),
-    prisma.instructorPayout.aggregate({
+    prisma.instructor_payouts.aggregate({
       where: { status: 'PROCESSING' },
       _sum: { amount: true },
     }),
-    prisma.instructorPayout.count({
+    prisma.instructor_payouts.count({
       where: {
         status: 'COMPLETED',
         completedAt: {
@@ -667,7 +667,7 @@ export async function getPayoutStats() {
         },
       },
     }),
-    prisma.instructorPayout.aggregate({
+    prisma.instructor_payouts.aggregate({
       where: {
         status: 'COMPLETED',
         completedAt: {

@@ -31,7 +31,7 @@ const router = Router();
  *             schema:
  *               type: object
  *               properties:
- *                 user:
+ *                 users:
  *                   type: object
  *                   properties:
  *                     id:
@@ -80,7 +80,7 @@ router.post('/google', authRateLimiter, googleLogin);
  *               identityToken:
  *                 type: string
  *                 description: Apple identity token from client-side authentication
- *               user:
+ *               users:
  *                 type: object
  *                 description: User info (only provided on first sign-in)
  *                 properties:
@@ -96,7 +96,7 @@ router.post('/google', authRateLimiter, googleLogin);
  *             schema:
  *               type: object
  *               properties:
- *                 user:
+ *                 users:
  *                   type: object
  *                   properties:
  *                     id:

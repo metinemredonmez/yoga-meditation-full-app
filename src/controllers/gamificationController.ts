@@ -25,7 +25,13 @@ export async function getUserStats(req: Request, res: Response, next: NextFuncti
 export async function getLevelInfo(req: Request, res: Response, next: NextFunction) {
   try {
     const userId = req.user!.id;
-    const levelInfo = await xpService.getLevelInfo(userId);
+    const userStats = await xpService.getUserStats(userId);
+
+    if (!userStats) {
+      throw new Error('User stats not found');
+    }
+
+    const levelInfo = await xpService.getLevelInfo(userStats.level);
 
     res.json({
       success: true,
@@ -50,12 +56,8 @@ export async function getXPHistory(req: Request, res: Response, next: NextFuncti
       {
         page: page ? parseInt(page as string) : undefined,
         limit: limit ? parseInt(limit as string) : undefined,
-      },
-      {
         source: source as any,
         type: type as any,
-        startDate: startDate ? new Date(startDate as string) : undefined,
-        endDate: endDate ? new Date(endDate as string) : undefined,
       },
     );
 
@@ -216,13 +218,11 @@ export async function adminAddXP(req: Request, res: Response, next: NextFunction
     const targetUserId = req.params.userId!;
     const { amount, description } = req.body;
 
-    const result = await xpService.awardXP(
+    const result = await xpService.addXP(
       targetUserId,
       amount,
       'ADMIN',
-      undefined,
       description || 'Admin XP adjustment',
-      'ADMIN_ADJUSTMENT',
     );
 
     res.json({

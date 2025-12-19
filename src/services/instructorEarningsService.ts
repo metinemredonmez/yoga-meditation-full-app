@@ -100,7 +100,7 @@ export function calculateInstructorShare(
  * Record an earning for an instructor
  */
 export async function recordEarning(input: RecordEarningInput) {
-  const instructor = await prisma.instructorProfile.findUnique({
+  const instructor = await prisma.instructor_profiles.findUnique({
     where: { id: input.instructorId },
   });
 
@@ -116,7 +116,7 @@ export async function recordEarning(input: RecordEarningInput) {
     instructor.customPayoutRate ? Number(instructor.customPayoutRate) : null,
   );
 
-  const earning = await prisma.instructorEarning.create({
+  const earning = await prisma.instructor_earnings.create({
     data: {
       instructorId: input.instructorId,
       type: input.type,
@@ -156,7 +156,7 @@ export async function calculateProgramEarning(
   paymentAmount: number,
   studentId?: string,
 ) {
-  const program = await prisma.program.findUnique({
+  const program = await prisma.programs.findUnique({
     where: { id: programId },
   });
 
@@ -166,7 +166,7 @@ export async function calculateProgramEarning(
   }
 
   // Get instructor profile
-  const instructor = await prisma.instructorProfile.findUnique({
+  const instructor = await prisma.instructor_profiles.findUnique({
     where: { userId: program.instructorId },
   });
 
@@ -183,7 +183,7 @@ export async function calculateProgramEarning(
     const earnings = [];
 
     for (const [instructorUserId, percentage] of Object.entries(revenueShare)) {
-      const instructorProfile = await prisma.instructorProfile.findUnique({
+      const instructorProfile = await prisma.instructor_profiles.findUnique({
         where: { userId: instructorUserId },
       });
 
@@ -227,7 +227,7 @@ export async function calculateClassEarning(
   bookingAmount: number,
   studentId?: string,
 ) {
-  const classItem = await prisma.class.findUnique({
+  const classItem = await prisma.classes.findUnique({
     where: { id: classId },
   });
 
@@ -237,7 +237,7 @@ export async function calculateClassEarning(
   }
 
   // Get instructor profile
-  const instructor = await prisma.instructorProfile.findUnique({
+  const instructor = await prisma.instructor_profiles.findUnique({
     where: { userId: classItem.instructorId },
   });
 
@@ -268,7 +268,7 @@ export async function calculateSubscriptionShare(
   distributionMethod: 'equal' | 'viewBased' = 'viewBased',
 ) {
   // Get all approved instructors
-  const instructors = await prisma.instructorProfile.findMany({
+  const instructors = await prisma.instructor_profiles.findMany({
     where: { status: 'APPROVED' },
   });
 
@@ -299,7 +299,7 @@ export async function calculateSubscriptionShare(
   } else {
     // View-based distribution
     // Get view counts from analytics in the period
-    const analytics = await prisma.instructorAnalytics.groupBy({
+    const analytics = await prisma.instructor_analytics.groupBy({
       by: ['instructorId'],
       where: {
         date: {
@@ -385,7 +385,7 @@ export async function recordBonus(
   metadata?: Record<string, unknown>,
 ) {
   // Bonuses don't have platform fee
-  const instructor = await prisma.instructorProfile.findUnique({
+  const instructor = await prisma.instructor_profiles.findUnique({
     where: { id: instructorId },
   });
 
@@ -393,7 +393,7 @@ export async function recordBonus(
     throw new Error('Instructor not found');
   }
 
-  const earning = await prisma.instructorEarning.create({
+  const earning = await prisma.instructor_earnings.create({
     data: {
       instructorId,
       type: 'BONUS',
@@ -420,7 +420,7 @@ export async function recordBonus(
  * Confirm pending earnings (make them available for payout)
  */
 export async function confirmEarnings(earningIds: string[]) {
-  const result = await prisma.instructorEarning.updateMany({
+  const result = await prisma.instructor_earnings.updateMany({
     where: {
       id: { in: earningIds },
       status: 'PENDING',
@@ -439,7 +439,7 @@ export async function confirmEarnings(earningIds: string[]) {
  * Mark earnings as paid
  */
 export async function markEarningsAsPaid(earningIds: string[], payoutId: string) {
-  const result = await prisma.instructorEarning.updateMany({
+  const result = await prisma.instructor_earnings.updateMany({
     where: {
       id: { in: earningIds },
       status: 'CONFIRMED',
@@ -460,7 +460,7 @@ export async function markEarningsAsPaid(earningIds: string[], payoutId: string)
  * Cancel earnings
  */
 export async function cancelEarnings(earningIds: string[], reason: string) {
-  const result = await prisma.instructorEarning.updateMany({
+  const result = await prisma.instructor_earnings.updateMany({
     where: {
       id: { in: earningIds },
       status: { in: ['PENDING', 'CONFIRMED'] },
@@ -487,7 +487,7 @@ export async function getEarningsSummary(
   instructorId: string,
   period?: { start: Date; end: Date },
 ): Promise<EarningSummary> {
-  const where: Prisma.InstructorEarningWhereInput = {
+  const where: Prisma.instructor_earningsWhereInput = {
     instructorId,
   };
 
@@ -499,7 +499,7 @@ export async function getEarningsSummary(
   }
 
   // Get all earnings
-  const earnings = await prisma.instructorEarning.findMany({
+  const earnings = await prisma.instructor_earnings.findMany({
     where,
   });
 
@@ -557,7 +557,7 @@ export async function getEarningsHistory(
 ) {
   const { page = 1, limit = 20 } = pagination;
 
-  const where: Prisma.InstructorEarningWhereInput = {
+  const where: Prisma.instructor_earningsWhereInput = {
     instructorId,
   };
 
@@ -584,13 +584,13 @@ export async function getEarningsHistory(
   }
 
   const [items, total] = await Promise.all([
-    prisma.instructorEarning.findMany({
+    prisma.instructor_earnings.findMany({
       where,
       orderBy: { createdAt: 'desc' },
       skip: (page - 1) * limit,
       take: limit,
     }),
-    prisma.instructorEarning.count({ where }),
+    prisma.instructor_earnings.count({ where }),
   ]);
 
   return {
@@ -606,7 +606,7 @@ export async function getEarningsHistory(
  * Get pending (available for payout) earnings
  */
 export async function getPendingEarnings(instructorId: string) {
-  return prisma.instructorEarning.findMany({
+  return prisma.instructor_earnings.findMany({
     where: {
       instructorId,
       status: 'CONFIRMED',
@@ -619,7 +619,7 @@ export async function getPendingEarnings(instructorId: string) {
  * Get total pending amount for instructor
  */
 export async function getPendingAmount(instructorId: string): Promise<number> {
-  const result = await prisma.instructorEarning.aggregate({
+  const result = await prisma.instructor_earnings.aggregate({
     where: {
       instructorId,
       status: 'CONFIRMED',
@@ -639,7 +639,7 @@ export async function getEarningsByContent(
   instructorId: string,
   contentType: 'PROGRAM' | 'CLASS',
 ) {
-  const earnings = await prisma.instructorEarning.groupBy({
+  const earnings = await prisma.instructor_earnings.groupBy({
     by: ['sourceId'],
     where: {
       instructorId,
@@ -659,12 +659,12 @@ export async function getEarningsByContent(
       let content = null;
       if (e.sourceId) {
         if (contentType === 'PROGRAM') {
-          content = await prisma.program.findUnique({
+          content = await prisma.programs.findUnique({
             where: { id: e.sourceId },
             select: { id: true, title: true },
           });
         } else {
-          content = await prisma.class.findUnique({
+          content = await prisma.classes.findUnique({
             where: { id: e.sourceId },
             select: { id: true, title: true },
           });
@@ -711,7 +711,7 @@ export async function getTopEarningContent(instructorId: string, limit: number =
  * Get total platform earnings (admin)
  */
 export async function getPlatformEarnings(period?: { start: Date; end: Date }) {
-  const where: Prisma.InstructorEarningWhereInput = {
+  const where: Prisma.instructor_earningsWhereInput = {
     status: { not: 'CANCELLED' },
   };
 
@@ -722,7 +722,7 @@ export async function getPlatformEarnings(period?: { start: Date; end: Date }) {
     };
   }
 
-  const result = await prisma.instructorEarning.aggregate({
+  const result = await prisma.instructor_earnings.aggregate({
     where,
     _sum: {
       grossAmount: true,
@@ -732,7 +732,7 @@ export async function getPlatformEarnings(period?: { start: Date; end: Date }) {
   });
 
   // Group by type
-  const byType = await prisma.instructorEarning.groupBy({
+  const byType = await prisma.instructor_earnings.groupBy({
     by: ['type'],
     where,
     _sum: {

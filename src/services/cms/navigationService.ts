@@ -7,26 +7,26 @@ import { HttpError } from '../../middleware/errorHandler';
 // ============================================
 
 export async function getMenus() {
-  return prisma.navigationMenu.findMany({
+  return prisma.navigation_menus.findMany({
     orderBy: { name: 'asc' },
     include: {
-      _count: { select: { items: true } },
+      _count: { select: { navigation_items: true } },
     },
   });
 }
 
 export async function getMenu(menuId: string) {
-  const menu = await prisma.navigationMenu.findUnique({
+  const menu = await prisma.navigation_menus.findUnique({
     where: { id: menuId },
     include: {
-      items: {
+      navigation_items: {
         where: { parentId: null },
         orderBy: { sortOrder: 'asc' },
         include: {
-          children: {
+          other_navigation_items: {
             orderBy: { sortOrder: 'asc' },
             include: {
-              children: { orderBy: { sortOrder: 'asc' } },
+              other_navigation_items: { orderBy: { sortOrder: 'asc' } },
             },
           },
         },
@@ -39,18 +39,18 @@ export async function getMenu(menuId: string) {
 }
 
 export async function getMenuBySlug(slug: string) {
-  const menu = await prisma.navigationMenu.findUnique({
+  const menu = await prisma.navigation_menus.findUnique({
     where: { slug },
     include: {
-      items: {
+      navigation_items: {
         where: { parentId: null, isActive: true },
         orderBy: { sortOrder: 'asc' },
         include: {
-          children: {
+          other_navigation_items: {
             where: { isActive: true },
             orderBy: { sortOrder: 'asc' },
             include: {
-              children: {
+              other_navigation_items: {
                 where: { isActive: true },
                 orderBy: { sortOrder: 'asc' },
               },
@@ -73,10 +73,10 @@ export async function createMenu(
     description?: string;
   }
 ) {
-  const existing = await prisma.navigationMenu.findUnique({ where: { slug: data.slug } });
+  const existing = await prisma.navigation_menus.findUnique({ where: { slug: data.slug } });
   if (existing) throw new HttpError(400, 'Menu with this slug already exists');
 
-  return prisma.navigationMenu.create({
+  return prisma.navigation_menus.create({
     data: {
       name: data.name,
       slug: data.slug,
@@ -95,15 +95,15 @@ export async function updateMenu(
     isActive?: boolean;
   }
 ) {
-  const menu = await prisma.navigationMenu.findUnique({ where: { id: menuId } });
+  const menu = await prisma.navigation_menus.findUnique({ where: { id: menuId } });
   if (!menu) throw new HttpError(404, 'Menu not found');
 
   if (data.slug && data.slug !== menu.slug) {
-    const existing = await prisma.navigationMenu.findUnique({ where: { slug: data.slug } });
+    const existing = await prisma.navigation_menus.findUnique({ where: { slug: data.slug } });
     if (existing) throw new HttpError(400, 'Menu with this slug already exists');
   }
 
-  return prisma.navigationMenu.update({
+  return prisma.navigation_menus.update({
     where: { id: menuId },
     data: {
       name: data.name,
@@ -115,17 +115,17 @@ export async function updateMenu(
 }
 
 export async function deleteMenu(menuId: string) {
-  const menu = await prisma.navigationMenu.findUnique({
+  const menu = await prisma.navigation_menus.findUnique({
     where: { id: menuId },
-    include: { _count: { select: { items: true } } },
+    include: { _count: { select: { navigation_items: true } } },
   });
 
   if (!menu) throw new HttpError(404, 'Menu not found');
-  if (menu._count.items > 0) {
+  if (menu._count.navigation_items > 0) {
     throw new HttpError(400, 'Menu must be empty before deletion');
   }
 
-  await prisma.navigationMenu.delete({ where: { id: menuId } });
+  await prisma.navigation_menus.delete({ where: { id: menuId } });
   return { deleted: true };
 }
 
@@ -134,14 +134,14 @@ export async function deleteMenu(menuId: string) {
 // ============================================
 
 export async function getMenuItems(menuId: string) {
-  return prisma.navigationItem.findMany({
+  return prisma.navigation_items.findMany({
     where: { menuId, parentId: null },
     orderBy: { sortOrder: 'asc' },
     include: {
-      children: {
+      other_navigation_items: {
         orderBy: { sortOrder: 'asc' },
         include: {
-          children: { orderBy: { sortOrder: 'asc' } },
+          other_navigation_items: { orderBy: { sortOrder: 'asc' } },
         },
       },
     },
@@ -149,12 +149,12 @@ export async function getMenuItems(menuId: string) {
 }
 
 export async function getMenuItem(itemId: string) {
-  const item = await prisma.navigationItem.findUnique({
+  const item = await prisma.navigation_items.findUnique({
     where: { id: itemId },
     include: {
-      menu: { select: { id: true, name: true, slug: true } },
-      parent: { select: { id: true, label: true } },
-      children: { orderBy: { sortOrder: 'asc' } },
+      navigation_menus: { select: { id: true, name: true, slug: true } },
+      navigation_items: { select: { id: true, label: true } },
+      other_navigation_items: { orderBy: { sortOrder: 'asc' } },
     },
   });
 
@@ -172,18 +172,18 @@ export async function createMenuItem(data: {
   sortOrder?: number;
   visibleTo?: string[];
 }) {
-  const menu = await prisma.navigationMenu.findUnique({ where: { id: data.menuId } });
+  const menu = await prisma.navigation_menus.findUnique({ where: { id: data.menuId } });
   if (!menu) throw new HttpError(404, 'Menu not found');
 
   if (data.parentId) {
-    const parent = await prisma.navigationItem.findUnique({ where: { id: data.parentId } });
+    const parent = await prisma.navigation_items.findUnique({ where: { id: data.parentId } });
     if (!parent) throw new HttpError(404, 'Parent item not found');
     if (parent.menuId !== data.menuId) {
       throw new HttpError(400, 'Parent item must be in the same menu');
     }
   }
 
-  return prisma.navigationItem.create({
+  return prisma.navigation_items.create({
     data: {
       menuId: data.menuId,
       label: data.label,
@@ -196,8 +196,8 @@ export async function createMenuItem(data: {
       visibleTo: data.visibleTo || [],
     },
     include: {
-      menu: { select: { id: true, name: true } },
-      parent: { select: { id: true, label: true } },
+      navigation_menus: { select: { id: true, name: true } },
+      navigation_items: { select: { id: true, label: true } },
     },
   });
 }
@@ -215,7 +215,7 @@ export async function updateMenuItem(
     visibleTo?: string[];
   }
 ) {
-  const item = await prisma.navigationItem.findUnique({ where: { id: itemId } });
+  const item = await prisma.navigation_items.findUnique({ where: { id: itemId } });
   if (!item) throw new HttpError(404, 'Menu item not found');
 
   if (data.parentId === itemId) {
@@ -223,14 +223,14 @@ export async function updateMenuItem(
   }
 
   if (data.parentId) {
-    const parent = await prisma.navigationItem.findUnique({ where: { id: data.parentId } });
+    const parent = await prisma.navigation_items.findUnique({ where: { id: data.parentId } });
     if (!parent) throw new HttpError(404, 'Parent item not found');
     if (parent.menuId !== item.menuId) {
       throw new HttpError(400, 'Parent item must be in the same menu');
     }
   }
 
-  return prisma.navigationItem.update({
+  return prisma.navigation_items.update({
     where: { id: itemId },
     data: {
       label: data.label,
@@ -243,30 +243,30 @@ export async function updateMenuItem(
       visibleTo: data.visibleTo,
     },
     include: {
-      menu: { select: { id: true, name: true } },
-      parent: { select: { id: true, label: true } },
+      navigation_menus: { select: { id: true, name: true } },
+      navigation_items: { select: { id: true, label: true } },
     },
   });
 }
 
 export async function deleteMenuItem(itemId: string) {
-  const item = await prisma.navigationItem.findUnique({
+  const item = await prisma.navigation_items.findUnique({
     where: { id: itemId },
-    include: { _count: { select: { children: true } } },
+    include: { _count: { select: { other_navigation_items: true } } },
   });
 
   if (!item) throw new HttpError(404, 'Menu item not found');
-  if (item._count.children > 0) {
+  if (item._count.other_navigation_items > 0) {
     throw new HttpError(400, 'Item has children. Delete or move children first.');
   }
 
-  await prisma.navigationItem.delete({ where: { id: itemId } });
+  await prisma.navigation_items.delete({ where: { id: itemId } });
   return { deleted: true };
 }
 
 export async function reorderMenuItems(itemIds: string[]) {
   const updates = itemIds.map((id, index) =>
-    prisma.navigationItem.update({
+    prisma.navigation_items.update({
       where: { id },
       data: { sortOrder: index },
     })
@@ -277,7 +277,7 @@ export async function reorderMenuItems(itemIds: string[]) {
 }
 
 export async function moveMenuItem(itemId: string, newParentId: string | null, newMenuId?: string) {
-  const item = await prisma.navigationItem.findUnique({ where: { id: itemId } });
+  const item = await prisma.navigation_items.findUnique({ where: { id: itemId } });
   if (!item) throw new HttpError(404, 'Menu item not found');
 
   if (newParentId === itemId) {
@@ -287,14 +287,14 @@ export async function moveMenuItem(itemId: string, newParentId: string | null, n
   const menuId = newMenuId || item.menuId;
 
   if (newParentId) {
-    const parent = await prisma.navigationItem.findUnique({ where: { id: newParentId } });
+    const parent = await prisma.navigation_items.findUnique({ where: { id: newParentId } });
     if (!parent) throw new HttpError(404, 'Parent item not found');
     if (parent.menuId !== menuId) {
       throw new HttpError(400, 'Parent item must be in the same menu');
     }
   }
 
-  return prisma.navigationItem.update({
+  return prisma.navigation_items.update({
     where: { id: itemId },
     data: {
       parentId: newParentId,
@@ -308,13 +308,13 @@ export async function moveMenuItem(itemId: string, newParentId: string | null, n
 // ============================================
 
 export async function getPublicMenu(slug: string) {
-  const menu = await prisma.navigationMenu.findFirst({
+  const menu = await prisma.navigation_menus.findFirst({
     where: { slug, isActive: true },
     select: {
       id: true,
       name: true,
       slug: true,
-      items: {
+      navigation_items: {
         where: { parentId: null, isActive: true },
         orderBy: { sortOrder: 'asc' },
         select: {
@@ -323,7 +323,7 @@ export async function getPublicMenu(slug: string) {
           url: true,
           target: true,
           icon: true,
-          children: {
+          other_navigation_items: {
             where: { isActive: true },
             orderBy: { sortOrder: 'asc' },
             select: {
@@ -332,7 +332,7 @@ export async function getPublicMenu(slug: string) {
               url: true,
               target: true,
               icon: true,
-              children: {
+              other_navigation_items: {
                 where: { isActive: true },
                 orderBy: { sortOrder: 'asc' },
                 select: {
@@ -357,13 +357,13 @@ export async function getPublicMenu(slug: string) {
 export async function getMenusByLocation(_location: string) {
   // Note: The schema doesn't have a location field, this is a stub
   // In a real implementation, you might use slug pattern matching or metadata
-  return prisma.navigationMenu.findMany({
+  return prisma.navigation_menus.findMany({
     where: { isActive: true },
     select: {
       id: true,
       name: true,
       slug: true,
-      items: {
+      navigation_items: {
         where: { parentId: null, isActive: true },
         orderBy: { sortOrder: 'asc' },
         select: {
@@ -372,7 +372,7 @@ export async function getMenusByLocation(_location: string) {
           url: true,
           target: true,
           icon: true,
-          children: {
+          other_navigation_items: {
             where: { isActive: true },
             orderBy: { sortOrder: 'asc' },
             select: {

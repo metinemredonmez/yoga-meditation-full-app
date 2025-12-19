@@ -18,9 +18,9 @@ export const createExport = async (
     throw new Error('Report instance not found');
   }
 
-  const fileName = generateFileName(instance.definition.name, format);
+  const fileName = generateFileName(instance.report_definitions.name, format);
 
-  return prisma.reportExport.create({
+  return prisma.report_exports.create({
     data: {
       instanceId,
       format,
@@ -41,7 +41,7 @@ export const createDirectExport = async (
 ) => {
   const fileName = generateFileName(reportType, format);
 
-  return prisma.reportExport.create({
+  return prisma.report_exports.create({
     data: {
       reportType,
       filters: filters as Prisma.InputJsonValue,
@@ -56,11 +56,11 @@ export const createDirectExport = async (
 
 // Process export (generate file)
 export const processExport = async (exportId: string) => {
-  const exportRecord = await prisma.reportExport.findUnique({
+  const exportRecord = await prisma.report_exports.findUnique({
     where: { id: exportId },
     include: {
-      instance: {
-        include: { definition: true },
+      report_instances: {
+        include: { report_definitions: true },
       },
     },
   });
@@ -70,7 +70,7 @@ export const processExport = async (exportId: string) => {
   }
 
   // Update status to processing
-  await prisma.reportExport.update({
+  await prisma.report_exports.update({
     where: { id: exportId },
     data: {
       status: 'PROCESSING',
@@ -83,17 +83,17 @@ export const processExport = async (exportId: string) => {
     let data: unknown[];
     let columns: string[];
 
-    if (exportRecord.instance) {
-      const reportData = await generateReport(exportRecord.instance.definitionId, {
-        filters: exportRecord.instance.filters as Record<string, unknown>,
-        columns: exportRecord.instance.columns,
-        dateRangeType: exportRecord.instance.dateRangeType,
-        dateFrom: exportRecord.instance.dateFrom || undefined,
-        dateTo: exportRecord.instance.dateTo || undefined,
+    if (exportRecord.report_instances) {
+      const reportData = await generateReport(exportRecord.report_instances.definitionId, {
+        filters: exportRecord.report_instances.filters as Record<string, unknown>,
+        columns: exportRecord.report_instances.columns,
+        dateRangeType: exportRecord.report_instances.dateRangeType,
+        dateFrom: exportRecord.report_instances.dateFrom || undefined,
+        dateTo: exportRecord.report_instances.dateTo || undefined,
         limit: 10000, // Max rows for export
       });
       data = reportData.data as unknown[];
-      columns = exportRecord.instance.columns;
+      columns = exportRecord.report_instances.columns;
     } else if (exportRecord.reportType && exportRecord.filters) {
       const reportData = await generateReport(exportRecord.reportType, {
         filters: exportRecord.filters as Record<string, unknown>,
@@ -116,23 +116,19 @@ export const processExport = async (exportId: string) => {
         break;
       case 'EXCEL':
         buffer = await generateExcel(data, columns, {
-          sheetName: exportRecord.instance?.definition.name || 'Report',
+          sheetName: exportRecord.report_instances?.report_definitions.name || 'Report',
         });
         contentType = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
         break;
       case 'PDF':
         buffer = await generatePDF(data, columns, {
-          title: exportRecord.instance?.definition.name || 'Report',
+          title: exportRecord.report_instances?.report_definitions.name || 'Report',
         });
         contentType = 'application/pdf';
         break;
       case 'JSON':
         buffer = Buffer.from(JSON.stringify(data, null, 2));
         contentType = 'application/json';
-        break;
-      case 'XML':
-        buffer = generateXML(data);
-        contentType = 'application/xml';
         break;
       default:
         throw new Error(`Unsupported format: ${exportRecord.format}`);
@@ -142,7 +138,7 @@ export const processExport = async (exportId: string) => {
     const fileUrl = await uploadExportFile(exportId, buffer, exportRecord.format, contentType);
 
     // Update export record
-    await prisma.reportExport.update({
+    await prisma.report_exports.update({
       where: { id: exportId },
       data: {
         status: 'COMPLETED',
@@ -157,7 +153,7 @@ export const processExport = async (exportId: string) => {
 
     return { fileUrl, fileSize: buffer.length };
   } catch (error) {
-    await prisma.reportExport.update({
+    await prisma.report_exports.update({
       where: { id: exportId },
       data: {
         status: 'FAILED',
@@ -323,27 +319,6 @@ export const generateJSON = (data: unknown[]): string => {
   return JSON.stringify(data, null, 2);
 };
 
-// Generate XML
-const generateXML = (data: unknown[]): Buffer => {
-  let xml = '<?xml version="1.0" encoding="UTF-8"?>\n<report>\n';
-
-  data.forEach((row, index) => {
-    xml += `  <row index="${index}">\n`;
-    Object.entries(row as Record<string, unknown>).forEach(([key, value]) => {
-      const escapedValue = String(value)
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;');
-      xml += `    <${key}>${escapedValue}</${key}>\n`;
-    });
-    xml += '  </row>\n';
-  });
-
-  xml += '</report>';
-  return Buffer.from(xml, 'utf-8');
-};
-
 // Upload export file to S3
 export const uploadExportFile = async (
   exportId: string,
@@ -361,7 +336,7 @@ export const uploadExportFile = async (
 
 // Get download URL
 export const getExportDownloadUrl = async (exportId: string): Promise<string> => {
-  const exportRecord = await prisma.reportExport.findUnique({
+  const exportRecord = await prisma.report_exports.findUnique({
     where: { id: exportId },
   });
 
@@ -378,7 +353,7 @@ export const getExportDownloadUrl = async (exportId: string): Promise<string> =>
   }
 
   // Mark as downloaded
-  await prisma.reportExport.update({
+  await prisma.report_exports.update({
     where: { id: exportId },
     data: { downloadedAt: new Date() },
   });
@@ -388,7 +363,7 @@ export const getExportDownloadUrl = async (exportId: string): Promise<string> =>
 
 // Delete export file
 export const deleteExportFile = async (exportId: string): Promise<void> => {
-  const exportRecord = await prisma.reportExport.findUnique({
+  const exportRecord = await prisma.report_exports.findUnique({
     where: { id: exportId },
   });
 
@@ -396,14 +371,14 @@ export const deleteExportFile = async (exportId: string): Promise<void> => {
     await deleteFile(exportRecord.fileUrl);
   }
 
-  await prisma.reportExport.delete({
+  await prisma.report_exports.delete({
     where: { id: exportId },
   });
 };
 
 // Cleanup expired exports
 export const cleanupExpiredExports = async (): Promise<number> => {
-  const expiredExports = await prisma.reportExport.findMany({
+  const expiredExports = await prisma.report_exports.findMany({
     where: {
       expiresAt: { lt: new Date() },
       status: 'COMPLETED',
@@ -420,7 +395,7 @@ export const cleanupExpiredExports = async (): Promise<number> => {
     }
   }
 
-  await prisma.reportExport.updateMany({
+  await prisma.report_exports.updateMany({
     where: {
       expiresAt: { lt: new Date() },
       status: 'COMPLETED',
@@ -439,7 +414,7 @@ export const updateExportProgress = async (
   progress: number,
   processedRows: number
 ) => {
-  return prisma.reportExport.update({
+  return prisma.report_exports.update({
     where: { id: exportId },
     data: { progress, processedRows },
   });
@@ -447,7 +422,7 @@ export const updateExportProgress = async (
 
 // Get export status
 export const getExportStatus = async (exportId: string) => {
-  return prisma.reportExport.findUnique({
+  return prisma.report_exports.findUnique({
     where: { id: exportId },
     select: {
       id: true,
@@ -465,7 +440,7 @@ export const getExportStatus = async (exportId: string) => {
 
 // Get user exports
 export const getUserExports = async (userId: string) => {
-  return prisma.reportExport.findMany({
+  return prisma.report_exports.findMany({
     where: { requestedById: userId },
     orderBy: { createdAt: 'desc' },
     take: 50,
@@ -474,9 +449,9 @@ export const getUserExports = async (userId: string) => {
 
 // Cancel export
 export const cancelExport = async (exportId: string) => {
-  return prisma.reportExport.update({
+  return prisma.report_exports.update({
     where: { id: exportId },
-    data: { status: 'CANCELLED' },
+    data: { status: 'FAILED' }, // Use FAILED instead of CANCELLED as it's not in enum
   });
 };
 

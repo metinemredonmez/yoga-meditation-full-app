@@ -10,7 +10,7 @@ import { logger } from '../utils/logger';
  */
 export async function followInstructor(userId: string, instructorId: string) {
   // Check if instructor exists and is approved
-  const instructor = await prisma.instructorProfile.findUnique({
+  const instructor = await prisma.instructor_profiles.findUnique({
     where: { id: instructorId },
   });
 
@@ -19,7 +19,7 @@ export async function followInstructor(userId: string, instructorId: string) {
   }
 
   // Check if already following
-  const existing = await prisma.instructorFollower.findUnique({
+  const existing = await prisma.instructor_followers.findUnique({
     where: {
       instructorId_userId: {
         instructorId,
@@ -32,7 +32,7 @@ export async function followInstructor(userId: string, instructorId: string) {
     throw new Error('Already following this instructor');
   }
 
-  const follower = await prisma.instructorFollower.create({
+  const follower = await prisma.instructor_followers.create({
     data: {
       instructorId,
       userId,
@@ -49,7 +49,7 @@ export async function followInstructor(userId: string, instructorId: string) {
  * Unfollow an instructor
  */
 export async function unfollowInstructor(userId: string, instructorId: string) {
-  const follower = await prisma.instructorFollower.findUnique({
+  const follower = await prisma.instructor_followers.findUnique({
     where: {
       instructorId_userId: {
         instructorId,
@@ -62,7 +62,7 @@ export async function unfollowInstructor(userId: string, instructorId: string) {
     throw new Error('Not following this instructor');
   }
 
-  await prisma.instructorFollower.delete({
+  await prisma.instructor_followers.delete({
     where: {
       instructorId_userId: {
         instructorId,
@@ -82,7 +82,7 @@ export async function toggleNotifications(
   instructorId: string,
   enabled: boolean,
 ) {
-  const follower = await prisma.instructorFollower.findUnique({
+  const follower = await prisma.instructor_followers.findUnique({
     where: {
       instructorId_userId: {
         instructorId,
@@ -95,7 +95,7 @@ export async function toggleNotifications(
     throw new Error('Not following this instructor');
   }
 
-  const updated = await prisma.instructorFollower.update({
+  const updated = await prisma.instructor_followers.update({
     where: {
       instructorId_userId: {
         instructorId,
@@ -123,7 +123,7 @@ export async function isFollowing(
   userId: string,
   instructorId: string,
 ): Promise<boolean> {
-  const follower = await prisma.instructorFollower.findUnique({
+  const follower = await prisma.instructor_followers.findUnique({
     where: {
       instructorId_userId: {
         instructorId,
@@ -139,7 +139,7 @@ export async function isFollowing(
  * Get following status with notification setting
  */
 export async function getFollowingStatus(userId: string, instructorId: string) {
-  const follower = await prisma.instructorFollower.findUnique({
+  const follower = await prisma.instructor_followers.findUnique({
     where: {
       instructorId_userId: {
         instructorId,
@@ -165,13 +165,13 @@ export async function getFollowers(
   const { page = 1, limit = 20 } = pagination;
 
   const [items, total] = await Promise.all([
-    prisma.instructorFollower.findMany({
+    prisma.instructor_followers.findMany({
       where: { instructorId },
       orderBy: { followedAt: 'desc' },
       skip: (page - 1) * limit,
       take: limit,
       include: {
-        user: {
+        users: {
           select: {
             id: true,
             firstName: true,
@@ -180,7 +180,7 @@ export async function getFollowers(
         },
       },
     }),
-    prisma.instructorFollower.count({ where: { instructorId } }),
+    prisma.instructor_followers.count({ where: { instructorId } }),
   ]);
 
   return {
@@ -202,13 +202,13 @@ export async function getFollowing(
   const { page = 1, limit = 20 } = pagination;
 
   const [items, total] = await Promise.all([
-    prisma.instructorFollower.findMany({
+    prisma.instructor_followers.findMany({
       where: { userId },
       orderBy: { followedAt: 'desc' },
       skip: (page - 1) * limit,
       take: limit,
       include: {
-        instructor: {
+        instructor_profiles: {
           select: {
             id: true,
             displayName: true,
@@ -220,12 +220,12 @@ export async function getFollowing(
         },
       },
     }),
-    prisma.instructorFollower.count({ where: { userId } }),
+    prisma.instructor_followers.count({ where: { userId } }),
   ]);
 
   return {
     items: items.map((i) => ({
-      ...i.instructor,
+      ...i.instructor_profiles,
       followedAt: i.followedAt,
       notificationsEnabled: i.notificationsEnabled,
     })),
@@ -240,7 +240,7 @@ export async function getFollowing(
  * Get follower count for instructor
  */
 export async function getFollowerCount(instructorId: string): Promise<number> {
-  return prisma.instructorFollower.count({
+  return prisma.instructor_followers.count({
     where: { instructorId },
   });
 }
@@ -256,7 +256,7 @@ export async function getFollowerCount(instructorId: string): Promise<number> {
 export async function getFollowerIdsWithNotifications(
   instructorId: string,
 ): Promise<string[]> {
-  const followers = await prisma.instructorFollower.findMany({
+  const followers = await prisma.instructor_followers.findMany({
     where: {
       instructorId,
       notificationsEnabled: true,
@@ -315,20 +315,20 @@ export async function getFollowerStats(instructorId: string) {
   const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
 
   const [total, newThisMonth, newThisWeek, withNotifications] = await Promise.all([
-    prisma.instructorFollower.count({ where: { instructorId } }),
-    prisma.instructorFollower.count({
+    prisma.instructor_followers.count({ where: { instructorId } }),
+    prisma.instructor_followers.count({
       where: {
         instructorId,
         followedAt: { gte: thirtyDaysAgo },
       },
     }),
-    prisma.instructorFollower.count({
+    prisma.instructor_followers.count({
       where: {
         instructorId,
         followedAt: { gte: sevenDaysAgo },
       },
     }),
-    prisma.instructorFollower.count({
+    prisma.instructor_followers.count({
       where: {
         instructorId,
         notificationsEnabled: true,

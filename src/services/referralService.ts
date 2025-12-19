@@ -13,7 +13,7 @@ const REFERRED_XP_BONUS = 100;
 
 export async function generateReferralCode(userId: string) {
   // Check if user already has a code
-  let referralCode = await prisma.referralCode.findUnique({
+  let referralCode = await prisma.referral_codes.findUnique({
     where: { userId },
   });
 
@@ -24,7 +24,7 @@ export async function generateReferralCode(userId: string) {
   // Generate unique code
   const code = generateUniqueCode(userId);
 
-  referralCode = await prisma.referralCode.create({
+  referralCode = await prisma.referral_codes.create({
     data: {
       userId,
       code,
@@ -37,7 +37,7 @@ export async function generateReferralCode(userId: string) {
 }
 
 export async function getReferralCode(userId: string) {
-  return prisma.referralCode.findUnique({
+  return prisma.referral_codes.findUnique({
     where: { userId },
   });
 }
@@ -48,10 +48,10 @@ function generateUniqueCode(userId: string): string {
 }
 
 export async function validateReferralCode(code: string) {
-  const referralCode = await prisma.referralCode.findUnique({
+  const referralCode = await prisma.referral_codes.findUnique({
     where: { code },
     include: {
-      user: {
+      users: {
         select: { id: true, firstName: true, lastName: true },
       },
     },
@@ -77,7 +77,7 @@ export async function validateReferralCode(code: string) {
     valid: true,
     referrerId: referralCode.userId,
     referrerName:
-      `${referralCode.user.firstName || ''} ${referralCode.user.lastName || ''}`.trim() ||
+      `${referralCode.users.firstName || ''} ${referralCode.users.lastName || ''}`.trim() ||
       'A Yogi',
     bonusXP: referralCode.bonusXP,
   };
@@ -92,7 +92,7 @@ export async function applyReferralCode(
   code: string,
 ) {
   // Check if user already used a referral code
-  const existingReferral = await prisma.referral.findUnique({
+  const existingReferral = await prisma.referrals.findUnique({
     where: { referredId: userId },
   });
 
@@ -112,7 +112,7 @@ export async function applyReferralCode(
   }
 
   // Create referral record
-  const referral = await prisma.referral.create({
+  const referral = await prisma.referrals.create({
     data: {
       referrerId: validation.referrerId!,
       referredId: userId,
@@ -122,7 +122,7 @@ export async function applyReferralCode(
   });
 
   // Increment usage count
-  await prisma.referralCode.update({
+  await prisma.referral_codes.update({
     where: { code },
     data: { usageCount: { increment: 1 } },
   });
@@ -142,7 +142,7 @@ export async function applyReferralCode(
 // ============================================
 
 export async function processReferralConversion(referredUserId: string) {
-  const referral = await prisma.referral.findUnique({
+  const referral = await prisma.referrals.findUnique({
     where: { referredId: referredUserId },
   });
 
@@ -155,33 +155,29 @@ export async function processReferralConversion(referredUserId: string) {
   const referredXP = REFERRED_XP_BONUS;
 
   // Get bonus XP from referral code
-  const referralCode = await prisma.referralCode.findFirst({
+  const referralCode = await prisma.referral_codes.findFirst({
     where: { code: referral.code },
   });
   const bonusXP = referralCode?.bonusXP || 0;
 
   // Award to referrer
-  await xpService.awardXP(
+  await xpService.addXP(
     referral.referrerId,
     referrerXP,
     'REFERRAL',
-    referredUserId,
     'Friend joined through your referral',
-    'REFERRAL_BONUS',
   );
 
   // Award to referred user
-  await xpService.awardXP(
+  await xpService.addXP(
     referredUserId,
     referredXP + bonusXP,
     'REFERRAL',
-    referral.referrerId,
     'Welcome bonus for using referral code',
-    'REFERRAL_BONUS',
   );
 
   // Update referral status
-  await prisma.referral.update({
+  await prisma.referrals.update({
     where: { id: referral.id },
     data: {
       status: 'CONVERTED',
@@ -212,24 +208,24 @@ export async function processReferralConversion(referredUserId: string) {
 export async function getReferralStats(userId: string) {
   const [referralCode, totalReferrals, convertedReferrals, totalXPEarned] =
     await Promise.all([
-      prisma.referralCode.findUnique({ where: { userId } }),
-      prisma.referral.count({ where: { referrerId: userId } }),
-      prisma.referral.count({
+      prisma.referral_codes.findUnique({ where: { userId } }),
+      prisma.referrals.count({ where: { referrerId: userId } }),
+      prisma.referrals.count({
         where: { referrerId: userId, status: 'CONVERTED' },
       }),
-      prisma.referral.aggregate({
+      prisma.referrals.aggregate({
         where: { referrerId: userId, referrerRewardGiven: true },
         _sum: { referrerXP: true },
       }),
     ]);
 
   // Get recent referrals
-  const recentReferrals = await prisma.referral.findMany({
+  const recentReferrals = await prisma.referrals.findMany({
     where: { referrerId: userId },
     orderBy: { createdAt: 'desc' },
     take: 10,
     include: {
-      referred: {
+      users_referrals_referredIdTousers: {
         select: { firstName: true, lastName: true, createdAt: true },
       },
     },
@@ -247,9 +243,9 @@ export async function getReferralStats(userId: string) {
       id: r.id,
       status: r.status,
       userName:
-        `${r.referred.firstName || ''} ${r.referred.lastName || ''}`.trim() ||
+        `${r.users_referrals_referredIdTousers.firstName || ''} ${r.users_referrals_referredIdTousers.lastName || ''}`.trim() ||
         'Yogi',
-      joinedAt: r.referred.createdAt,
+      joinedAt: r.users_referrals_referredIdTousers.createdAt,
       convertedAt: r.convertedAt,
       xpEarned: r.referrerXP,
     })),
@@ -266,7 +262,7 @@ export async function getReferralLeaderboard(
   const { page = 1, limit = 50 } = pagination;
   const skip = (page - 1) * limit;
 
-  const leaderboard = await prisma.referral.groupBy({
+  const leaderboard = await prisma.referrals.groupBy({
     by: ['referrerId'],
     where: { status: 'CONVERTED' },
     _count: { id: true },
@@ -278,7 +274,7 @@ export async function getReferralLeaderboard(
 
   // Get user info
   const userIds = leaderboard.map((l) => l.referrerId);
-  const users = await prisma.user.findMany({
+  const users = await prisma.users.findMany({
     where: { id: { in: userIds } },
     select: { id: true, firstName: true, lastName: true },
   });
@@ -298,7 +294,7 @@ export async function getReferralLeaderboard(
     };
   });
 
-  const total = await prisma.referral.groupBy({
+  const total = await prisma.referrals.groupBy({
     by: ['referrerId'],
     where: { status: 'CONVERTED' },
   });
@@ -327,7 +323,7 @@ export async function updateReferralCodeSettings(
     expiresAt?: Date | null;
   },
 ) {
-  return prisma.referralCode.update({
+  return prisma.referral_codes.update({
     where: { userId },
     data,
   });
@@ -337,7 +333,7 @@ export async function expireOldReferrals() {
   const thirtyDaysAgo = new Date();
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-  const result = await prisma.referral.updateMany({
+  const result = await prisma.referrals.updateMany({
     where: {
       status: 'PENDING',
       createdAt: { lt: thirtyDaysAgo },

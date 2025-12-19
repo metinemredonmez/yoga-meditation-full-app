@@ -57,7 +57,7 @@ export async function warnUser(req: Request, res: Response, next: NextFunction) 
 export async function changeUserRole(req: Request, res: Response, next: NextFunction) {
   try {
     const result = await userService.changeUserRole(req.params.id!, req.body.role);
-    res.json({ success: true, user: result });
+    res.json({ success: true, users: result });
   } catch (error) { next(error); }
 }
 

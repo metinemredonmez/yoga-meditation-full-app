@@ -20,7 +20,7 @@ if (process.env.NODE_ENV === 'production') {
 // This allows code using prisma.user to work with prisma.users
 const modelAliases: Record<string, string> = {
   // Core models
-  user: 'users',
+  users: 'users',
   auditLog: 'audit_logs',
   refreshToken: 'refresh_tokens',
   passwordResetToken: 'password_reset_tokens',
@@ -62,9 +62,9 @@ const modelAliases: Record<string, string> = {
   userEmbedding: 'user_embeddings',
 
   // Subscription & Payments
-  subscription: 'subscriptions',
+  subscriptions: 'subscriptions',
   subscriptionPlan: 'subscription_plans',
-  payment: 'payments',
+  payments: 'payments',
   invoice: 'invoices',
   invoiceItem: 'invoice_items',
   refund: 'refunds',
@@ -266,7 +266,7 @@ const modelAliases: Record<string, string> = {
 const prisma = new Proxy(basePrisma, {
   get(target, prop: string) {
     const aliasedProp = modelAliases[prop] || prop;
-    return (target as Record<string, unknown>)[aliasedProp];
+    return (target as unknown as Record<string, unknown>)[aliasedProp];
   },
 }) as PrismaClient;
 

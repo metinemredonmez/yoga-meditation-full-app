@@ -44,7 +44,7 @@ export async function sendTestNotification(req: Request, res: Response) {
       deliveries.push('push');
     }
 
-    await prisma.auditLog.create({
+    await prisma.audit_logs.create({
       data: {
         userId: req.user.userId,
         actorRole: req.user.role,
@@ -93,7 +93,7 @@ export async function scheduleReminder(req: Request, res: Response) {
       'Reminder scheduled (mock queue)',
     );
 
-    await prisma.auditLog.create({
+    await prisma.audit_logs.create({
       data: {
         userId: req.user.userId,
         actorRole: req.user.role,

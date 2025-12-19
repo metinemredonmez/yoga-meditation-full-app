@@ -7,7 +7,7 @@ export const getReportDefinitions = async (
   category?: ReportCategory,
   userRole?: string
 ) => {
-  const where: Prisma.ReportDefinitionWhereInput = {
+  const where: Prisma.report_definitionsWhereInput = {
     isActive: true,
   };
 
@@ -24,7 +24,7 @@ export const getReportDefinitions = async (
     ];
   }
 
-  return prisma.reportDefinition.findMany({
+  return prisma.report_definitions.findMany({
     where,
     orderBy: [{ category: 'asc' }, { name: 'asc' }],
   });
@@ -32,14 +32,14 @@ export const getReportDefinitions = async (
 
 // Get single report definition by ID
 export const getReportDefinition = async (id: string) => {
-  return prisma.reportDefinition.findUnique({
+  return prisma.report_definitions.findUnique({
     where: { id },
   });
 };
 
 // Get report definition by slug
 export const getReportDefinitionBySlug = async (slug: string) => {
-  return prisma.reportDefinition.findUnique({
+  return prisma.report_definitions.findUnique({
     where: { slug },
   });
 };
@@ -65,7 +65,7 @@ export const createReportDefinition = async (data: {
   isPublic?: boolean;
   allowScheduling?: boolean;
 }) => {
-  return prisma.reportDefinition.create({
+  return prisma.report_definitions.create({
     data: {
       ...data,
       chartTypes: data.chartTypes || [],
@@ -94,7 +94,7 @@ export const updateReportDefinition = async (
     isActive: boolean;
   }>
 ) => {
-  return prisma.reportDefinition.update({
+  return prisma.report_definitions.update({
     where: { id },
     data,
   });
@@ -102,7 +102,7 @@ export const updateReportDefinition = async (
 
 // Delete report definition (soft delete)
 export const deleteReportDefinition = async (id: string) => {
-  return prisma.reportDefinition.update({
+  return prisma.report_definitions.update({
     where: { id },
     data: { isActive: false },
   });
@@ -487,7 +487,7 @@ export const seedDefaultReportDefinitions = async () => {
   ];
 
   for (const def of definitions) {
-    await prisma.reportDefinition.upsert({
+    await prisma.report_definitions.upsert({
       where: { slug: def.slug },
       update: def,
       create: def,

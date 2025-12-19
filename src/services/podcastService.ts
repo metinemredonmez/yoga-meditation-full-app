@@ -19,7 +19,7 @@ export async function listPodcasts(filters: PodcastFilters) {
   const { page, limit, category, status, hostId, q, tag, sortBy, sortOrder } = filters;
   const skip = (page - 1) * limit;
 
-  const where: Prisma.PodcastWhereInput = {
+  const where: Prisma.podcastsWhereInput = {
     ...(category && { category }),
     ...(status && { status }),
     ...(hostId && { hostId }),
@@ -33,22 +33,22 @@ export async function listPodcasts(filters: PodcastFilters) {
   };
 
   const [podcasts, total] = await Promise.all([
-    prisma.podcast.findMany({
+    prisma.podcasts.findMany({
       where,
       skip,
       take: limit,
       orderBy: { [sortBy]: sortOrder },
       include: {
-        host: {
+        users: {
           select: { id: true, firstName: true, lastName: true, avatarUrl: true },
         },
         tags: true,
         _count: {
-          select: { episodes: true, subscribers: true },
+          select: { podcast_episodes: true, podcast_subscriptions: true },
         },
       },
     }),
-    prisma.podcast.count({ where }),
+    prisma.podcasts.count({ where }),
   ]);
 
   return {
@@ -63,40 +63,40 @@ export async function listPodcasts(filters: PodcastFilters) {
 }
 
 export async function getPodcastById(podcastId: string) {
-  return prisma.podcast.findUnique({
+  return prisma.podcasts.findUnique({
     where: { id: podcastId },
     include: {
-      host: {
+      users: {
         select: { id: true, firstName: true, lastName: true, email: true, avatarUrl: true },
       },
       tags: true,
-      episodes: {
+      podcast_episodes: {
         where: { status: EpisodeStatus.PUBLISHED },
         orderBy: { publishedAt: 'desc' },
         take: 10,
       },
       _count: {
-        select: { episodes: true, subscribers: true },
+        select: { podcast_episodes: true, podcast_subscriptions: true },
       },
     },
   });
 }
 
 export async function getPodcastBySlug(slug: string) {
-  return prisma.podcast.findUnique({
+  return prisma.podcasts.findUnique({
     where: { slug },
     include: {
-      host: {
+      users: {
         select: { id: true, firstName: true, lastName: true, avatarUrl: true },
       },
       tags: true,
-      episodes: {
+      podcast_episodes: {
         where: { status: EpisodeStatus.PUBLISHED },
         orderBy: { publishedAt: 'desc' },
         take: 10,
       },
       _count: {
-        select: { episodes: true, subscribers: true },
+        select: { podcast_episodes: true, podcast_subscriptions: true },
       },
     },
   });
@@ -105,7 +105,7 @@ export async function getPodcastBySlug(slug: string) {
 export async function createPodcast(data: CreatePodcastInput) {
   const { tagIds, ...podcastData } = data;
 
-  return prisma.podcast.create({
+  return prisma.podcasts.create({
     data: {
       ...podcastData,
       ...(tagIds && {
@@ -113,7 +113,7 @@ export async function createPodcast(data: CreatePodcastInput) {
       }),
     },
     include: {
-      host: {
+      users: {
         select: { id: true, firstName: true, lastName: true, avatarUrl: true },
       },
       tags: true,
@@ -124,7 +124,7 @@ export async function createPodcast(data: CreatePodcastInput) {
 export async function updatePodcast(podcastId: string, data: UpdatePodcastInput) {
   const { tagIds, ...podcastData } = data;
 
-  return prisma.podcast.update({
+  return prisma.podcasts.update({
     where: { id: podcastId },
     data: {
       ...podcastData,
@@ -133,7 +133,7 @@ export async function updatePodcast(podcastId: string, data: UpdatePodcastInput)
       }),
     },
     include: {
-      host: {
+      users: {
         select: { id: true, firstName: true, lastName: true, avatarUrl: true },
       },
       tags: true,
@@ -144,11 +144,11 @@ export async function updatePodcast(podcastId: string, data: UpdatePodcastInput)
 export async function deletePodcast(podcastId: string) {
   // Delete related data first
   await prisma.$transaction([
-    prisma.podcastLike.deleteMany({ where: { episode: { podcastId } } }),
-    prisma.podcastListen.deleteMany({ where: { episode: { podcastId } } }),
-    prisma.podcastSubscription.deleteMany({ where: { podcastId } }),
-    prisma.podcastEpisode.deleteMany({ where: { podcastId } }),
-    prisma.podcast.delete({ where: { id: podcastId } }),
+    prisma.podcast_likes.deleteMany({ where: { podcast_episodes: { podcastId } } }),
+    prisma.podcast_listens.deleteMany({ where: { podcast_episodes: { podcastId } } }),
+    prisma.podcast_subscriptions.deleteMany({ where: { podcastId } }),
+    prisma.podcast_episodes.deleteMany({ where: { podcastId } }),
+    prisma.podcasts.delete({ where: { id: podcastId } }),
   ]);
 }
 
@@ -160,7 +160,7 @@ export async function listEpisodes(podcastId: string, filters: EpisodeFilters) {
   const { page, limit, status, seasonNumber, isPremium, q, sortBy, sortOrder } = filters;
   const skip = (page - 1) * limit;
 
-  const where: Prisma.PodcastEpisodeWhereInput = {
+  const where: Prisma.podcast_episodesWhereInput = {
     podcastId,
     ...(status && { status }),
     ...(seasonNumber && { seasonNumber }),
@@ -174,18 +174,18 @@ export async function listEpisodes(podcastId: string, filters: EpisodeFilters) {
   };
 
   const [episodes, total] = await Promise.all([
-    prisma.podcastEpisode.findMany({
+    prisma.podcast_episodes.findMany({
       where,
       skip,
       take: limit,
       orderBy: { [sortBy]: sortOrder },
       include: {
         _count: {
-          select: { listens: true, likes: true },
+          select: { podcast_listens: true, podcast_likes: true },
         },
       },
     }),
-    prisma.podcastEpisode.count({ where }),
+    prisma.podcast_episodes.count({ where }),
   ]);
 
   return {
@@ -200,53 +200,53 @@ export async function listEpisodes(podcastId: string, filters: EpisodeFilters) {
 }
 
 export async function getEpisodeById(episodeId: string) {
-  return prisma.podcastEpisode.findUnique({
+  return prisma.podcast_episodes.findUnique({
     where: { id: episodeId },
     include: {
-      podcast: {
+      podcasts: {
         select: { id: true, title: true, slug: true, coverImage: true },
       },
       _count: {
-        select: { listens: true, likes: true },
+        select: { podcast_listens: true, podcast_likes: true },
       },
     },
   });
 }
 
 export async function getEpisodeBySlug(podcastSlug: string, episodeSlug: string) {
-  const podcast = await prisma.podcast.findUnique({
+  const podcast = await prisma.podcasts.findUnique({
     where: { slug: podcastSlug },
     select: { id: true },
   });
 
   if (!podcast) return null;
 
-  return prisma.podcastEpisode.findFirst({
+  return prisma.podcast_episodes.findFirst({
     where: {
       podcastId: podcast.id,
       slug: episodeSlug,
       status: EpisodeStatus.PUBLISHED,
     },
     include: {
-      podcast: {
+      podcasts: {
         select: { id: true, title: true, slug: true, coverImage: true, hostName: true },
       },
       _count: {
-        select: { listens: true, likes: true },
+        select: { podcast_listens: true, podcast_likes: true },
       },
     },
   });
 }
 
 export async function createEpisode(podcastId: string, data: CreateEpisodeInput) {
-  const episode = await prisma.podcastEpisode.create({
+  const episode = await prisma.podcast_episodes.create({
     data: {
       ...data,
       podcastId,
       chapters: data.chapters as Prisma.JsonArray,
     },
     include: {
-      podcast: {
+      podcasts: {
         select: { id: true, title: true, slug: true },
       },
     },
@@ -259,14 +259,14 @@ export async function createEpisode(podcastId: string, data: CreateEpisodeInput)
 }
 
 export async function updateEpisode(episodeId: string, data: UpdateEpisodeInput) {
-  const episode = await prisma.podcastEpisode.update({
+  const episode = await prisma.podcast_episodes.update({
     where: { id: episodeId },
     data: {
       ...data,
       ...(data.chapters && { chapters: data.chapters as Prisma.JsonArray }),
     },
     include: {
-      podcast: {
+      podcasts: {
         select: { id: true, title: true, slug: true },
       },
     },
@@ -281,15 +281,15 @@ export async function updateEpisode(episodeId: string, data: UpdateEpisodeInput)
 }
 
 export async function deleteEpisode(episodeId: string) {
-  const episode = await prisma.podcastEpisode.findUnique({
+  const episode = await prisma.podcast_episodes.findUnique({
     where: { id: episodeId },
     select: { podcastId: true },
   });
 
   await prisma.$transaction([
-    prisma.podcastLike.deleteMany({ where: { episodeId } }),
-    prisma.podcastListen.deleteMany({ where: { episodeId } }),
-    prisma.podcastEpisode.delete({ where: { id: episodeId } }),
+    prisma.podcast_likes.deleteMany({ where: { episodeId } }),
+    prisma.podcast_listens.deleteMany({ where: { episodeId } }),
+    prisma.podcast_episodes.delete({ where: { id: episodeId } }),
   ]);
 
   if (episode) {
@@ -302,14 +302,14 @@ export async function deleteEpisode(episodeId: string) {
 // ============================================
 
 export async function subscribeToPodcast(userId: string, podcastId: string) {
-  const subscription = await prisma.podcastSubscription.upsert({
+  const subscription = await prisma.podcast_subscriptions.upsert({
     where: {
       userId_podcastId: { userId, podcastId },
     },
     create: { userId, podcastId },
     update: {},
     include: {
-      podcast: {
+      podcasts: {
         select: { id: true, title: true, slug: true, coverImage: true },
       },
     },
@@ -322,7 +322,7 @@ export async function subscribeToPodcast(userId: string, podcastId: string) {
 }
 
 export async function unsubscribeFromPodcast(userId: string, podcastId: string) {
-  await prisma.podcastSubscription.delete({
+  await prisma.podcast_subscriptions.delete({
     where: {
       userId_podcastId: { userId, podcastId },
     },
@@ -333,16 +333,16 @@ export async function unsubscribeFromPodcast(userId: string, podcastId: string) 
 }
 
 export async function getUserSubscriptions(userId: string) {
-  return prisma.podcastSubscription.findMany({
+  return prisma.podcast_subscriptions.findMany({
     where: { userId },
     include: {
-      podcast: {
+      podcasts: {
         include: {
-          host: {
+          users: {
             select: { id: true, firstName: true, lastName: true, avatarUrl: true },
           },
           _count: {
-            select: { episodes: true },
+            select: { podcast_episodes: true },
           },
         },
       },
@@ -352,7 +352,7 @@ export async function getUserSubscriptions(userId: string) {
 }
 
 export async function isUserSubscribed(userId: string, podcastId: string) {
-  const subscription = await prisma.podcastSubscription.findUnique({
+  const subscription = await prisma.podcast_subscriptions.findUnique({
     where: {
       userId_podcastId: { userId, podcastId },
     },
@@ -371,7 +371,7 @@ export async function recordListenProgress(
   ipAddress?: string
 ) {
   // Find existing listen record for this user/episode combination
-  const existingListen = await prisma.podcastListen.findFirst({
+  const existingListen = await prisma.podcast_listens.findFirst({
     where: userId
       ? { userId, episodeId }
       : { ipHash: ipAddress, episodeId, userId: null },
@@ -380,7 +380,7 @@ export async function recordListenProgress(
   let listen;
   if (existingListen) {
     // Update existing
-    listen = await prisma.podcastListen.update({
+    listen = await prisma.podcast_listens.update({
       where: { id: existingListen.id },
       data: {
         progress: data.progress,
@@ -391,7 +391,7 @@ export async function recordListenProgress(
     });
   } else {
     // Create new
-    listen = await prisma.podcastListen.create({
+    listen = await prisma.podcast_listens.create({
       data: {
         episodeId,
         userId,
@@ -411,12 +411,12 @@ export async function recordListenProgress(
 }
 
 export async function getUserListenHistory(userId: string, limit = 20) {
-  return prisma.podcastListen.findMany({
+  return prisma.podcast_listens.findMany({
     where: { userId },
     include: {
-      episode: {
+      podcast_episodes: {
         include: {
-          podcast: {
+          podcasts: {
             select: { id: true, title: true, slug: true, coverImage: true },
           },
         },
@@ -428,7 +428,7 @@ export async function getUserListenHistory(userId: string, limit = 20) {
 }
 
 export async function getEpisodeProgress(userId: string, episodeId: string) {
-  return prisma.podcastListen.findFirst({
+  return prisma.podcast_listens.findFirst({
     where: { userId, episodeId },
     select: { progress: true, duration: true, completed: true },
   });
@@ -439,7 +439,7 @@ export async function getEpisodeProgress(userId: string, episodeId: string) {
 // ============================================
 
 export async function likeEpisode(userId: string, episodeId: string) {
-  const like = await prisma.podcastLike.upsert({
+  const like = await prisma.podcast_likes.upsert({
     where: {
       userId_episodeId: { userId, episodeId },
     },
@@ -453,7 +453,7 @@ export async function likeEpisode(userId: string, episodeId: string) {
 }
 
 export async function unlikeEpisode(userId: string, episodeId: string) {
-  await prisma.podcastLike.delete({
+  await prisma.podcast_likes.delete({
     where: {
       userId_episodeId: { userId, episodeId },
     },
@@ -463,7 +463,7 @@ export async function unlikeEpisode(userId: string, episodeId: string) {
 }
 
 export async function isEpisodeLiked(userId: string, episodeId: string) {
-  const like = await prisma.podcastLike.findUnique({
+  const like = await prisma.podcast_likes.findUnique({
     where: {
       userId_episodeId: { userId, episodeId },
     },
@@ -472,12 +472,12 @@ export async function isEpisodeLiked(userId: string, episodeId: string) {
 }
 
 export async function getUserLikedEpisodes(userId: string) {
-  return prisma.podcastLike.findMany({
+  return prisma.podcast_likes.findMany({
     where: { userId },
     include: {
-      episode: {
+      podcast_episodes: {
         include: {
-          podcast: {
+          podcasts: {
             select: { id: true, title: true, slug: true, coverImage: true },
           },
         },
@@ -492,13 +492,13 @@ export async function getUserLikedEpisodes(userId: string) {
 // ============================================
 
 async function updatePodcastStats(podcastId: string) {
-  const stats = await prisma.podcastEpisode.aggregate({
+  const stats = await prisma.podcast_episodes.aggregate({
     where: { podcastId, status: EpisodeStatus.PUBLISHED },
     _count: { id: true },
     _sum: { duration: true, listenCount: true },
   });
 
-  await prisma.podcast.update({
+  await prisma.podcasts.update({
     where: { id: podcastId },
     data: {
       totalEpisodes: stats._count.id,
@@ -509,22 +509,22 @@ async function updatePodcastStats(podcastId: string) {
 }
 
 async function updatePodcastSubscriberCount(podcastId: string) {
-  const count = await prisma.podcastSubscription.count({
+  const count = await prisma.podcast_subscriptions.count({
     where: { podcastId },
   });
 
-  await prisma.podcast.update({
+  await prisma.podcasts.update({
     where: { id: podcastId },
     data: { subscriberCount: count },
   });
 }
 
 async function updateEpisodeListenCount(episodeId: string) {
-  const count = await prisma.podcastListen.count({
+  const count = await prisma.podcast_listens.count({
     where: { episodeId },
   });
 
-  const episode = await prisma.podcastEpisode.update({
+  const episode = await prisma.podcast_episodes.update({
     where: { id: episodeId },
     data: { listenCount: count },
     select: { podcastId: true },
@@ -535,11 +535,11 @@ async function updateEpisodeListenCount(episodeId: string) {
 }
 
 async function updateEpisodeLikeCount(episodeId: string) {
-  const count = await prisma.podcastLike.count({
+  const count = await prisma.podcast_likes.count({
     where: { episodeId },
   });
 
-  await prisma.podcastEpisode.update({
+  await prisma.podcast_episodes.update({
     where: { id: episodeId },
     data: { likeCount: count },
   });
@@ -550,28 +550,28 @@ async function updateEpisodeLikeCount(episodeId: string) {
 // ============================================
 
 export async function getFeaturedPodcasts(limit = 6) {
-  return prisma.podcast.findMany({
+  return prisma.podcasts.findMany({
     where: { status: PodcastStatus.PUBLISHED },
     orderBy: { subscriberCount: 'desc' },
     take: limit,
     include: {
-      host: {
+      users: {
         select: { id: true, firstName: true, lastName: true, avatarUrl: true },
       },
       _count: {
-        select: { episodes: true },
+        select: { podcast_episodes: true },
       },
     },
   });
 }
 
 export async function getLatestEpisodes(limit = 10) {
-  return prisma.podcastEpisode.findMany({
+  return prisma.podcast_episodes.findMany({
     where: { status: EpisodeStatus.PUBLISHED },
     orderBy: { publishedAt: 'desc' },
     take: limit,
     include: {
-      podcast: {
+      podcasts: {
         select: { id: true, title: true, slug: true, coverImage: true },
       },
     },
@@ -579,12 +579,12 @@ export async function getLatestEpisodes(limit = 10) {
 }
 
 export async function getPopularEpisodes(limit = 10) {
-  return prisma.podcastEpisode.findMany({
+  return prisma.podcast_episodes.findMany({
     where: { status: EpisodeStatus.PUBLISHED },
     orderBy: { listenCount: 'desc' },
     take: limit,
     include: {
-      podcast: {
+      podcasts: {
         select: { id: true, title: true, slug: true, coverImage: true },
       },
     },
@@ -611,7 +611,7 @@ export async function getPodcastAnalytics(podcastId: string, days = 30) {
       ORDER BY date
     `,
     // Top episodes
-    prisma.podcastEpisode.findMany({
+    prisma.podcast_episodes.findMany({
       where: { podcastId },
       orderBy: { listenCount: 'desc' },
       take: 5,

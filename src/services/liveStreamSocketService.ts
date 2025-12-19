@@ -165,7 +165,7 @@ export function initializeSocketServer(httpServer: HttpServer): SocketServer {
           participant: {
             id: participant.id,
             userId: participant.userId,
-            user: participant.user,
+            users: participant.users,
             role: participant.role,
           },
           participantCount,
@@ -263,7 +263,7 @@ export function initializeSocketServer(httpServer: HttpServer): SocketServer {
         const { streamId } = payload;
         await liveStreamService.raiseHand(streamId, socket.userId);
 
-        const user = await prisma.user.findUnique({
+        const user = await prisma.users.findUnique({
           where: { id: socket.userId },
           select: { firstName: true, lastName: true },
         });

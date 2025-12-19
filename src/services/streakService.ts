@@ -41,7 +41,7 @@ export async function updateStreak(userId: string) {
       const freeze = await useAvailableFreeze(userId);
       if (!freeze) {
         // Reset streak
-        await prisma.userLevel.update({
+        await prisma.user_levels.update({
           where: { userId },
           data: {
             currentStreak: 1,
@@ -66,7 +66,7 @@ export async function updateStreak(userId: string) {
   const newStreak = userLevel.currentStreak + 1;
   const newLongestStreak = Math.max(newStreak, userLevel.longestStreak);
 
-  await prisma.userLevel.update({
+  await prisma.user_levels.update({
     where: { userId },
     data: {
       currentStreak: newStreak,
@@ -93,7 +93,7 @@ export async function getStreakInfo(userId: string) {
   const userLevel = await xpService.getOrCreateUserLevel(userId);
 
   // Get available freezes
-  const freezeCount = await prisma.streakFreeze.count({
+  const freezeCount = await prisma.streak_freezes.count({
     where: {
       userId,
       usedAt: null,
@@ -144,7 +144,7 @@ export async function grantStreakFreeze(
   source: StreakFreezeSource,
   expiresAt?: Date,
 ) {
-  const freeze = await prisma.streakFreeze.create({
+  const freeze = await prisma.streak_freezes.create({
     data: {
       userId,
       source,
@@ -153,7 +153,7 @@ export async function grantStreakFreeze(
   });
 
   // Update user freeze count
-  await prisma.userLevel.update({
+  await prisma.user_levels.update({
     where: { userId },
     data: {
       streakFreezeCount: { increment: 1 },
@@ -167,7 +167,7 @@ export async function grantStreakFreeze(
 
 export async function useStreakFreeze(userId: string) {
   // Find available freeze
-  const freeze = await prisma.streakFreeze.findFirst({
+  const freeze = await prisma.streak_freezes.findFirst({
     where: {
       userId,
       usedAt: null,
@@ -181,12 +181,12 @@ export async function useStreakFreeze(userId: string) {
   }
 
   // Use the freeze
-  await prisma.streakFreeze.update({
+  await prisma.streak_freezes.update({
     where: { id: freeze.id },
     data: { usedAt: new Date() },
   });
 
-  await prisma.userLevel.update({
+  await prisma.user_levels.update({
     where: { userId },
     data: {
       streakFreezeUsed: new Date(),
@@ -205,7 +205,7 @@ async function useAvailableFreeze(userId: string): Promise<boolean> {
 }
 
 export async function getAvailableFreezes(userId: string) {
-  const freezes = await prisma.streakFreeze.findMany({
+  const freezes = await prisma.streak_freezes.findMany({
     where: {
       userId,
       usedAt: null,
@@ -232,13 +232,11 @@ async function checkStreakMilestones(userId: string, streak: number) {
   for (const { days, xp, milestone } of STREAK_MILESTONES) {
     if (streak === days) {
       // Award XP bonus
-      await xpService.awardXP(
+      await xpService.addXP(
         userId,
         xp,
         'STREAK_MILESTONE',
-        undefined,
         `${days} day streak milestone`,
-        'STREAK_BONUS',
       );
 
       // Create milestone
@@ -266,7 +264,7 @@ export async function checkExpiredStreaks() {
   yesterday.setHours(0, 0, 0, 0);
 
   // Find users who haven't been active since yesterday and don't have freeze used
-  const usersToReset = await prisma.userLevel.findMany({
+  const usersToReset = await prisma.user_levels.findMany({
     where: {
       currentStreak: { gt: 0 },
       lastActivityDate: { lt: yesterday },
@@ -279,7 +277,7 @@ export async function checkExpiredStreaks() {
     const hasFreeze = await useAvailableFreeze(user.userId);
 
     if (!hasFreeze) {
-      await prisma.userLevel.update({
+      await prisma.user_levels.update({
         where: { userId: user.userId },
         data: {
           currentStreak: 0,
@@ -304,13 +302,13 @@ export async function getStreakLeaderboard(
   const skip = (page - 1) * limit;
 
   const [entries, total] = await Promise.all([
-    prisma.userLevel.findMany({
+    prisma.user_levels.findMany({
       where: { currentStreak: { gt: 0 } },
       orderBy: { currentStreak: 'desc' },
       skip,
       take: limit,
       include: {
-        user: {
+        users: {
           select: {
             id: true,
             firstName: true,
@@ -319,14 +317,14 @@ export async function getStreakLeaderboard(
         },
       },
     }),
-    prisma.userLevel.count({ where: { currentStreak: { gt: 0 } } }),
+    prisma.user_levels.count({ where: { currentStreak: { gt: 0 } } }),
   ]);
 
   const leaderboard = entries.map((entry, index) => ({
     rank: skip + index + 1,
     userId: entry.userId,
     userName:
-      `${entry.user.firstName || ''} ${entry.user.lastName || ''}`.trim() ||
+      `${entry.users.firstName || ''} ${entry.users.lastName || ''}`.trim() ||
       'Yogi',
     currentStreak: entry.currentStreak,
     longestStreak: entry.longestStreak,

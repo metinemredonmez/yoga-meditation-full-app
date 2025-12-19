@@ -15,9 +15,9 @@ const baseInclude = {
       sessions: true,
     },
   },
-} satisfies Prisma.ProgramInclude;
+} satisfies Prisma.programsInclude;
 
-function mapProgramSummary(program: Prisma.ProgramGetPayload<{ include: typeof baseInclude }>) {
+function mapProgramSummary(program: Prisma.programsGetPayload<{ include: typeof baseInclude }>) {
   return {
     id: program.id,
     title: program.title,
@@ -36,7 +36,7 @@ function mapProgramSummary(program: Prisma.ProgramGetPayload<{ include: typeof b
 }
 
 function mapProgramDetail(
-  program: Prisma.ProgramGetPayload<{
+  program: Prisma.programsGetPayload<{
     include: {
       tags: true;
       sessions: true;
@@ -61,9 +61,9 @@ function mapProgramDetail(
   };
 }
 
-function buildProgramWhere(filters: ProgramFilters): Prisma.ProgramWhereInput {
-  const where: Prisma.ProgramWhereInput = {};
-  const andConditions: Prisma.ProgramWhereInput[] = [];
+function buildProgramWhere(filters: ProgramFilters): Prisma.programsWhereInput {
+  const where: Prisma.programsWhereInput = {};
+  const andConditions: Prisma.programsWhereInput[] = [];
 
   if (filters.level) {
     where.level = filters.level;
@@ -101,7 +101,7 @@ function buildProgramWhere(filters: ProgramFilters): Prisma.ProgramWhereInput {
 }
 
 export async function listPrograms(filters: ProgramFilters) {
-  const programs = await prisma.program.findMany({
+  const programs = await prisma.programs.findMany({
     where: buildProgramWhere(filters),
     include: baseInclude,
     orderBy: [{ title: 'asc' }],
@@ -115,7 +115,7 @@ export async function searchPrograms(filters: ProgramFilters) {
 }
 
 export async function getProgramById(id: string) {
-  const program = await prisma.program.findUnique({
+  const program = await prisma.programs.findUnique({
     where: { id },
     include: {
       tags: true,
@@ -145,7 +145,7 @@ function buildTagConnections(tagSlugs?: string[]) {
 
 export async function createProgram(data: CreateProgramInput) {
   const tagConnections = buildTagConnections(data.tags);
-  const program = await prisma.program.create({
+  const program = await prisma.programs.create({
     data: {
       title: data.title,
       description: data.description,
@@ -161,7 +161,7 @@ export async function createProgram(data: CreateProgramInput) {
 }
 
 export async function updateProgram(id: string, data: UpdateProgramInput) {
-  const updateData: Prisma.ProgramUpdateInput = {};
+  const updateData: Prisma.programsUpdateInput = {};
 
   if (data.title !== undefined) {
     updateData.title = data.title;
@@ -190,7 +190,7 @@ export async function updateProgram(id: string, data: UpdateProgramInput) {
     };
   }
 
-  const program = await prisma.program.update({
+  const program = await prisma.programs.update({
     where: { id },
     data: updateData,
     include: baseInclude,
@@ -200,11 +200,11 @@ export async function updateProgram(id: string, data: UpdateProgramInput) {
 }
 
 export async function deleteProgram(id: string) {
-  await prisma.program.delete({ where: { id } });
+  await prisma.programs.delete({ where: { id } });
 }
 
 export async function listTagsByKind() {
-  const tags = await prisma.tag.findMany({
+  const tags = await prisma.tags.findMany({
     orderBy: [{ kind: 'asc' }, { name: 'asc' }],
   });
 
@@ -226,7 +226,7 @@ export async function listTagsByKind() {
 }
 
 export async function listProgramSessions(programId: string) {
-  const sessions = await prisma.programSession.findMany({
+  const sessions = await prisma.program_sessions.findMany({
     where: { programId },
     orderBy: { order: 'asc' },
   });
@@ -242,7 +242,7 @@ export async function listProgramSessions(programId: string) {
 }
 
 export async function createProgramSession(programId: string, data: CreateProgramSessionInput) {
-  const session = await prisma.programSession.create({
+  const session = await prisma.program_sessions.create({
     data: {
       programId,
       order: data.order,
@@ -264,7 +264,7 @@ export async function createProgramSession(programId: string, data: CreateProgra
 }
 
 export async function updateProgramSession(sessionId: string, data: UpdateProgramSessionInput) {
-  const session = await prisma.programSession.update({
+  const session = await prisma.program_sessions.update({
     where: { id: sessionId },
     data: {
       ...(typeof data.order === 'number' ? { order: data.order } : {}),
@@ -286,5 +286,5 @@ export async function updateProgramSession(sessionId: string, data: UpdateProgra
 }
 
 export async function deleteProgramSession(sessionId: string) {
-  await prisma.programSession.delete({ where: { id: sessionId } });
+  await prisma.program_sessions.delete({ where: { id: sessionId } });
 }

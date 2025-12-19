@@ -21,7 +21,7 @@ export async function getReports(
   const { page = 1, limit = 20 } = pagination;
   const skip = (page - 1) * limit;
 
-  const where: Prisma.ContentReportWhereInput = {};
+  const where: Prisma.content_reportsWhereInput = {};
 
   if (filters.status) where.status = filters.status;
   if (filters.reason) where.reason = filters.reason;
@@ -30,25 +30,25 @@ export async function getReports(
   if (filters.reviewedById) where.reviewedById = filters.reviewedById;
 
   const [reports, total] = await Promise.all([
-    prisma.contentReport.findMany({
+    prisma.content_reports.findMany({
       where,
       include: {
-        reporter: {
+        users_content_reports_reporterIdTousers: {
           select: { id: true, firstName: true, lastName: true, email: true },
         },
-        reviewedBy: {
+        users_content_reports_reviewedByIdTousers: {
           select: { id: true, firstName: true, lastName: true },
         },
-        topic: {
+        forum_topics: {
           select: { id: true, title: true, slug: true },
         },
-        post: {
+        forum_posts: {
           select: { id: true, content: true },
         },
-        comment: {
+        comments: {
           select: { id: true, content: true },
         },
-        reportedUser: {
+        users_content_reports_userIdTousers: {
           select: { id: true, firstName: true, lastName: true, email: true },
         },
       },
@@ -56,7 +56,7 @@ export async function getReports(
       skip,
       take: limit,
     }),
-    prisma.contentReport.count({ where }),
+    prisma.content_reports.count({ where }),
   ]);
 
   return {
@@ -71,25 +71,25 @@ export async function getReports(
 }
 
 export async function getReportById(id: string) {
-  return prisma.contentReport.findUnique({
+  return prisma.content_reports.findUnique({
     where: { id },
     include: {
-      reporter: {
+      users_content_reports_reporterIdTousers: {
         select: { id: true, firstName: true, lastName: true, email: true },
       },
-      reviewedBy: {
+      users_content_reports_reviewedByIdTousers: {
         select: { id: true, firstName: true, lastName: true },
       },
-      topic: {
+      forum_topics: {
         select: { id: true, title: true, slug: true, authorId: true },
       },
-      post: {
+      forum_posts: {
         select: { id: true, content: true, authorId: true },
       },
-      comment: {
+      comments: {
         select: { id: true, content: true, authorId: true },
       },
-      reportedUser: {
+      users_content_reports_userIdTousers: {
         select: { id: true, firstName: true, lastName: true, email: true },
       },
     },
@@ -107,7 +107,7 @@ export async function createReport(data: {
   userId?: string;
 }) {
   // Check for duplicate report
-  const existingReport = await prisma.contentReport.findFirst({
+  const existingReport = await prisma.content_reports.findFirst({
     where: {
       reporterId: data.reporterId,
       targetType: data.targetType,
@@ -123,10 +123,10 @@ export async function createReport(data: {
     return { created: false, report: existingReport, message: 'Already reported' };
   }
 
-  const report = await prisma.contentReport.create({
+  const report = await prisma.content_reports.create({
     data,
     include: {
-      reporter: {
+      users_content_reports_reporterIdTousers: {
         select: { id: true, firstName: true, lastName: true },
       },
     },
@@ -146,7 +146,7 @@ export async function updateReportStatus(
   reviewedById: string,
   resolution?: string,
 ) {
-  const report = await prisma.contentReport.update({
+  const report = await prisma.content_reports.update({
     where: { id },
     data: {
       status,
@@ -177,9 +177,9 @@ export async function resolveReport(
       case 'TOPIC':
         if (report.topicId) {
           if (action === 'delete') {
-            await prisma.forumTopic.delete({ where: { id: report.topicId } });
+            await prisma.forum_topics.delete({ where: { id: report.topicId } });
           } else if (action === 'hide') {
-            await prisma.forumTopic.update({
+            await prisma.forum_topics.update({
               where: { id: report.topicId },
               data: { isLocked: true },
             });
@@ -189,16 +189,16 @@ export async function resolveReport(
 
       case 'POST':
         if (report.postId && action === 'delete') {
-          await prisma.forumPost.delete({ where: { id: report.postId } });
+          await prisma.forum_posts.delete({ where: { id: report.postId } });
         }
         break;
 
       case 'COMMENT':
         if (report.commentId) {
           if (action === 'delete') {
-            await prisma.comment.delete({ where: { id: report.commentId } });
+            await prisma.comments.delete({ where: { id: report.commentId } });
           } else if (action === 'hide') {
-            await prisma.comment.update({
+            await prisma.comments.update({
               where: { id: report.commentId },
               data: { isHidden: true, hiddenReason: resolution },
             });
@@ -239,24 +239,24 @@ export async function getReportStats() {
     reportsByType,
     recentReports,
   ] = await Promise.all([
-    prisma.contentReport.count(),
-    prisma.contentReport.count({ where: { status: 'PENDING' } }),
-    prisma.contentReport.count({ where: { status: 'RESOLVED' } }),
-    prisma.contentReport.count({ where: { status: 'DISMISSED' } }),
-    prisma.contentReport.groupBy({
+    prisma.content_reports.count(),
+    prisma.content_reports.count({ where: { status: 'PENDING' } }),
+    prisma.content_reports.count({ where: { status: 'RESOLVED' } }),
+    prisma.content_reports.count({ where: { status: 'DISMISSED' } }),
+    prisma.content_reports.groupBy({
       by: ['reason'],
       _count: true,
     }),
-    prisma.contentReport.groupBy({
+    prisma.content_reports.groupBy({
       by: ['targetType'],
       _count: true,
     }),
-    prisma.contentReport.findMany({
+    prisma.content_reports.findMany({
       where: { status: 'PENDING' },
       take: 5,
       orderBy: { createdAt: 'desc' },
       include: {
-        reporter: {
+        users_content_reports_reporterIdTousers: {
           select: { id: true, firstName: true, lastName: true },
         },
       },
@@ -288,17 +288,17 @@ export async function getReportStats() {
 
 export async function getUserReportHistory(userId: string) {
   const [reportsAgainst, reportsSubmitted] = await Promise.all([
-    prisma.contentReport.count({
+    prisma.content_reports.count({
       where: {
         OR: [
           { userId },
-          { topic: { authorId: userId } },
-          { post: { authorId: userId } },
-          { comment: { authorId: userId } },
+          { forum_topics: { authorId: userId } },
+          { forum_posts: { authorId: userId } },
+          { comments: { authorId: userId } },
         ],
       },
     }),
-    prisma.contentReport.count({
+    prisma.content_reports.count({
       where: { reporterId: userId },
     }),
   ]);

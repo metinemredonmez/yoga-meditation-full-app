@@ -113,7 +113,7 @@ export async function getUserOverview(userId: string) {
       challengesJoined: user._count.challenge_enrollments,
       totalSessions: practiceStats?.totalSessions || 0,
     },
-    subscription: user.subscriptions[0]
+    subscriptions: user.subscriptions[0]
       ? {
           plan: user.subscriptions[0].plan?.name,
           tier: user.subscriptions[0].plan?.tier,
@@ -153,7 +153,7 @@ export async function getUserActivity(
   // Build filter
   const where: Prisma.user_activitiesWhereInput = { userId };
   if (filter && filter !== 'all') {
-    where.activityType = filter;
+    where.activityType = filter as any;
   }
 
   const [activities, total] = await Promise.all([
@@ -226,7 +226,7 @@ export async function getUserActiveSessions(userId: string) {
     device: parseUserAgent(s.userAgent || ''),
     ipAddress: s.ipAddress,
     createdAt: s.createdAt,
-    lastUsed: s.updatedAt,
+    expiresAt: s.expiresAt,
   }));
 }
 
@@ -291,16 +291,6 @@ export async function getUserProgress(userId: string) {
       where: { userId, completed: true },
       take: 10,
       orderBy: { lastWatchedAt: 'desc' },
-      include: {
-        classes: {
-          select: {
-            id: true,
-            title: true,
-            duration: true,
-            thumbnailUrl: true,
-          },
-        },
-      },
     }),
 
     // Favorites
@@ -318,12 +308,9 @@ export async function getUserProgress(userId: string) {
           select: {
             id: true,
             title: true,
-            startDate: true,
-            endDate: true,
+            startAt: true,
+            endAt: true,
           },
-        },
-        daily_checks: {
-          where: { completed: true },
         },
       },
       orderBy: { joinedAt: 'desc' },
@@ -351,7 +338,7 @@ export async function getUserProgress(userId: string) {
         id: b.badges?.id,
         name: b.badges?.name,
         description: b.badges?.description,
-        iconUrl: b.badges?.iconUrl,
+        icon: b.badges?.icon,
         earnedAt: b.earnedAt,
       })),
       totalAvailable: await prisma.badges.count(),
@@ -368,10 +355,8 @@ export async function getUserProgress(userId: string) {
       xpReward: a.achievements?.xpReward,
     })),
     recentClasses: recentClasses.map((v) => ({
-      id: v.classes?.id,
-      title: v.classes?.title,
-      duration: v.classes?.duration,
-      thumbnailUrl: v.classes?.thumbnailUrl,
+      id: v.lessonId,
+      lessonType: v.lessonType,
       completedAt: v.lastWatchedAt,
     })),
     favorites: favorites.map((f) => ({
@@ -383,10 +368,9 @@ export async function getUserProgress(userId: string) {
     challenges: activeChallenges.map((c) => ({
       id: c.challenges?.id,
       title: c.challenges?.title,
-      startDate: c.challenges?.startDate,
-      endDate: c.challenges?.endDate,
+      startDate: c.challenges?.startAt,
+      endDate: c.challenges?.endAt,
       joinedAt: c.joinedAt,
-      daysCompleted: c.daily_checks?.length || 0,
     })),
   };
 }
@@ -490,7 +474,6 @@ export async function getUserPayments(userId: string, page = 1, limit = 20) {
         currency: p.currency,
         status: p.status,
         provider: p.provider,
-        description: p.description,
         cardBrand: p.cardBrand,
         cardLast4: p.cardLast4,
         receiptUrl: p.receiptUrl,
@@ -507,8 +490,8 @@ export async function getUserPayments(userId: string, page = 1, limit = 20) {
     },
     couponUsages: couponUsages.map((cu) => ({
       code: cu.coupons?.code,
-      discount: cu.coupons?.discountPercent || cu.coupons?.discountAmount,
-      discountType: cu.coupons?.discountType,
+      discount: cu.coupons?.value,
+      discountType: cu.coupons?.type,
       savedAmount: cu.discountAmount,
       usedAt: cu.createdAt,
     })),
@@ -548,9 +531,7 @@ export async function extendSubscription(
     data: {
       userId: adminId,
       action: 'EXTEND_SUBSCRIPTION',
-      entityType: 'subscription',
-      entityId: subscription.id,
-      metadata: { targetUserId: userId, days, newEndDate } as any,
+      metadata: { targetUserId: userId, days, newEndDate, subscriptionId: subscription.id } as any,
     },
   });
 
@@ -580,7 +561,7 @@ export async function grantPremium(
     data: {
       userId,
       planId,
-      provider: 'ADMIN',
+      provider: 'STRIPE', // Admin-granted subscription
       status: 'ACTIVE',
       currentPeriodStart: startDate,
       currentPeriodEnd: endDate,
@@ -608,9 +589,7 @@ export async function grantPremium(
     data: {
       userId: adminId,
       action: 'GRANT_PREMIUM',
-      entityType: 'subscription',
-      entityId: subscription.id,
-      metadata: { targetUserId: userId, days, planId } as any,
+      metadata: { targetUserId: userId, days, planId, subscriptionId: subscription.id } as any,
     },
   });
 
@@ -717,7 +696,9 @@ export async function getUserSupport(userId: string) {
     reportsByUser: reportsByUser.map((r) => ({
       id: r.id,
       targetType: r.targetType,
-      targetId: r.targetId,
+      topicId: r.topicId,
+      postId: r.postId,
+      commentId: r.commentId,
       reason: r.reason,
       status: r.status,
       createdAt: r.createdAt,
@@ -725,7 +706,9 @@ export async function getUserSupport(userId: string) {
     reportsAgainstUser: reportsAgainstUser.map((r) => ({
       id: r.id,
       targetType: r.targetType,
-      targetId: r.targetId,
+      topicId: r.topicId,
+      postId: r.postId,
+      commentId: r.commentId,
       reason: r.reason,
       status: r.status,
       createdAt: r.createdAt,
@@ -818,8 +801,11 @@ export async function addXP(
     data: {
       userId,
       amount,
-      type: 'ADMIN_GRANT',
+      type: 'ADMIN_ADJUSTMENT',
+      source: 'ADMIN',
       description: reason,
+      balanceBefore: totalXP,
+      balanceAfter: newTotalXP,
     },
   });
 
@@ -828,9 +814,7 @@ export async function addXP(
     data: {
       userId: adminId,
       action: 'GRANT_XP',
-      entityType: 'user',
-      entityId: userId,
-      metadata: { amount, reason, newLevel, newTotalXP } as any,
+      metadata: { targetUserId: userId, amount, reason, newLevel, newTotalXP } as any,
     },
   });
 
@@ -864,9 +848,7 @@ export async function grantBadge(
     data: {
       userId: adminId,
       action: 'GRANT_BADGE',
-      entityType: 'user_badge',
-      entityId: userBadge.id,
-      metadata: { targetUserId: userId, badgeId, badgeName: userBadge.badges?.name } as any,
+      metadata: { targetUserId: userId, badgeId, badgeName: userBadge.badges?.name, userBadgeId: userBadge.id } as any,
     },
   });
 
@@ -900,9 +882,7 @@ export async function grantTitle(
     data: {
       userId: adminId,
       action: 'GRANT_TITLE',
-      entityType: 'user_title',
-      entityId: userTitle.id,
-      metadata: { targetUserId: userId, titleId, titleName: userTitle.titles?.name } as any,
+      metadata: { targetUserId: userId, titleId, titleName: userTitle.titles?.name, userTitleId: userTitle.id } as any,
     },
   });
 
@@ -926,9 +906,7 @@ export async function addStreakFreeze(userId: string, adminId: string) {
     data: {
       userId: adminId,
       action: 'ADD_STREAK_FREEZE',
-      entityType: 'user',
-      entityId: userId,
-      metadata: { newCount: userLevel.streakFreezeCount } as any,
+      metadata: { targetUserId: userId, newCount: userLevel.streakFreezeCount } as any,
     },
   });
 
@@ -945,8 +923,7 @@ export async function verifyUserEmail(userId: string, adminId: string) {
     data: {
       userId: adminId,
       action: 'VERIFY_EMAIL',
-      entityType: 'user',
-      entityId: userId,
+      metadata: { targetUserId: userId } as any,
     },
   });
 
@@ -963,8 +940,7 @@ export async function verifyUserPhone(userId: string, adminId: string) {
     data: {
       userId: adminId,
       action: 'VERIFY_PHONE',
-      entityType: 'user',
-      entityId: userId,
+      metadata: { targetUserId: userId } as any,
     },
   });
 
@@ -1065,13 +1041,13 @@ export async function getTeacherProfile(userId: string) {
 
   // Calculate totals
   const totalEarnings = await prisma.instructor_earnings.aggregate({
-    where: { instructorId: userId, status: 'COMPLETED' },
-    _sum: { amount: true },
+    where: { instructorId: userId, status: 'PAID' },
+    _sum: { netAmount: true },
   });
 
   const pendingEarnings = await prisma.instructor_earnings.aggregate({
     where: { instructorId: userId, status: 'PENDING' },
-    _sum: { amount: true },
+    _sum: { netAmount: true },
   });
 
   const followerCount = await prisma.instructor_followers.count({
@@ -1103,13 +1079,13 @@ export async function getTeacherProfile(userId: string) {
       totalStudents: instructorProfile.totalStudents,
       averageRating: instructorProfile.averageRating,
       totalReviews: instructorProfile.totalReviews,
-      totalViews: analytics?.totalViews || 0,
-      completionRate: analytics?.completionRate || 0,
+      views: analytics?.views || 0,
+      completions: analytics?.completions || 0,
       followers: followerCount,
     },
     financial: {
-      totalEarnings: totalEarnings._sum.amount || 0,
-      pendingBalance: pendingEarnings._sum.amount || 0,
+      totalEarnings: totalEarnings._sum?.netAmount || 0,
+      pendingBalance: pendingEarnings._sum?.netAmount || 0,
       commissionRate: instructorProfile.commissionRate,
       minimumPayout: instructorProfile.minimumPayout,
     },
@@ -1117,28 +1093,26 @@ export async function getTeacherProfile(userId: string) {
       id: c.id,
       title: c.title,
       status: c.status,
-      difficulty: c.difficulty,
+      level: c.level,
       duration: c.duration,
       thumbnailUrl: c.thumbnailUrl,
-      viewCount: c.viewCount,
-      averageRating: c.averageRating,
+      totalRating: c.totalRating,
+      ratingCount: c.ratingCount,
       createdAt: c.createdAt,
     })),
     programs: programs.map((p) => ({
       id: p.id,
       title: p.title,
       status: p.status,
-      difficulty: p.difficulty,
-      totalDuration: p.totalDuration,
+      level: p.level,
+      durationMin: p.durationMin,
       thumbnailUrl: p.thumbnailUrl,
-      enrollmentCount: p.enrollmentCount,
-      averageRating: p.averageRating,
       createdAt: p.createdAt,
     })),
     earnings: earnings.map((e) => ({
       id: e.id,
       type: e.type,
-      amount: e.amount,
+      netAmount: e.netAmount,
       status: e.status,
       createdAt: e.createdAt,
     })),
@@ -1169,16 +1143,14 @@ export async function updateInstructorStatus(
 ) {
   const updated = await prisma.instructor_profiles.update({
     where: { userId },
-    data: { status },
+    data: { status: status as any },
   });
 
   await prisma.audit_logs.create({
     data: {
       userId: adminId,
       action: 'UPDATE_INSTRUCTOR_STATUS',
-      entityType: 'instructor_profile',
-      entityId: updated.id,
-      metadata: { targetUserId: userId, newStatus: status } as any,
+      metadata: { targetUserId: userId, newStatus: status, instructorProfileId: updated.id } as any,
     },
   });
 
@@ -1192,16 +1164,14 @@ export async function updateInstructorTier(
 ) {
   const updated = await prisma.instructor_profiles.update({
     where: { userId },
-    data: { tier },
+    data: { tier: tier as any },
   });
 
   await prisma.audit_logs.create({
     data: {
       userId: adminId,
       action: 'UPDATE_INSTRUCTOR_TIER',
-      entityType: 'instructor_profile',
-      entityId: updated.id,
-      metadata: { targetUserId: userId, newTier: tier } as any,
+      metadata: { targetUserId: userId, newTier: tier, instructorProfileId: updated.id } as any,
     },
   });
 
@@ -1226,9 +1196,7 @@ export async function toggleInstructorVerified(userId: string, adminId: string) 
     data: {
       userId: adminId,
       action: profile.isVerified ? 'UNVERIFY_INSTRUCTOR' : 'VERIFY_INSTRUCTOR',
-      entityType: 'instructor_profile',
-      entityId: updated.id,
-      metadata: { targetUserId: userId } as any,
+      metadata: { targetUserId: userId, instructorProfileId: updated.id } as any,
     },
   });
 
@@ -1253,9 +1221,7 @@ export async function toggleInstructorFeatured(userId: string, adminId: string) 
     data: {
       userId: adminId,
       action: profile.isFeatured ? 'UNFEATURE_INSTRUCTOR' : 'FEATURE_INSTRUCTOR',
-      entityType: 'instructor_profile',
-      entityId: updated.id,
-      metadata: { targetUserId: userId } as any,
+      metadata: { targetUserId: userId, instructorProfileId: updated.id } as any,
     },
   });
 
@@ -1280,9 +1246,7 @@ export async function updateCommissionRate(
     data: {
       userId: adminId,
       action: 'UPDATE_COMMISSION_RATE',
-      entityType: 'instructor_profile',
-      entityId: updated.id,
-      metadata: { targetUserId: userId, newRate: rate } as any,
+      metadata: { targetUserId: userId, newRate: rate, instructorProfileId: updated.id } as any,
     },
   });
 

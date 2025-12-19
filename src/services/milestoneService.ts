@@ -15,7 +15,7 @@ export async function createMilestone(
   metadata?: Record<string, unknown>,
 ) {
   // Check if milestone already exists
-  const existing = await prisma.milestone.findFirst({
+  const existing = await prisma.milestones.findFirst({
     where: { userId, type, value },
   });
 
@@ -23,7 +23,7 @@ export async function createMilestone(
     return existing;
   }
 
-  const milestone = await prisma.milestone.create({
+  const milestone = await prisma.milestones.create({
     data: {
       userId,
       type,
@@ -53,20 +53,20 @@ export async function getMilestones(
     where.celebratedAt = filters.celebrated ? { not: null } : null;
   }
 
-  return prisma.milestone.findMany({
+  return prisma.milestones.findMany({
     where,
     orderBy: { createdAt: 'desc' },
   });
 }
 
 export async function getMilestoneById(id: string) {
-  return prisma.milestone.findUnique({
+  return prisma.milestones.findUnique({
     where: { id },
   });
 }
 
 export async function celebrateMilestone(userId: string, milestoneId: string) {
-  const milestone = await prisma.milestone.findFirst({
+  const milestone = await prisma.milestones.findFirst({
     where: { id: milestoneId, userId },
   });
 
@@ -78,7 +78,7 @@ export async function celebrateMilestone(userId: string, milestoneId: string) {
     return { success: false, message: 'Already celebrated' };
   }
 
-  await prisma.milestone.update({
+  await prisma.milestones.update({
     where: { id: milestoneId },
     data: { celebratedAt: new Date() },
   });
@@ -96,11 +96,11 @@ export async function checkMilestones(userId: string) {
   // Get user stats
   const [userLevel, videoProgress, challengeEnrollments] =
     await Promise.all([
-      prisma.userLevel.findUnique({ where: { userId } }),
-      prisma.videoProgress.findMany({
+      prisma.user_levels.findUnique({ where: { userId } }),
+      prisma.video_progress.findMany({
         where: { userId, completed: true },
       }),
-      prisma.challengeEnrollment.findMany({
+      prisma.challenge_enrollments.findMany({
         where: { userId },
       }),
     ]);
@@ -117,7 +117,7 @@ export async function checkMilestones(userId: string) {
 
   for (const { count, type, title } of classMilestones) {
     if (classCount >= count) {
-      const existing = await prisma.milestone.findFirst({
+      const existing = await prisma.milestones.findFirst({
         where: { userId, type },
       });
       if (!existing) {
@@ -130,7 +130,7 @@ export async function checkMilestones(userId: string) {
   // Check challenge milestones
   const challengeCount = challengeEnrollments.length;
   if (challengeCount >= 1) {
-    const existing = await prisma.milestone.findFirst({
+    const existing = await prisma.milestones.findFirst({
       where: { userId, type: 'FIRST_CHALLENGE_COMPLETE' },
     });
     if (!existing) {
@@ -156,7 +156,7 @@ export async function checkMilestones(userId: string) {
 
     for (const { level, type } of levelMilestones) {
       if (userLevel.level >= level) {
-        const existing = await prisma.milestone.findFirst({
+        const existing = await prisma.milestones.findFirst({
           where: { userId, type },
         });
         if (!existing) {
@@ -181,7 +181,7 @@ export async function checkMilestones(userId: string) {
 
     for (const { days, type } of streakMilestones) {
       if (userLevel.longestStreak >= days) {
-        const existing = await prisma.milestone.findFirst({
+        const existing = await prisma.milestones.findFirst({
           where: { userId, type },
         });
         if (!existing) {
@@ -198,7 +198,7 @@ export async function checkMilestones(userId: string) {
   }
 
   // Check total hours milestones
-  const totalMinutes = videoProgress.reduce((sum: number, vp) => sum + (vp.duration || 0), 0);
+  const totalMinutes = videoProgress.reduce((sum: number, vp: any) => sum + (vp.duration || 0), 0);
   const totalHours = Math.floor(totalMinutes / 3600);
 
   const hourMilestones = [
@@ -210,7 +210,7 @@ export async function checkMilestones(userId: string) {
 
   for (const { hours, type } of hourMilestones) {
     if (totalHours >= hours) {
-      const existing = await prisma.milestone.findFirst({
+      const existing = await prisma.milestones.findFirst({
         where: { userId, type },
       });
       if (!existing) {
@@ -226,7 +226,7 @@ export async function checkMilestones(userId: string) {
   }
 
   // Check anniversary milestones
-  const user = await prisma.user.findUnique({
+  const user = await prisma.users.findUnique({
     where: { id: userId },
     select: { createdAt: true },
   });
@@ -237,7 +237,7 @@ export async function checkMilestones(userId: string) {
     const yearsOld = accountAge / (365 * 24 * 60 * 60 * 1000);
 
     if (yearsOld >= 1) {
-      const existing = await prisma.milestone.findFirst({
+      const existing = await prisma.milestones.findFirst({
         where: { userId, type: 'ANNIVERSARY_1_YEAR' },
       });
       if (!existing) {
@@ -252,7 +252,7 @@ export async function checkMilestones(userId: string) {
     }
 
     if (yearsOld >= 2) {
-      const existing = await prisma.milestone.findFirst({
+      const existing = await prisma.milestones.findFirst({
         where: { userId, type: 'ANNIVERSARY_2_YEAR' },
       });
       if (!existing) {
@@ -276,8 +276,8 @@ export async function checkMilestones(userId: string) {
 
 export async function getUpcomingMilestones(userId: string) {
   const [userLevel, videoProgress] = await Promise.all([
-    prisma.userLevel.findUnique({ where: { userId } }),
-    prisma.videoProgress.count({ where: { userId, completed: true } }),
+    prisma.user_levels.findUnique({ where: { userId } }),
+    prisma.video_progress.count({ where: { userId, completed: true } }),
   ]);
 
   const upcoming: {
@@ -340,11 +340,11 @@ export async function getUpcomingMilestones(userId: string) {
 
 export async function getMilestoneStats(userId: string) {
   const [total, celebrated, byType] = await Promise.all([
-    prisma.milestone.count({ where: { userId } }),
-    prisma.milestone.count({
+    prisma.milestones.count({ where: { userId } }),
+    prisma.milestones.count({
       where: { userId, celebratedAt: { not: null } },
     }),
-    prisma.milestone.groupBy({
+    prisma.milestones.groupBy({
       by: ['type'],
       where: { userId },
       _count: { id: true },

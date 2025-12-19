@@ -17,11 +17,6 @@ interface PodcastForRss {
   language: string;
   websiteUrl: string | null;
   status: string;
-  host: {
-    firstName: string | null;
-    lastName: string | null;
-    email: string;
-  } | null;
   episodes: {
     id: string;
     title: string;
@@ -104,13 +99,10 @@ function getItunesCategory(category: string): { category: string; subcategory?: 
  * Generate RSS feed XML for a podcast
  */
 export async function generatePodcastRssFeed(podcastSlug: string): Promise<string | null> {
-  const podcast = await prisma.podcast.findUnique({
+  const podcast = await prisma.podcasts.findUnique({
     where: { slug: podcastSlug },
     include: {
-      host: {
-        select: { firstName: true, lastName: true, email: true },
-      },
-      episodes: {
+      podcast_episodes: {
         where: { status: EpisodeStatus.PUBLISHED },
         orderBy: { publishedAt: 'desc' },
         select: {
@@ -129,20 +121,29 @@ export async function generatePodcastRssFeed(podcastSlug: string): Promise<strin
         },
       },
     },
-  }) as PodcastForRss | null;
+  });
 
-  if (!podcast || podcast.status !== PodcastStatus.PUBLISHED) {
+  if (!podcast) {
+    return null;
+  }
+
+  // Map podcast_episodes to episodes for compatibility
+  const podcastWithEpisodes: PodcastForRss | null = podcast ? {
+    ...podcast,
+    episodes: podcast.podcast_episodes
+  } : null;
+
+  if (!podcastWithEpisodes || podcastWithEpisodes.status !== PodcastStatus.PUBLISHED) {
     return null;
   }
 
   const baseUrl = getBaseUrl();
-  const feedUrl = `${baseUrl}/api/podcasts/${podcast.slug}/rss`;
-  const podcastUrl = `${baseUrl}/podcasts/${podcast.slug}`;
-  const itunesCategory = getItunesCategory(podcast.category);
+  const feedUrl = `${baseUrl}/api/podcasts/${podcastWithEpisodes.slug}/rss`;
+  const podcastUrl = `${baseUrl}/podcasts/${podcastWithEpisodes.slug}`;
+  const itunesCategory = getItunesCategory(podcastWithEpisodes.category);
 
-  const authorName = podcast.hostName ||
-    (podcast.host ? `${podcast.host.firstName || ''} ${podcast.host.lastName || ''}`.trim() : 'Unknown');
-  const authorEmail = podcast.host?.email || 'podcast@example.com';
+  const authorName = podcastWithEpisodes.hostName || 'Unknown';
+  const authorEmail = 'podcast@example.com';
 
   // Build RSS XML
   let rss = `<?xml version="1.0" encoding="UTF-8"?>
@@ -152,23 +153,23 @@ export async function generatePodcastRssFeed(podcastSlug: string): Promise<strin
      xmlns:content="http://purl.org/rss/1.0/modules/content/"
      xmlns:podcast="https://podcastindex.org/namespace/1.0">
   <channel>
-    <title>${escapeXml(podcast.title)}</title>
+    <title>${escapeXml(podcastWithEpisodes.title)}</title>
     <link>${escapeXml(podcastUrl)}</link>
-    <description>${escapeXml(podcast.description)}</description>
-    <language>${podcast.language}</language>
-    <lastBuildDate>${formatRssDate(podcast.updatedAt)}</lastBuildDate>
-    <pubDate>${formatRssDate(podcast.createdAt)}</pubDate>
+    <description>${escapeXml(podcastWithEpisodes.description)}</description>
+    <language>${podcastWithEpisodes.language}</language>
+    <lastBuildDate>${formatRssDate(podcastWithEpisodes.updatedAt)}</lastBuildDate>
+    <pubDate>${formatRssDate(podcastWithEpisodes.createdAt)}</pubDate>
     <generator>Yoga App Podcast Platform</generator>
 
     <atom:link href="${escapeXml(feedUrl)}" rel="self" type="application/rss+xml"/>
 
-    <itunes:summary>${escapeXml(podcast.shortDescription || podcast.description)}</itunes:summary>
+    <itunes:summary>${escapeXml(podcastWithEpisodes.shortDescription || podcastWithEpisodes.description)}</itunes:summary>
     <itunes:author>${escapeXml(authorName)}</itunes:author>
     <itunes:owner>
       <itunes:name>${escapeXml(authorName)}</itunes:name>
       <itunes:email>${escapeXml(authorEmail)}</itunes:email>
     </itunes:owner>
-    <itunes:explicit>${podcast.isExplicit ? 'yes' : 'no'}</itunes:explicit>
+    <itunes:explicit>${podcastWithEpisodes.isExplicit ? 'yes' : 'no'}</itunes:explicit>
     <itunes:type>episodic</itunes:type>
     <itunes:category text="${itunesCategory.category}"${itunesCategory.subcategory ? `>
       <itunes:category text="${itunesCategory.subcategory}"/>
@@ -176,13 +177,13 @@ export async function generatePodcastRssFeed(podcastSlug: string): Promise<strin
 `;
 
   // Add podcast cover image
-  if (podcast.coverImage) {
-    const coverUrl = podcast.coverImage.startsWith('http')
-      ? podcast.coverImage
-      : buildCdnUrl(podcast.coverImage);
+  if (podcastWithEpisodes.coverImage) {
+    const coverUrl = podcastWithEpisodes.coverImage.startsWith('http')
+      ? podcastWithEpisodes.coverImage
+      : buildCdnUrl(podcastWithEpisodes.coverImage);
     rss += `    <image>
       <url>${escapeXml(coverUrl)}</url>
-      <title>${escapeXml(podcast.title)}</title>
+      <title>${escapeXml(podcastWithEpisodes.title)}</title>
       <link>${escapeXml(podcastUrl)}</link>
     </image>
     <itunes:image href="${escapeXml(coverUrl)}"/>
@@ -190,15 +191,15 @@ export async function generatePodcastRssFeed(podcastSlug: string): Promise<strin
   }
 
   // Add episodes
-  for (const episode of podcast.episodes) {
+  for (const episode of podcastWithEpisodes.episodes) {
     if (!episode.audioUrl || !episode.publishedAt) continue;
 
     const audioUrl = episode.audioUrl.startsWith('http')
       ? episode.audioUrl
       : buildCdnUrl(episode.audioUrl);
 
-    const episodeUrl = `${baseUrl}/podcasts/${podcast.slug}/episodes/${episode.slug}`;
-    const guid = `${podcast.id}-${episode.id}`;
+    const episodeUrl = `${baseUrl}/podcasts/${podcastWithEpisodes.slug}/episodes/${episode.slug}`;
+    const guid = `${podcastWithEpisodes.id}-${episode.id}`;
 
     rss += `
     <item>

@@ -13,7 +13,7 @@ import * as unifiedMessagingService from './unifiedMessagingService';
  * Send welcome message immediately after registration
  */
 export async function sendWelcomeMessage(userId: string): Promise<void> {
-  const user = await prisma.user.findUnique({
+  const user = await prisma.users.findUnique({
     where: { id: userId },
     select: { firstName: true, email: true },
   });
@@ -61,7 +61,7 @@ export async function sendWelcomeMessage(userId: string): Promise<void> {
  * Schedule onboarding sequence (Day 1, 3, 7)
  */
 export async function scheduleOnboardingSequence(userId: string): Promise<void> {
-  const template = await prisma.messageTemplate.findUnique({
+  const template = await prisma.message_templates.findUnique({
     where: { slug: 'welcome_email' },
   });
 
@@ -101,7 +101,7 @@ export async function scheduleTrialReminders(
   const now = new Date();
   const trialDays = Math.ceil((trialEndDate.getTime() - now.getTime()) / (24 * 60 * 60 * 1000));
 
-  const user = await prisma.user.findUnique({
+  const user = await prisma.users.findUnique({
     where: { id: userId },
     select: { firstName: true },
   });
@@ -135,7 +135,7 @@ async function sendTrialStartedMessage(
   trialDays: number,
   trialEndDate: Date,
 ): Promise<void> {
-  const user = await prisma.user.findUnique({
+  const user = await prisma.users.findUnique({
     where: { id: userId },
     select: { firstName: true },
   });
@@ -175,7 +175,7 @@ export async function sendSubscriptionStarted(
   userId: string,
   planName: string,
 ): Promise<void> {
-  const user = await prisma.user.findUnique({
+  const user = await prisma.users.findUnique({
     where: { id: userId },
     select: { firstName: true },
   });
@@ -243,7 +243,7 @@ export async function sendSubscriptionCancelled(
   userId: string,
   endDate: Date,
 ): Promise<void> {
-  const user = await prisma.user.findUnique({
+  const user = await prisma.users.findUnique({
     where: { id: userId },
     select: { firstName: true },
   });
@@ -275,7 +275,7 @@ export async function sendSubscriptionCancelled(
  * Send subscription expired notification
  */
 export async function sendSubscriptionExpired(userId: string): Promise<void> {
-  const user = await prisma.user.findUnique({
+  const user = await prisma.users.findUnique({
     where: { id: userId },
     select: { firstName: true },
   });
@@ -322,7 +322,7 @@ export async function sendPaymentFailed(
   userId: string,
   attemptNumber: number,
 ): Promise<void> {
-  const user = await prisma.user.findUnique({
+  const user = await prisma.users.findUnique({
     where: { id: userId },
     select: { firstName: true },
   });
@@ -366,7 +366,7 @@ export async function sendPaymentRetryScheduled(
   userId: string,
   retryDate: Date,
 ): Promise<void> {
-  const user = await prisma.user.findUnique({
+  const user = await prisma.users.findUnique({
     where: { id: userId },
     select: { firstName: true },
   });
@@ -402,7 +402,7 @@ export async function sendPaymentSuccess(
   amount: string,
   invoiceUrl?: string,
 ): Promise<void> {
-  const user = await prisma.user.findUnique({
+  const user = await prisma.users.findUnique({
     where: { id: userId },
     select: { firstName: true },
   });
@@ -447,7 +447,7 @@ export async function sendWeeklyDigest(
     recommendations?: string;
   },
 ): Promise<void> {
-  const user = await prisma.user.findUnique({
+  const user = await prisma.users.findUnique({
     where: { id: userId },
     select: { firstName: true },
   });
@@ -500,7 +500,7 @@ export async function sendMonthlyDigest(
     yearlyMinutes: number;
   },
 ): Promise<void> {
-  const user = await prisma.user.findUnique({
+  const user = await prisma.users.findUnique({
     where: { id: userId },
     select: { firstName: true },
   });
@@ -541,7 +541,7 @@ export async function sendInactivityReminder(
   userId: string,
   daysSinceActive: number,
 ): Promise<void> {
-  const user = await prisma.user.findUnique({
+  const user = await prisma.users.findUnique({
     where: { id: userId },
     select: { firstName: true },
   });
@@ -600,7 +600,7 @@ export async function sendChallengeReminder(
   progress: number,
   targetDays: number,
 ): Promise<void> {
-  const user = await prisma.user.findUnique({
+  const user = await prisma.users.findUnique({
     where: { id: userId },
     select: { firstName: true },
   });
@@ -647,7 +647,7 @@ export async function sendChallengeCompleted(
   userId: string,
   challengeName: string,
 ): Promise<void> {
-  const user = await prisma.user.findUnique({
+  const user = await prisma.users.findUnique({
     where: { id: userId },
     select: { firstName: true },
   });
@@ -694,7 +694,7 @@ export async function sendNewContentNotification(
   contentTitle: string,
   contentDescription?: string,
 ): Promise<void> {
-  const user = await prisma.user.findUnique({
+  const user = await prisma.users.findUnique({
     where: { id: userId },
     select: { firstName: true },
   });
@@ -748,7 +748,7 @@ export async function scheduleMessage(
   channel: MessageChannel,
   metadata?: Record<string, unknown>,
 ): Promise<string> {
-  const template = await prisma.messageTemplate.findUnique({
+  const template = await prisma.message_templates.findUnique({
     where: { slug: templateSlug },
   });
 
@@ -756,7 +756,7 @@ export async function scheduleMessage(
     throw new Error(`Template not found: ${templateSlug}`);
   }
 
-  const scheduled = await prisma.scheduledMessage.create({
+  const scheduled = await prisma.scheduled_messages.create({
     data: {
       templateId: template.id,
       userId,
@@ -776,7 +776,7 @@ export async function scheduleMessage(
  * Cancel a scheduled message
  */
 export async function cancelScheduledMessage(messageId: string): Promise<void> {
-  await prisma.scheduledMessage.update({
+  await prisma.scheduled_messages.update({
     where: { id: messageId },
     data: { status: 'CANCELLED' },
   });
@@ -791,16 +791,16 @@ export async function cancelUserScheduledMessages(
   userId: string,
   templateSlug?: string,
 ): Promise<number> {
-  const where: { userId: string; status: ScheduledMessageStatus; template?: { slug: string } } = {
+  const where: { userId: string; status: ScheduledMessageStatus; message_templates?: { slug: string } } = {
     userId,
     status: 'PENDING',
   };
 
   if (templateSlug) {
-    where.template = { slug: templateSlug };
+    where.message_templates = { slug: templateSlug };
   }
 
-  const result = await prisma.scheduledMessage.updateMany({
+  const result = await prisma.scheduled_messages.updateMany({
     where,
     data: { status: 'CANCELLED' },
   });
@@ -817,14 +817,14 @@ export async function processScheduledMessages(): Promise<number> {
   const now = new Date();
 
   // Get all pending messages that are due
-  const dueMessages = await prisma.scheduledMessage.findMany({
+  const dueMessages = await prisma.scheduled_messages.findMany({
     where: {
       status: 'PENDING',
       scheduledAt: { lte: now },
     },
     include: {
-      template: true,
-      user: {
+      message_templates: true,
+      users: {
         select: { id: true, firstName: true, email: true },
       },
     },
@@ -838,13 +838,13 @@ export async function processScheduledMessages(): Promise<number> {
       // Check user preferences and quiet hours
       const canSend = await unifiedMessagingService.checkUserPreference(
         message.userId,
-        message.template.category.toLowerCase(),
+        message.message_templates.category.toLowerCase(),
       );
 
       const isQuietHours = await unifiedMessagingService.isInQuietHours(message.userId);
 
       if (!canSend) {
-        await prisma.scheduledMessage.update({
+        await prisma.scheduled_messages.update({
           where: { id: message.id },
           data: {
             status: 'CANCELLED',
@@ -857,7 +857,7 @@ export async function processScheduledMessages(): Promise<number> {
       if (isQuietHours) {
         // Reschedule for later
         const newScheduledAt = new Date(now.getTime() + 8 * 60 * 60 * 1000); // +8 hours
-        await prisma.scheduledMessage.update({
+        await prisma.scheduled_messages.update({
           where: { id: message.id },
           data: { scheduledAt: newScheduledAt },
         });
@@ -866,12 +866,12 @@ export async function processScheduledMessages(): Promise<number> {
 
       // Render template with metadata as variables
       const variables = {
-        firstName: message.user.firstName || 'Değerli Üyemiz',
+        firstName: message.users.firstName || 'Değerli Üyemiz',
         appUrl: config.notification.frontendUrl,
         ...(message.metadata as Record<string, unknown> || {}),
       };
 
-      const rendered = await messageTemplateService.renderTemplate(message.template.slug, variables);
+      const rendered = await messageTemplateService.renderTemplate(message.message_templates.slug, variables);
 
       // Send message
       const result = await unifiedMessagingService.sendMessage({
@@ -883,7 +883,7 @@ export async function processScheduledMessages(): Promise<number> {
         templateId: message.templateId,
       });
 
-      await prisma.scheduledMessage.update({
+      await prisma.scheduled_messages.update({
         where: { id: message.id },
         data: {
           status: result.success ? 'SENT' : 'FAILED',
@@ -899,7 +899,7 @@ export async function processScheduledMessages(): Promise<number> {
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
 
-      await prisma.scheduledMessage.update({
+      await prisma.scheduled_messages.update({
         where: { id: message.id },
         data: {
           status: 'FAILED',

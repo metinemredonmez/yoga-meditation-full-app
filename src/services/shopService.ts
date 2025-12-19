@@ -30,7 +30,7 @@ export async function getShopItems(
     ];
   }
 
-  const items = await prisma.shopItem.findMany({
+  const items = await prisma.shop_items.findMany({
     where,
     orderBy: [{ type: 'asc' }, { priceXP: 'asc' }],
   });
@@ -38,7 +38,7 @@ export async function getShopItems(
   // If userId provided, check if user can purchase each item
   if (userId) {
     const userLevel = await xpService.getOrCreateUserLevel(userId);
-    const userBadges = await prisma.userBadge.findMany({
+    const userBadges = await prisma.user_badges.findMany({
       where: { userId },
       select: { badgeId: true },
     });
@@ -55,7 +55,7 @@ export async function getShopItems(
 }
 
 export async function getShopItemById(id: string) {
-  return prisma.shopItem.findUnique({
+  return prisma.shop_items.findUnique({
     where: { id },
   });
 }
@@ -117,7 +117,7 @@ function getRequirementReason(
 // ============================================
 
 export async function purchaseItem(userId: string, itemId: string) {
-  const item = await prisma.shopItem.findUnique({
+  const item = await prisma.shop_items.findUnique({
     where: { id: itemId },
   });
 
@@ -151,7 +151,7 @@ export async function purchaseItem(userId: string, itemId: string) {
   }
 
   if (item.requiredBadgeId) {
-    const hasBadge = await prisma.userBadge.findUnique({
+    const hasBadge = await prisma.user_badges.findUnique({
       where: { userId_badgeId: { userId, badgeId: item.requiredBadgeId } },
     });
     if (!hasBadge) {
@@ -167,7 +167,7 @@ export async function purchaseItem(userId: string, itemId: string) {
   // Process purchase
   const [purchase] = await prisma.$transaction([
     // Create purchase record
-    prisma.shopPurchase.create({
+    prisma.shop_purchases.create({
       data: {
         userId,
         itemId,
@@ -176,7 +176,7 @@ export async function purchaseItem(userId: string, itemId: string) {
       },
     }),
     // Deduct XP
-    prisma.userLevel.update({
+    prisma.user_levels.update({
       where: { userId },
       data: {
         currentXP: { decrement: item.priceXP },
@@ -185,7 +185,7 @@ export async function purchaseItem(userId: string, itemId: string) {
     // Update stock if applicable
     ...(item.stock !== null
       ? [
-          prisma.shopItem.update({
+          prisma.shop_items.update({
             where: { id: itemId },
             data: {
               stock: { decrement: 1 },
@@ -199,7 +199,7 @@ export async function purchaseItem(userId: string, itemId: string) {
   // Auto-use certain item types
   if (item.type === 'STREAK_FREEZE') {
     await streakService.grantStreakFreeze(userId, 'PURCHASED');
-    await prisma.shopPurchase.update({
+    await prisma.shop_purchases.update({
       where: { id: purchase.id },
       data: { isUsed: true, usedAt: new Date() },
     });
@@ -220,9 +220,9 @@ export async function purchaseItem(userId: string, itemId: string) {
 // ============================================
 
 export async function usePurchase(userId: string, purchaseId: string) {
-  const purchase = await prisma.shopPurchase.findFirst({
+  const purchase = await prisma.shop_purchases.findFirst({
     where: { id: purchaseId, userId },
-    include: { item: true },
+    include: { shop_items: true },
   });
 
   if (!purchase) {
@@ -234,20 +234,20 @@ export async function usePurchase(userId: string, purchaseId: string) {
   }
 
   // Process usage based on item type
-  switch (purchase.item.type) {
+  switch (purchase.shop_items.type) {
     case 'STREAK_FREEZE':
       await streakService.grantStreakFreeze(userId, 'PURCHASED');
       break;
 
     case 'AVATAR_FRAME':
       // Grant frame to user
-      await prisma.userAvatarFrame.upsert({
+      await prisma.user_avatar_frames.upsert({
         where: {
-          userId_frameId: { userId, frameId: purchase.item.value },
+          userId_frameId: { userId, frameId: purchase.shop_items.value },
         },
         create: {
           userId,
-          frameId: purchase.item.value,
+          frameId: purchase.shop_items.value,
         },
         update: {},
       });
@@ -255,13 +255,13 @@ export async function usePurchase(userId: string, purchaseId: string) {
 
     case 'TITLE':
       // Grant title to user
-      await prisma.userTitle.upsert({
+      await prisma.user_titles.upsert({
         where: {
-          userId_titleId: { userId, titleId: purchase.item.value },
+          userId_titleId: { userId, titleId: purchase.shop_items.value },
         },
         create: {
           userId,
-          titleId: purchase.item.value,
+          titleId: purchase.shop_items.value,
         },
         update: {},
       });
@@ -269,13 +269,13 @@ export async function usePurchase(userId: string, purchaseId: string) {
 
     case 'BADGE':
       // Grant badge to user
-      await prisma.userBadge.upsert({
+      await prisma.user_badges.upsert({
         where: {
-          userId_badgeId: { userId, badgeId: purchase.item.value },
+          userId_badgeId: { userId, badgeId: purchase.shop_items.value },
         },
         create: {
           userId,
-          badgeId: purchase.item.value,
+          badgeId: purchase.shop_items.value,
         },
         update: {},
       });
@@ -287,14 +287,14 @@ export async function usePurchase(userId: string, purchaseId: string) {
   }
 
   // Mark as used
-  await prisma.shopPurchase.update({
+  await prisma.shop_purchases.update({
     where: { id: purchaseId },
     data: { isUsed: true, usedAt: new Date() },
   });
 
   logger.info({ userId, purchaseId }, 'Shop purchase used');
 
-  return { success: true, itemType: purchase.item.type };
+  return { success: true, itemType: purchase.shop_items.type };
 }
 
 // ============================================
@@ -309,14 +309,14 @@ export async function getPurchaseHistory(
   const skip = (page - 1) * limit;
 
   const [purchases, total] = await Promise.all([
-    prisma.shopPurchase.findMany({
+    prisma.shop_purchases.findMany({
       where: { userId },
-      include: { item: true },
+      include: { shop_items: true },
       orderBy: { createdAt: 'desc' },
       skip,
       take: limit,
     }),
-    prisma.shopPurchase.count({ where: { userId } }),
+    prisma.shop_purchases.count({ where: { userId } }),
   ]);
 
   return {
@@ -331,9 +331,9 @@ export async function getPurchaseHistory(
 }
 
 export async function getUnusedPurchases(userId: string) {
-  return prisma.shopPurchase.findMany({
+  return prisma.shop_purchases.findMany({
     where: { userId, isUsed: false },
-    include: { item: true },
+    include: { shop_items: true },
     orderBy: { createdAt: 'desc' },
   });
 }
@@ -356,7 +356,7 @@ export async function createShopItem(data: {
   availableFrom?: Date;
   availableUntil?: Date;
 }) {
-  return prisma.shopItem.create({ data });
+  return prisma.shop_items.create({ data });
 }
 
 export async function updateShopItem(
@@ -377,14 +377,14 @@ export async function updateShopItem(
     availableUntil: Date;
   }>,
 ) {
-  return prisma.shopItem.update({
+  return prisma.shop_items.update({
     where: { id },
     data,
   });
 }
 
 export async function deleteShopItem(id: string) {
-  return prisma.shopItem.delete({ where: { id } });
+  return prisma.shop_items.delete({ where: { id } });
 }
 
 // ============================================
@@ -394,10 +394,10 @@ export async function deleteShopItem(id: string) {
 export async function getShopStats() {
   const [totalItems, totalSales, totalRevenue, popularItems] =
     await Promise.all([
-      prisma.shopItem.count({ where: { isActive: true } }),
-      prisma.shopPurchase.count(),
-      prisma.shopPurchase.aggregate({ _sum: { pricePaid: true } }),
-      prisma.shopItem.findMany({
+      prisma.shop_items.count({ where: { isActive: true } }),
+      prisma.shop_purchases.count(),
+      prisma.shop_purchases.aggregate({ _sum: { pricePaid: true } }),
+      prisma.shop_items.findMany({
         where: { isActive: true },
         orderBy: { soldCount: 'desc' },
         take: 5,

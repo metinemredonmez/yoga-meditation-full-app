@@ -16,7 +16,7 @@ export async function createStream(req: AuthRequest, res: Response) {
     const userId = req.user!.id;
 
     // Get instructor profile
-    const instructor = await prisma.instructorProfile.findUnique({
+    const instructor = await prisma.instructor_profiles.findUnique({
       where: { userId },
     });
 
@@ -47,7 +47,7 @@ export async function updateStream(req: AuthRequest, res: Response) {
     const userId = req.user!.id;
     const streamId = req.params.id!;
 
-    const instructor = await prisma.instructorProfile.findUnique({
+    const instructor = await prisma.instructor_profiles.findUnique({
       where: { userId },
     });
 
@@ -68,7 +68,7 @@ export async function deleteStream(req: AuthRequest, res: Response) {
     const userId = req.user!.id;
     const streamId = req.params.id!;
 
-    const instructor = await prisma.instructorProfile.findUnique({
+    const instructor = await prisma.instructor_profiles.findUnique({
       where: { userId },
     });
 
@@ -162,7 +162,7 @@ export async function startStream(req: AuthRequest, res: Response) {
     const userId = req.user!.id;
     const streamId = req.params.id!;
 
-    const instructor = await prisma.instructorProfile.findUnique({
+    const instructor = await prisma.instructor_profiles.findUnique({
       where: { userId },
     });
 
@@ -191,7 +191,7 @@ export async function endStream(req: AuthRequest, res: Response) {
     const userId = req.user!.id;
     const streamId = req.params.id!;
 
-    const instructor = await prisma.instructorProfile.findUnique({
+    const instructor = await prisma.instructor_profiles.findUnique({
       where: { userId },
     });
 
@@ -218,7 +218,7 @@ export async function cancelStream(req: AuthRequest, res: Response) {
     const streamId = req.params.id!;
     const { reason } = req.body;
 
-    const instructor = await prisma.instructorProfile.findUnique({
+    const instructor = await prisma.instructor_profiles.findUnique({
       where: { userId },
     });
 
@@ -526,7 +526,7 @@ export async function getMyStreams(req: AuthRequest, res: Response) {
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 20;
 
-    const instructor = await prisma.instructorProfile.findUnique({
+    const instructor = await prisma.instructor_profiles.findUnique({
       where: { userId },
     });
 
@@ -550,7 +550,7 @@ export async function createSchedule(req: AuthRequest, res: Response) {
   try {
     const userId = req.user!.id;
 
-    const instructor = await prisma.instructorProfile.findUnique({
+    const instructor = await prisma.instructor_profiles.findUnique({
       where: { userId },
     });
 
@@ -570,7 +570,7 @@ export async function getMySchedules(req: AuthRequest, res: Response) {
   try {
     const userId = req.user!.id;
 
-    const instructor = await prisma.instructorProfile.findUnique({
+    const instructor = await prisma.instructor_profiles.findUnique({
       where: { userId },
     });
 
@@ -591,7 +591,7 @@ export async function updateSchedule(req: AuthRequest, res: Response) {
     const userId = req.user!.id;
     const scheduleId = req.params.scheduleId!;
 
-    const instructor = await prisma.instructorProfile.findUnique({
+    const instructor = await prisma.instructor_profiles.findUnique({
       where: { userId },
     });
 
@@ -616,7 +616,7 @@ export async function deleteSchedule(req: AuthRequest, res: Response) {
     const userId = req.user!.id;
     const scheduleId = req.params.scheduleId!;
 
-    const instructor = await prisma.instructorProfile.findUnique({
+    const instructor = await prisma.instructor_profiles.findUnique({
       where: { userId },
     });
 

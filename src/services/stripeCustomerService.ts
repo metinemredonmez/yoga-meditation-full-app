@@ -28,7 +28,7 @@ export async function createCustomer(
   });
 
   // Update user with Stripe customer ID
-  await prisma.user.update({
+  await prisma.users.update({
     where: { id: userId },
     data: { stripeCustomerId: customer.id },
   });
@@ -111,7 +111,7 @@ export async function getOrCreateCustomer(userId: string): Promise<Stripe.Custom
     throw new Error('Stripe is not configured');
   }
 
-  const user = await prisma.user.findUnique({
+  const user = await prisma.users.findUnique({
     where: { id: userId },
     select: { id: true, email: true, firstName: true, lastName: true, stripeCustomerId: true },
   });

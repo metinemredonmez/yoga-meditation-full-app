@@ -97,7 +97,7 @@ async function processAppleTransaction(
   }
 
   // Check if subscription already exists
-  let subscription = await prisma.subscription.findFirst({
+  let subscription = await prisma.subscriptions.findFirst({
     where: { appleOriginalTransactionId: originalTransactionId },
   });
 
@@ -110,7 +110,7 @@ async function processAppleTransaction(
 
   if (subscription) {
     // Update existing subscription
-    subscription = await prisma.subscription.update({
+    subscription = await prisma.subscriptions.update({
       where: { id: subscription.id },
       data: {
         status: subscriptionStatus,
@@ -124,12 +124,12 @@ async function processAppleTransaction(
   } else {
     // Create new subscription
     // First, cancel any existing subscriptions for this user
-    await prisma.subscription.updateMany({
+    await prisma.subscriptions.updateMany({
       where: { userId, status: { in: ['ACTIVE', 'TRIALING'] } },
       data: { status: 'CANCELLED', cancelledAt: new Date() },
     });
 
-    subscription = await prisma.subscription.create({
+    subscription = await prisma.subscriptions.create({
       data: {
         userId,
         planId: plan.id,
@@ -147,7 +147,7 @@ async function processAppleTransaction(
     });
 
     // Update user tier
-    await prisma.user.update({
+    await prisma.users.update({
       where: { id: userId },
       data: {
         subscriptionTier: plan.tier,
@@ -209,9 +209,9 @@ export async function handleAppleNotification(
     : null;
 
   // Find subscription by original transaction ID
-  const subscription = await prisma.subscription.findFirst({
+  const subscription = await prisma.subscriptions.findFirst({
     where: { appleOriginalTransactionId: transactionInfo.originalTransactionId },
-    include: { plan: true, user: true },
+    include: { plan: true, users: true },
   });
 
   if (!subscription) {
@@ -233,7 +233,7 @@ export async function handleAppleNotification(
  */
 async function processAppleNotificationType(
   notificationType: AppleNotificationType,
-  subscription: Awaited<ReturnType<typeof prisma.subscription.findFirst>> & { plan: any; user: any },
+  subscription: Awaited<ReturnType<typeof prisma.subscriptions.findFirst>> & { plan: any; users: any },
   transactionInfo: any,
   renewalInfo: any
 ) {
@@ -244,7 +244,7 @@ async function processAppleNotificationType(
   switch (notificationType) {
     case 'DID_RENEW':
     case 'SUBSCRIBED':
-      await prisma.subscription.update({
+      await prisma.subscriptions.update({
         where: { id: subscription.id },
         data: {
           status: 'ACTIVE',
@@ -257,7 +257,7 @@ async function processAppleNotificationType(
       break;
 
     case 'DID_FAIL_TO_RENEW':
-      await prisma.subscription.update({
+      await prisma.subscriptions.update({
         where: { id: subscription.id },
         data: {
           status: 'PAST_DUE',
@@ -276,7 +276,7 @@ async function processAppleNotificationType(
       break;
 
     case 'EXPIRED':
-      await prisma.subscription.update({
+      await prisma.subscriptions.update({
         where: { id: subscription.id },
         data: {
           status: 'EXPIRED',
@@ -295,7 +295,7 @@ async function processAppleNotificationType(
       break;
 
     case 'GRACE_PERIOD_EXPIRED':
-      await prisma.subscription.update({
+      await prisma.subscriptions.update({
         where: { id: subscription.id },
         data: {
           status: 'EXPIRED',
@@ -308,7 +308,7 @@ async function processAppleNotificationType(
 
     case 'REFUND':
     case 'REVOKE':
-      await prisma.subscription.update({
+      await prisma.subscriptions.update({
         where: { id: subscription.id },
         data: {
           status: 'CANCELLED',
@@ -330,7 +330,7 @@ async function processAppleNotificationType(
 
     case 'DID_CHANGE_RENEWAL_STATUS':
       const autoRenew = renewalInfo?.autoRenewStatus === 1;
-      await prisma.subscription.update({
+      await prisma.subscriptions.update({
         where: { id: subscription.id },
         data: {
           autoRenew,
@@ -345,7 +345,7 @@ async function processAppleNotificationType(
       if (renewalInfo?.autoRenewProductId) {
         const newPlan = await findPlanByAppleProductId(renewalInfo.autoRenewProductId);
         if (newPlan) {
-          await prisma.subscription.update({
+          await prisma.subscriptions.update({
             where: { id: subscription.id },
             data: {
               planId: newPlan.id,
@@ -364,7 +364,7 @@ async function processAppleNotificationType(
 // ==================== Helper Functions ====================
 
 async function findPlanByAppleProductId(productId: string) {
-  return prisma.subscriptionPlan.findFirst({
+  return prisma.subscription_plans.findFirst({
     where: {
       OR: [
         { appleProductIdMonthly: productId },
@@ -380,7 +380,7 @@ async function updateUserTier(
   tier: string,
   expiresAt: Date | null
 ) {
-  await prisma.user.update({
+  await prisma.users.update({
     where: { id: userId },
     data: {
       subscriptionTier: tier as any,
@@ -399,7 +399,7 @@ async function logReceiptValidation(
     ? parseInt(transaction.expires_date_ms, 10)
     : null;
 
-  await prisma.purchaseReceipt.create({
+  await prisma.purchase_receipts.create({
     data: {
       userId,
       provider: 'APPLE',
@@ -425,7 +425,7 @@ async function createApplePayment(
   const isYearly = transaction.product_id.includes('yearly');
   const amount = isYearly ? plan.priceYearly : plan.priceMonthly;
 
-  await prisma.payment.create({
+  await prisma.payments.create({
     data: {
       userId,
       subscriptionId,

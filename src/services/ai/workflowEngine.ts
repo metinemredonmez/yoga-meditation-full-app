@@ -45,7 +45,7 @@ export const createWorkflow = async (data: {
   variables?: Record<string, unknown>;
   createdById: string;
 }) => {
-  return prisma.aIWorkflow.create({
+  return prisma.ai_workflows.create({
     data: {
       name: data.name,
       slug: data.slug,
@@ -60,24 +60,24 @@ export const createWorkflow = async (data: {
 
 // Get workflow by ID
 export const getWorkflow = async (workflowId: string) => {
-  return prisma.aIWorkflow.findUnique({
+  return prisma.ai_workflows.findUnique({
     where: { id: workflowId },
     include: {
-      nodes: {
+      ai_workflow_nodes: {
         orderBy: { createdAt: 'asc' },
       },
-      edges: true,
+      ai_workflow_edges: true,
     },
   });
 };
 
 // Get workflow by slug
 export const getWorkflowBySlug = async (slug: string) => {
-  return prisma.aIWorkflow.findUnique({
+  return prisma.ai_workflows.findUnique({
     where: { slug },
     include: {
-      nodes: true,
-      edges: true,
+      ai_workflow_nodes: true,
+      ai_workflow_edges: true,
     },
   });
 };
@@ -87,7 +87,7 @@ export const updateWorkflowStatus = async (
   workflowId: string,
   status: WorkflowStatus
 ) => {
-  return prisma.aIWorkflow.update({
+  return prisma.ai_workflows.update({
     where: { id: workflowId },
     data: { status },
   });
@@ -120,7 +120,7 @@ export const addNode = async (
     timeout?: number;
   }
 ) => {
-  return prisma.aIWorkflowNode.create({
+  return prisma.ai_workflow_nodes.create({
     data: {
       workflowId,
       nodeKey: data.nodeKey,
@@ -159,7 +159,7 @@ export const updateNode = async (
     positionY: number;
   }>
 ) => {
-  const updateData: Prisma.AIWorkflowNodeUpdateInput = {
+  const updateData: Prisma.ai_workflow_nodesUpdateInput = {
     name: data.name,
     description: data.description,
     promptTemplate: data.promptTemplate,
@@ -170,7 +170,7 @@ export const updateNode = async (
   if (data.config) {
     updateData.config = data.config as Prisma.InputJsonValue;
   }
-  return prisma.aIWorkflowNode.update({
+  return prisma.ai_workflow_nodes.update({
     where: { id: nodeId },
     data: updateData,
   });
@@ -179,13 +179,13 @@ export const updateNode = async (
 // Delete node
 export const deleteNode = async (nodeId: string) => {
   // Delete associated edges first
-  await prisma.aIWorkflowEdge.deleteMany({
+  await prisma.ai_workflow_edges.deleteMany({
     where: {
       OR: [{ sourceNodeId: nodeId }, { targetNodeId: nodeId }],
     },
   });
 
-  return prisma.aIWorkflowNode.delete({
+  return prisma.ai_workflow_nodes.delete({
     where: { id: nodeId },
   });
 };
@@ -205,7 +205,7 @@ export const addEdge = async (
     dataMapping?: Record<string, unknown>;
   }
 ) => {
-  return prisma.aIWorkflowEdge.create({
+  return prisma.ai_workflow_edges.create({
     data: {
       workflowId,
       sourceNodeId: data.sourceNodeId,
@@ -221,7 +221,7 @@ export const addEdge = async (
 
 // Delete edge
 export const deleteEdge = async (edgeId: string) => {
-  return prisma.aIWorkflowEdge.delete({
+  return prisma.ai_workflow_edges.delete({
     where: { id: edgeId },
   });
 };
@@ -242,7 +242,7 @@ export const startWorkflowExecution = async (
   }
 
   // Create execution record
-  const execution = await prisma.aIWorkflowExecution.create({
+  const execution = await prisma.ai_workflow_executions.create({
     data: {
       workflowId,
       input: input as Prisma.InputJsonValue,
@@ -264,13 +264,13 @@ export const startWorkflowExecution = async (
 
 // Main workflow execution logic
 export const executeWorkflow = async (executionId: string): Promise<void> => {
-  const execution = await prisma.aIWorkflowExecution.findUnique({
+  const execution = await prisma.ai_workflow_executions.findUnique({
     where: { id: executionId },
     include: {
-      workflow: {
+      ai_workflows: {
         include: {
-          nodes: true,
-          edges: true,
+          ai_workflow_nodes: true,
+          ai_workflow_edges: true,
         },
       },
     },
@@ -281,7 +281,7 @@ export const executeWorkflow = async (executionId: string): Promise<void> => {
   }
 
   // Update status to running
-  await prisma.aIWorkflowExecution.update({
+  await prisma.ai_workflow_executions.update({
     where: { id: executionId },
     data: {
       status: WorkflowExecutionStatus.RUNNING,
@@ -289,12 +289,12 @@ export const executeWorkflow = async (executionId: string): Promise<void> => {
     },
   });
 
-  const workflow = execution.workflow;
-  const nodes = new Map(workflow.nodes.map((n) => [n.nodeKey, n]));
-  const edges = workflow.edges;
+  const workflow = execution.ai_workflows;
+  const nodes = new Map(workflow.ai_workflow_nodes.map((n) => [n.nodeKey, n]));
+  const edges = workflow.ai_workflow_edges;
 
   // Find start node
-  const startNode = workflow.nodes.find((n) => n.type === WorkflowNodeType.START);
+  const startNode = workflow.ai_workflow_nodes.find((n) => n.type === WorkflowNodeType.START);
   if (!startNode) {
     throw new Error('No start node found');
   }
@@ -330,7 +330,7 @@ export const executeWorkflow = async (executionId: string): Promise<void> => {
       }
 
       // Update current node
-      await prisma.aIWorkflowExecution.update({
+      await prisma.ai_workflow_executions.update({
         where: { id: executionId },
         data: { currentNodeId: currentNode.id },
       });
@@ -343,7 +343,7 @@ export const executeWorkflow = async (executionId: string): Promise<void> => {
       );
 
       // Record node execution
-      await prisma.aIWorkflowNodeExecution.create({
+      await prisma.ai_workflow_node_executions.create({
         data: {
           executionId,
           nodeId: currentNode.id,
@@ -386,19 +386,19 @@ export const executeWorkflow = async (executionId: string): Promise<void> => {
         // Single edge - follow it
         const firstEdge = outgoingEdges[0];
         const nextNode = firstEdge ? nodes.get(
-          workflow.nodes.find((n) => n.id === firstEdge.targetNodeId)?.nodeKey || ''
+          workflow.ai_workflow_nodes.find((n) => n.id === firstEdge.targetNodeId)?.nodeKey || ''
         ) : undefined;
         currentNodeKey = nextNode?.nodeKey || '';
       } else {
         // Multiple edges - evaluate conditions
         const nextNodeId = await evaluateConditions(outgoingEdges, context.state);
-        const nextNode = workflow.nodes.find((n) => n.id === nextNodeId);
+        const nextNode = workflow.ai_workflow_nodes.find((n) => n.id === nextNodeId);
         currentNodeKey = nextNode?.nodeKey || '';
       }
     }
 
     // Mark execution as completed
-    await prisma.aIWorkflowExecution.update({
+    await prisma.ai_workflow_executions.update({
       where: { id: executionId },
       data: {
         status: WorkflowExecutionStatus.COMPLETED,
@@ -411,7 +411,7 @@ export const executeWorkflow = async (executionId: string): Promise<void> => {
     });
   } catch (error) {
     // Mark execution as failed
-    await prisma.aIWorkflowExecution.update({
+    await prisma.ai_workflow_executions.update({
       where: { id: executionId },
       data: {
         status: WorkflowExecutionStatus.FAILED,
@@ -688,7 +688,7 @@ const executeRetrievalNode = async (
   const queryEmbedding = await createEmbedding(query, context.userId);
 
   // Search grounding documents
-  const documents = await prisma.groundingDocument.findMany({
+  const documents = await prisma.grounding_documents.findMany({
     where: { isActive: true },
     take: 100,
   });
@@ -792,7 +792,7 @@ const executeHumanFeedbackNode = async (
   context: WorkflowContext
 ): Promise<NodeResult> => {
   // This node pauses execution until human feedback is received
-  await prisma.aIWorkflowExecution.update({
+  await prisma.ai_workflow_executions.update({
     where: { id: context.executionId },
     data: {
       status: WorkflowExecutionStatus.WAITING_HUMAN,
@@ -854,7 +854,7 @@ const saveCheckpoint = async (
   nodeKey: string,
   state: WorkflowState
 ) => {
-  const execution = await prisma.aIWorkflowExecution.findUnique({
+  const execution = await prisma.ai_workflow_executions.findUnique({
     where: { id: executionId },
   });
 
@@ -867,7 +867,7 @@ const saveCheckpoint = async (
     timestamp: new Date().toISOString(),
   });
 
-  await prisma.aIWorkflowExecution.update({
+  await prisma.ai_workflow_executions.update({
     where: { id: executionId },
     data: {
       checkpoints: checkpoints as Prisma.InputJsonValue[],
@@ -1027,9 +1027,11 @@ const cosineSimilarity = (a: number[], b: number[]): number => {
   let normB = 0;
 
   for (let i = 0; i < a.length; i++) {
-    dotProduct += a[i] * b[i];
-    normA += a[i] * a[i];
-    normB += b[i] * b[i];
+    const aVal = a[i] ?? 0;
+    const bVal = b[i] ?? 0;
+    dotProduct += aVal * bVal;
+    normA += aVal * aVal;
+    normB += bVal * bVal;
   }
 
   if (normA === 0 || normB === 0) return 0;
@@ -1042,10 +1044,10 @@ const searchPosesTool = async (params: Record<string, unknown>) => {
   const query = params.query as string;
   const limit = (params.limit as number) || 5;
 
-  return prisma.pose.findMany({
+  return prisma.poses.findMany({
     where: {
       OR: [
-        { name: { contains: query, mode: 'insensitive' } },
+        { englishName: { contains: query, mode: 'insensitive' } },
         { sanskritName: { contains: query, mode: 'insensitive' } },
         { description: { contains: query, mode: 'insensitive' } },
       ],
@@ -1061,13 +1063,13 @@ const getUserProgressTool = async (
   if (!userId) return null;
 
   const [classes, challenges, level] = await Promise.all([
-    prisma.videoProgress.count({
+    prisma.video_progress.count({
       where: { userId, completed: true },
     }),
-    prisma.challengeEnrollment.count({
-      where: { userId, status: 'COMPLETED' },
+    prisma.challenge_enrollments.count({
+      where: { userId },
     }),
-    prisma.userLevel.findUnique({
+    prisma.user_levels.findUnique({
       where: { userId },
     }),
   ]);
@@ -1087,10 +1089,10 @@ const createRecommendationTool = async (
 ) => {
   if (!userId) return null;
 
-  return prisma.recommendation.create({
+  return prisma.recommendations.create({
     data: {
       userId,
-      type: (params.type as string) || 'FOR_YOU',
+      type: (params.type as 'FOR_YOU' | 'CONTINUE_WATCHING' | 'BECAUSE_YOU_LIKED' | 'TRENDING' | 'NEW_RELEASES' | 'GOAL_BASED' | 'SKILL_BUILDING' | 'RECOVERY' | 'TIME_BASED' | 'MOOD_BASED') || 'FOR_YOU',
       entityType: params.entityType as string,
       entityId: params.entityId as string,
       score: (params.score as number) || 0.8,
@@ -1106,12 +1108,12 @@ const createRecommendationTool = async (
 
 // Get execution by ID
 export const getExecution = async (executionId: string) => {
-  return prisma.aIWorkflowExecution.findUnique({
+  return prisma.ai_workflow_executions.findUnique({
     where: { id: executionId },
     include: {
-      workflow: true,
-      nodeExecutions: {
-        include: { node: true },
+      ai_workflows: true,
+      ai_workflow_node_executions: {
+        include: { ai_workflow_nodes: true },
         orderBy: { startedAt: 'asc' },
       },
     },
@@ -1123,9 +1125,9 @@ export const getUserExecutions = async (
   userId: string,
   limit: number = 20
 ) => {
-  return prisma.aIWorkflowExecution.findMany({
+  return prisma.ai_workflow_executions.findMany({
     where: { triggeredBy: userId },
-    include: { workflow: true },
+    include: { ai_workflows: true },
     orderBy: { createdAt: 'desc' },
     take: limit,
   });
@@ -1136,7 +1138,7 @@ export const resumeExecution = async (
   executionId: string,
   humanFeedback?: Record<string, unknown>
 ) => {
-  const execution = await prisma.aIWorkflowExecution.findUnique({
+  const execution = await prisma.ai_workflow_executions.findUnique({
     where: { id: executionId },
   });
 
@@ -1154,11 +1156,11 @@ export const resumeExecution = async (
     humanFeedback,
   };
 
-  await prisma.aIWorkflowExecution.update({
+  await prisma.ai_workflow_executions.update({
     where: { id: executionId },
     data: {
       status: WorkflowExecutionStatus.RUNNING,
-      state: newState,
+      state: JSON.parse(JSON.stringify(newState)) as Prisma.InputJsonValue,
     },
   });
 
@@ -1168,7 +1170,7 @@ export const resumeExecution = async (
 
 // Cancel execution
 export const cancelExecution = async (executionId: string) => {
-  return prisma.aIWorkflowExecution.update({
+  return prisma.ai_workflow_executions.update({
     where: { id: executionId },
     data: {
       status: WorkflowExecutionStatus.CANCELLED,

@@ -19,7 +19,7 @@ export async function requireInstructor(
       });
     }
 
-    const instructor = await prisma.instructorProfile.findUnique({
+    const instructor = await prisma.instructor_profiles.findUnique({
       where: { userId: req.user.id },
     });
 
@@ -59,7 +59,7 @@ export async function requireApprovedInstructor(
       });
     }
 
-    const instructor = await prisma.instructorProfile.findUnique({
+    const instructor = await prisma.instructor_profiles.findUnique({
       where: { userId: req.user.id },
     });
 
@@ -104,7 +104,7 @@ export function requireContentOwnership(contentType: 'program' | 'class') {
         });
       }
 
-      const instructor = await prisma.instructorProfile.findUnique({
+      const instructor = await prisma.instructor_profiles.findUnique({
         where: { userId: req.user.id },
       });
 
@@ -127,7 +127,7 @@ export function requireContentOwnership(contentType: 'program' | 'class') {
       let isOwner = false;
 
       if (contentType === 'program') {
-        const program = await prisma.program.findUnique({
+        const program = await prisma.programs.findUnique({
           where: { id: contentId },
         });
 
@@ -142,7 +142,7 @@ export function requireContentOwnership(contentType: 'program' | 'class') {
           program.instructorId === req.user.id ||
           program.coInstructorIds.includes(req.user.id);
       } else if (contentType === 'class') {
-        const classItem = await prisma.class.findUnique({
+        const classItem = await prisma.classes.findUnique({
           where: { id: contentId },
         });
 
@@ -197,7 +197,7 @@ export async function checkInstructorFreeAccess(
       return next();
     }
 
-    const instructor = await prisma.instructorProfile.findUnique({
+    const instructor = await prisma.instructor_profiles.findUnique({
       where: { userId: req.user.id },
     });
 
@@ -208,7 +208,7 @@ export async function checkInstructorFreeAccess(
     let hasAccess = false;
 
     if (contentType === 'program') {
-      const program = await prisma.program.findUnique({
+      const program = await prisma.programs.findUnique({
         where: { id: contentId },
       });
 
@@ -218,7 +218,7 @@ export async function checkInstructorFreeAccess(
           program.coInstructorIds.includes(req.user.id);
       }
     } else {
-      const classItem = await prisma.class.findUnique({
+      const classItem = await prisma.classes.findUnique({
         where: { id: contentId },
       });
 
@@ -250,7 +250,7 @@ export function requireInstructorTier(...allowedTiers: string[]) {
         });
       }
 
-      const instructor = await prisma.instructorProfile.findUnique({
+      const instructor = await prisma.instructor_profiles.findUnique({
         where: { userId: req.user.id },
       });
 

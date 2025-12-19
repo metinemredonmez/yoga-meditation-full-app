@@ -3082,6 +3082,18 @@ model subscription_plans {
   priceYearly            Decimal          @db.Decimal(10, 2)
   currency               String           @default("TRY")
   features               Json
+  // Content categories included in this plan
+  // Example: ["meditation", "breathwork", "sleep"] for Meditation plan
+  // Example: ["yoga", "pilates", "live_classes"] for Yoga plan
+  // Example: ["all"] for Premium - gives access to everything
+  includedCategories     String[]         @default([])
+  // Access control
+  hasAICoach             Boolean          @default(false)
+  hasOfflineDownload     Boolean          @default(false)
+  hasLiveClasses         Boolean          @default(false)
+  hasFamilySharing       Boolean          @default(false)
+  maxFamilyMembers       Int              @default(1)
+  // Stripe, Apple, Google IDs
   stripePriceIdMonthly   String?
   stripePriceIdYearly    String?
   appleProductIdMonthly  String?
@@ -3832,28 +3844,37 @@ model users {
   sleep_tracking       sleep_tracking[]
 
   // Sprint 5: Playlists & Wellness Stats relations
-  playlists            playlists[]
-  saved_playlists      saved_playlists[]
-  user_wellness_stats  user_wellness_stats?
+  playlists           playlists[]
+  saved_playlists     saved_playlists[]
+  user_wellness_stats user_wellness_stats?
 
   // Security
-  password_history          password_history[]
-  twoFactorSecret           String?
-  twoFactorVerifiedAt       DateTime?
-  two_factor_backup_codes   two_factor_backup_codes[]
+  password_history        password_history[]
+  twoFactorSecret         String?
+  twoFactorVerifiedAt     DateTime?
+  two_factor_backup_codes two_factor_backup_codes[]
 
   // Social Login
-  googleId                  String?                       @unique
-  appleId                   String?                       @unique
-  provider                  String?                       @default("email")
+  googleId String? @unique
+  appleId  String? @unique
+  provider String? @default("email")
 
   // Integration Settings Relations
-  integration_settings_updated   integration_settings[] @relation("IntegrationSettingsUpdatedBy")
-  integration_logs_created       integration_logs[]     @relation("IntegrationLogsCreatedBy")
+  integration_settings_updated integration_settings[] @relation("IntegrationSettingsUpdatedBy")
+  integration_logs_created     integration_logs[]     @relation("IntegrationLogsCreatedBy")
+
+  // AI Agent System Relations
+  ai_agent_events        ai_agent_events[]
+  user_agent_preferences user_agent_preferences?
+  user_engagement_scores user_engagement_scores?
+
+  // Active status for agent targeting
+  isActive Boolean @default(true)
 
   @@index([stripeCustomerId])
   @@index([googleId])
   @@index([appleId])
+  @@index([isActive])
 }
 
 model video_progress {
@@ -5014,10 +5035,12 @@ enum SubscriptionStatus {
 }
 
 enum SubscriptionTier {
-  FREE
-  BASIC
-  PREMIUM
-  ENTERPRISE
+  FREE // Ücretsiz - sınırlı içerik
+  MEDITATION // Sadece meditasyon, nefes, uyku
+  YOGA // Sadece yoga, pilates
+  PREMIUM // Her şey dahil
+  FAMILY // Premium + aile paylaşımı
+  ENTERPRISE // Kurumsal
 }
 
 enum TagKind {
@@ -5284,11 +5307,11 @@ model meditations {
   updatedAt DateTime @updatedAt
 
   // Relations
-  progress     meditation_progress[]
-  favorites    meditation_favorites[]
-  ratings      meditation_ratings[]
-  sessions     meditation_sessions[]
-  dailyContent daily_content[]
+  progress      meditation_progress[]
+  favorites     meditation_favorites[]
+  ratings       meditation_ratings[]
+  sessions      meditation_sessions[]
+  dailyContent  daily_content[]
   playlistItems playlist_items[]
 
   @@index([categoryId])
@@ -5367,7 +5390,7 @@ model meditation_sessions {
   id String @id @default(cuid())
 
   userId String
-  user   users @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user   users  @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   // İçerik bağlantısı (opsiyonel - timer only olabilir)
   meditationId String?
@@ -5384,7 +5407,7 @@ model meditation_sessions {
   status SessionStatus @default(IN_PROGRESS)
 
   // Timer ayarları
-  intervalBell Int?    // ara zil (saniye, null=yok)
+  intervalBell Int? // ara zil (saniye, null=yok)
   endBell      String? // bitiş zili sesi
 
   // Background
@@ -5543,16 +5566,16 @@ model soundscapes {
   updatedAt   DateTime @updatedAt
 
   // Relations
-  meditations  meditations[]
-  sleepStories sleep_stories[]
-  mixItems     sound_mix_items[]
-  favorites    soundscape_favorites[]
+  meditations   meditations[]
+  sleepStories  sleep_stories[]
+  mixItems      sound_mix_items[]
+  favorites     soundscape_favorites[]
   playlistItems playlist_items[]
 
   // Sprint 3: Timer & Sleep relations
-  sessionBackgrounds     meditation_sessions[]    @relation("SessionBackgroundSound")
-  presetBackgrounds      timer_presets[]          @relation("PresetBackgroundSound")
-  sleepTimerDefaults     sleep_timer_settings[]   @relation("SleepTimerDefaultSound")
+  sessionBackgrounds meditation_sessions[]  @relation("SessionBackgroundSound")
+  presetBackgrounds  timer_presets[]        @relation("PresetBackgroundSound")
+  sleepTimerDefaults sleep_timer_settings[] @relation("SleepTimerDefaultSound")
 }
 
 // Soundscape Favorites
@@ -5792,7 +5815,7 @@ model journal_entries {
 
   // İçerik
   title   String?
-  content String   @db.Text
+  content String  @db.Text
 
   // Tip
   type     JournalType      @default(FREE_WRITE)
@@ -5862,19 +5885,53 @@ model user_onboarding {
 
   // İlerleme
   currentStep Int @default(1)
-  totalSteps  Int @default(5)
+  totalSteps  Int @default(7)
 
   // Cevaplar (JSON olarak)
   answers Json? // tüm cevaplar
 
-  // Ayrıştırılmış cevaplar
-  experienceLevel   String? // BEGINNER, SOME, INTERMEDIATE, ADVANCED
-  goals             String[] // STRESS_RELIEF, BETTER_SLEEP, FOCUS, FLEXIBILITY, etc
-  interests         String[] // YOGA, MEDITATION, PILATES, BREATHWORK
+  // ============================================
+  // Kişisel Bilgiler
+  // ============================================
+  birthDate DateTime?
+  age       Int?
+  height    Float? // cm
+  weight    Float? // kg
+  gender    String? // male, female, other, prefer_not_to_say
+
+  // ============================================
+  // Fitness Bilgileri
+  // ============================================
+  fitnessLevel  String? // beginner, intermediate, advanced
+  activityLevel String? // sedentary, light, moderate, active, very_active
+
+  // Deneyim
+  hasYogaExperience       Boolean @default(false)
+  hasMeditationExperience Boolean @default(false)
+  hasPilatesExperience    Boolean @default(false)
+
+  // ============================================
+  // Tercihler ve Hedefler
+  // ============================================
+  experienceLevel     String? // BEGINNER, SOME, INTERMEDIATE, ADVANCED
+  goals               String[] // STRESS_RELIEF, BETTER_SLEEP, FOCUS, FLEXIBILITY, etc
+  primaryGoal         String? // Ana hedef
+  secondaryGoals      String[] // İkincil hedefler
+  interests           String[] // YOGA, MEDITATION, PILATES, BREATHWORK, SLEEP
+  preferredCategories String[] // yoga, meditation, pilates, breathwork, sleep
+
+  // ============================================
+  // Sağlık Durumu
+  // ============================================
+  healthConditions String[] // BACK_PAIN, ANXIETY, INSOMNIA, PREGNANCY, KNEE_INJURY, etc
+
+  // ============================================
+  // Zaman Tercihleri
+  // ============================================
   practiceFrequency String? // DAILY, FEW_TIMES_WEEK, WEEKLY, OCCASIONALLY
   preferredDuration Int? // dakika (5, 10, 15, 20, 30)
   preferredTime     String? // MORNING, AFTERNOON, EVENING, NIGHT, FLEXIBLE
-  healthConditions  String[] // BACK_PAIN, ANXIETY, INSOMNIA, etc
+  reminderTime      String? // "07:00" formatında
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -5986,15 +6043,15 @@ model goal_templates {
   id String @id @default(cuid())
 
   // Hedef bilgileri
-  type        GoalType
-  title       String
-  titleEn     String?
-  description String?
+  type          GoalType
+  title         String
+  titleEn       String?
+  description   String?
   descriptionEn String?
 
   // Hedef parametreleri
   targetValue Int
-  unit        String      // "minutes", "sessions", "days", "entries"
+  unit        String // "minutes", "sessions", "days", "entries"
   period      GoalPeriod
 
   // Görünüm
@@ -6018,10 +6075,10 @@ model reminder_templates {
   id String @id @default(cuid())
 
   // Hatırlatıcı bilgileri
-  type    ReminderType
-  title   String
-  titleEn String?
-  message String?
+  type      ReminderType
+  title     String
+  titleEn   String?
+  message   String?
   messageEn String?
 
   // Varsayılan zamanlama
@@ -6190,8 +6247,8 @@ enum ReminderType {
 // Sprint 3 Enums
 enum SessionType {
   GUIDED // rehberli meditasyon
-  TIMER  // sadece timer
-  OPEN   // açık uçlu (süresiz)
+  TIMER // sadece timer
+  OPEN // açık uçlu (süresiz)
 }
 
 enum SessionStatus {
@@ -6213,7 +6270,7 @@ model timer_presets {
   description String?
 
   // Timer ayarları
-  duration     Int  // saniye
+  duration     Int // saniye
   intervalBell Int? // ara zil (saniye)
 
   // Ses ayarları
@@ -6314,11 +6371,11 @@ model sleep_tracking {
 
 // Sprint 5: Playlist Type Enum
 enum PlaylistType {
-  CUSTOM    // kullanıcı oluşturdu
-  SYSTEM    // sistem oluşturdu
-  CURATED   // editör seçimi
+  CUSTOM // kullanıcı oluşturdu
+  SYSTEM // sistem oluşturdu
+  CURATED // editör seçimi
   GENERATED // AI oluşturdu
-  COURSE    // kurs/program
+  COURSE // kurs/program
 }
 
 // Sprint 5: Playlist Content Type Enum
@@ -6326,8 +6383,8 @@ enum PlaylistContentType {
   MEDITATION // sadece meditasyon
   BREATHWORK // sadece nefes
   SOUNDSCAPE // sadece ses
-  SLEEP      // sadece uyku
-  MIXED      // karışık
+  SLEEP // sadece uyku
+  MIXED // karışık
 }
 
 // Sprint 5: Playlist Item Type Enum
@@ -6429,7 +6486,7 @@ model saved_playlists {
   id String @id @default(cuid())
 
   userId String
-  user   users @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user   users  @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   playlistId String
   playlist   playlists @relation(fields: [playlistId], references: [id], onDelete: Cascade)
@@ -6499,16 +6556,15 @@ model password_history {
 
 // Two-factor authentication backup codes
 model two_factor_backup_codes {
-  id        String   @id @default(cuid())
+  id        String    @id @default(cuid())
   userId    String
-  code      String   // Hashed backup code
+  code      String // Hashed backup code
   usedAt    DateTime?
-  createdAt DateTime @default(now())
-  user      users    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime  @default(now())
+  user      users     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
 }
-
 
 // ============================================
 // Integration Settings (3rd party services)
@@ -6516,18 +6572,18 @@ model two_factor_backup_codes {
 
 // Integration settings for 3rd party services (encrypted)
 model integration_settings {
-  id          String   @id @default(cuid())
-  category    String   // auth, payment, notification, storage, streaming, monitoring, email, sms
-  provider    String   // google, stripe, firebase, aws_s3, etc.
-  key         String   // client_id, api_key, secret_key, etc.
-  value       String   @db.Text // Encrypted value
-  isActive    Boolean  @default(true)
-  isEncrypted Boolean  @default(true)
-  description String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  updatedBy   String?
-  updatedByUser users? @relation("IntegrationSettingsUpdatedBy", fields: [updatedBy], references: [id])
+  id            String   @id @default(cuid())
+  category      String // auth, payment, notification, storage, streaming, monitoring, email, sms
+  provider      String // google, stripe, firebase, aws_s3, etc.
+  key           String // client_id, api_key, secret_key, etc.
+  value         String   @db.Text // Encrypted value
+  isActive      Boolean  @default(true)
+  isEncrypted   Boolean  @default(true)
+  description   String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  updatedBy     String?
+  updatedByUser users?   @relation("IntegrationSettingsUpdatedBy", fields: [updatedBy], references: [id])
 
   @@unique([category, provider, key])
   @@index([category])
@@ -6540,8 +6596,8 @@ model integration_logs {
   id        String   @id @default(cuid())
   category  String
   provider  String
-  action    String   // test_connection, update_config, toggle_status, error
-  status    String   // success, failed
+  action    String // test_connection, update_config, toggle_status, error
+  status    String // success, failed
   message   String?
   metadata  Json?
   ipAddress String?
@@ -6556,3 +6612,182 @@ model integration_logs {
   @@index([createdAt])
 }
 
+// ============================================
+// AI Agent System (Calm/Headspace-like engagement)
+// ============================================
+
+// AI Agent Types
+enum AgentType {
+  ONBOARDING // Yeni kullanıcı yönlendirme
+  PERSONALIZATION // Kişiselleştirilmiş içerik önerisi
+  RETENTION // Kullanıcı tutundurma (churn önleme)
+  MOOD_WELLNESS // Duygu durumu takibi
+  STREAK_GAMIFICATION // Streak ve gamification
+  SUBSCRIPTION // Abonelik dönüşümü
+  CONTENT_SCHEDULING // İçerik zamanlama
+  SLEEP // Uyku asistanı
+  INSTRUCTOR // Eğitmen içgörüleri
+  SUPPORT // Destek chatbot
+}
+
+// Agent Event Status
+enum AgentEventStatus {
+  PENDING // Bekliyor
+  SCHEDULED // Zamanlanmış
+  SENT // Gönderildi
+  DELIVERED // Teslim edildi
+  OPENED // Açıldı
+  CLICKED // Tıklandı
+  DISMISSED // Kapatıldı
+  FAILED // Başarısız
+}
+
+// Agent Message Channel
+enum AgentChannel {
+  PUSH // Push notification
+  EMAIL // Email
+  IN_APP // In-app message
+  SMS // SMS
+}
+
+// AI Agent Events - Her agent'ın kullanıcıya gönderdiği mesajlar
+model ai_agent_events {
+  id           String           @id @default(cuid())
+  userId       String
+  user         users            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  agentType    AgentType
+  channel      AgentChannel
+  eventType    String // trigger event: user_inactive, streak_risk, mood_low, etc.
+  title        String
+  body         String           @db.Text
+  action       Json? // { type: 'open_content', targetId: 'xxx' }
+  payload      Json? // Additional data
+  status       AgentEventStatus @default(PENDING)
+  priority     Int              @default(0) // 0=normal, 1=high, 2=urgent
+  scheduledAt  DateTime?
+  sentAt       DateTime?
+  deliveredAt  DateTime?
+  openedAt     DateTime?
+  clickedAt    DateTime?
+  dismissedAt  DateTime?
+  errorMessage String?
+  ruleId       String?
+  rule         ai_agent_rules?  @relation(fields: [ruleId], references: [id])
+  createdAt    DateTime         @default(now())
+
+  @@index([userId])
+  @@index([agentType])
+  @@index([status])
+  @@index([scheduledAt])
+  @@index([createdAt])
+}
+
+// AI Agent Rules - Agent kuralları (admin tarafından yapılandırılır)
+model ai_agent_rules {
+  id            String            @id @default(cuid())
+  name          String
+  description   String?
+  agentType     AgentType
+  trigger       Json // { event: 'user_inactive', days: 3 }
+  conditions    Json? // { subscription: 'FREE', streak: '>5' }
+  action        Json // { channel: 'push', templateId: 'xxx' }
+  priority      Int               @default(0)
+  cooldownHours Int               @default(24) // Aynı kullanıcıya tekrar gönderme süresi
+  maxPerDay     Int               @default(1) // Günlük max mesaj
+  isActive      Boolean           @default(true)
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+  events        ai_agent_events[]
+
+  @@index([agentType])
+  @@index([isActive])
+}
+
+// AI Agent Message Templates - Mesaj şablonları
+model ai_agent_templates {
+  id            String       @id @default(cuid())
+  name          String
+  agentType     AgentType
+  channel       AgentChannel
+  titleTemplate String // "Merhaba {{name}}! 🧘"
+  bodyTemplate  String       @db.Text // "{{streak}} günlük serini korumak için..."
+  variables     String[] // ["name", "streak", "category"]
+  language      String       @default("tr")
+  isActive      Boolean      @default(true)
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  @@index([agentType])
+  @@index([channel])
+  @@index([language])
+}
+
+// User Agent Preferences - Kullanıcı bildirim tercihleri
+model user_agent_preferences {
+  id                     String   @id @default(cuid())
+  userId                 String   @unique
+  user                   users    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  pushEnabled            Boolean  @default(true)
+  emailEnabled           Boolean  @default(true)
+  inAppEnabled           Boolean  @default(true)
+  smsEnabled             Boolean  @default(false)
+  quietHoursStart        String? // "22:00"
+  quietHoursEnd          String? // "08:00"
+  maxDailyPush           Int      @default(5)
+  maxDailyEmail          Int      @default(2)
+  preferredTime          String? // "07:30" - En aktif saat
+  timezone               String   @default("Europe/Istanbul")
+  // Agent bazlı tercihler
+  onboardingEnabled      Boolean  @default(true)
+  personalizationEnabled Boolean  @default(true)
+  retentionEnabled       Boolean  @default(true)
+  moodEnabled            Boolean  @default(true)
+  streakEnabled          Boolean  @default(true)
+  subscriptionEnabled    Boolean  @default(true)
+  sleepEnabled           Boolean  @default(true)
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+}
+
+// User Agent Analytics - Agent performans analizi
+model ai_agent_analytics {
+  id              String       @id @default(cuid())
+  date            DateTime     @db.Date
+  agentType       AgentType
+  channel         AgentChannel
+  totalSent       Int          @default(0)
+  totalDelivered  Int          @default(0)
+  totalOpened     Int          @default(0)
+  totalClicked    Int          @default(0)
+  totalDismissed  Int          @default(0)
+  totalFailed     Int          @default(0)
+  conversionCount Int          @default(0) // Hedef aksiyonu tamamlayanlar
+  metadata        Json?
+  createdAt       DateTime     @default(now())
+
+  @@unique([date, agentType, channel])
+  @@index([date])
+  @@index([agentType])
+}
+
+// User Engagement Score - Kullanıcı bağlılık skoru
+model user_engagement_scores {
+  id               String   @id @default(cuid())
+  userId           String   @unique
+  user             users    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  overallScore     Float    @default(0) // 0-100
+  activityScore    Float    @default(0) // Son aktivite bazlı
+  streakScore      Float    @default(0) // Streak bazlı
+  contentScore     Float    @default(0) // İçerik tüketimi bazlı
+  socialScore      Float    @default(0) // Sosyal etkileşim bazlı
+  purchaseScore    Float    @default(0) // Satın alma davranışı
+  churnRisk        Float    @default(0) // 0-100, yüksek = risk
+  lifetimeValue    Float    @default(0) // Tahmini LTV
+  lastCalculatedAt DateTime @default(now())
+  factors          Json? // Skor faktörleri detayı
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@index([overallScore])
+  @@index([churnRisk])
+}

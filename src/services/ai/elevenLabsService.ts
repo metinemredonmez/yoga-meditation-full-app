@@ -57,12 +57,12 @@ export const syncElevenLabsVoices = async () => {
   };
 
   for (const voice of voices) {
-    const existing = await prisma.elevenLabsVoice.findUnique({
+    const existing = await prisma.elevenlabs_voices.findUnique({
       where: { voiceId: voice.voice_id },
     });
 
     if (existing) {
-      await prisma.elevenLabsVoice.update({
+      await prisma.elevenlabs_voices.update({
         where: { voiceId: voice.voice_id },
         data: {
           name: voice.name,
@@ -74,7 +74,7 @@ export const syncElevenLabsVoices = async () => {
       });
       results.updated++;
     } else {
-      await prisma.elevenLabsVoice.create({
+      await prisma.elevenlabs_voices.create({
         data: {
           voiceId: voice.voice_id,
           name: voice.name,
@@ -93,14 +93,14 @@ export const syncElevenLabsVoices = async () => {
 
 // Get voice from database
 export const getVoice = async (voiceId: string) => {
-  return prisma.elevenLabsVoice.findUnique({
+  return prisma.elevenlabs_voices.findUnique({
     where: { voiceId },
   });
 };
 
 // Get all active voices
 export const getActiveVoices = async (yogaCategory?: string) => {
-  return prisma.elevenLabsVoice.findMany({
+  return prisma.elevenlabs_voices.findMany({
     where: {
       isActive: true,
       ...(yogaCategory && { yogaCategory }),
@@ -242,7 +242,7 @@ export const createElevenLabsJob = async (data: {
   // Estimate cost (~$0.30 per 1000 characters for standard)
   const estimatedCost = (data.text.length / 1000) * 0.30;
 
-  return prisma.elevenLabsJob.create({
+  return prisma.elevenlabs_jobs.create({
     data: {
       voiceId: voice.id,
       text: data.text,
@@ -263,9 +263,9 @@ export const createElevenLabsJob = async (data: {
 
 // Process ElevenLabs job
 export const processElevenLabsJob = async (jobId: string) => {
-  const job = await prisma.elevenLabsJob.findUnique({
+  const job = await prisma.elevenlabs_jobs.findUnique({
     where: { id: jobId },
-    include: { voice: true },
+    include: { elevenlabs_voices: true },
   });
 
   if (!job) {
@@ -273,7 +273,7 @@ export const processElevenLabsJob = async (jobId: string) => {
   }
 
   // Update status to processing
-  await prisma.elevenLabsJob.update({
+  await prisma.elevenlabs_jobs.update({
     where: { id: jobId },
     data: {
       status: VoiceJobStatus.PROCESSING,
@@ -285,7 +285,7 @@ export const processElevenLabsJob = async (jobId: string) => {
     const result = await generateElevenLabsSpeechAndSave(
       job.text,
       {
-        voiceId: job.voice.voiceId,
+        voiceId: job.elevenlabs_voices.voiceId,
         modelId: job.modelId,
         voiceSettings: {
           stability: job.stability,
@@ -298,7 +298,7 @@ export const processElevenLabsJob = async (jobId: string) => {
     );
 
     // Update job with result
-    await prisma.elevenLabsJob.update({
+    await prisma.elevenlabs_jobs.update({
       where: { id: jobId },
       data: {
         status: VoiceJobStatus.COMPLETED,
@@ -312,7 +312,7 @@ export const processElevenLabsJob = async (jobId: string) => {
 
     return result;
   } catch (error) {
-    await prisma.elevenLabsJob.update({
+    await prisma.elevenlabs_jobs.update({
       where: { id: jobId },
       data: {
         status: VoiceJobStatus.FAILED,
@@ -327,9 +327,9 @@ export const processElevenLabsJob = async (jobId: string) => {
 
 // Get ElevenLabs job
 export const getElevenLabsJob = async (jobId: string) => {
-  return prisma.elevenLabsJob.findUnique({
+  return prisma.elevenlabs_jobs.findUnique({
     where: { id: jobId },
-    include: { voice: true },
+    include: { elevenlabs_voices: true },
   });
 };
 
@@ -338,12 +338,12 @@ export const getUserElevenLabsJobs = async (
   userId: string,
   status?: VoiceJobStatus
 ) => {
-  return prisma.elevenLabsJob.findMany({
+  return prisma.elevenlabs_jobs.findMany({
     where: {
       createdById: userId,
       ...(status && { status }),
     },
-    include: { voice: true },
+    include: { elevenlabs_voices: true },
     orderBy: { createdAt: 'desc' },
     take: 50,
   });
@@ -351,7 +351,7 @@ export const getUserElevenLabsJobs = async (
 
 // Process pending ElevenLabs jobs (cron job)
 export const processPendingElevenLabsJobs = async () => {
-  const pendingJobs = await prisma.elevenLabsJob.findMany({
+  const pendingJobs = await prisma.elevenlabs_jobs.findMany({
     where: { status: VoiceJobStatus.PENDING },
     take: 5, // Process 5 at a time
     orderBy: { createdAt: 'asc' },
@@ -384,7 +384,7 @@ export const getElevenLabsUsageStats = async (
   startDate: Date,
   endDate: Date
 ) => {
-  const jobs = await prisma.elevenLabsJob.findMany({
+  const jobs = await prisma.elevenlabs_jobs.findMany({
     where: {
       status: VoiceJobStatus.COMPLETED,
       completedAt: {
@@ -412,7 +412,7 @@ export const setVoiceYogaCategory = async (
   voiceId: string,
   yogaCategory: string
 ) => {
-  return prisma.elevenLabsVoice.update({
+  return prisma.elevenlabs_voices.update({
     where: { voiceId },
     data: { yogaCategory },
   });
@@ -423,7 +423,7 @@ export const getRecommendedVoice = async (
   yogaCategory: 'meditation' | 'instruction' | 'motivation'
 ) => {
   // First try to get a voice with matching category
-  let voice = await prisma.elevenLabsVoice.findFirst({
+  let voice = await prisma.elevenlabs_voices.findFirst({
     where: {
       isActive: true,
       yogaCategory,
@@ -432,7 +432,7 @@ export const getRecommendedVoice = async (
 
   // If no match, get default voice
   if (!voice) {
-    voice = await prisma.elevenLabsVoice.findFirst({
+    voice = await prisma.elevenlabs_voices.findFirst({
       where: {
         isActive: true,
         isDefault: true,
@@ -442,7 +442,7 @@ export const getRecommendedVoice = async (
 
   // If still no match, get any active voice
   if (!voice) {
-    voice = await prisma.elevenLabsVoice.findFirst({
+    voice = await prisma.elevenlabs_voices.findFirst({
       where: { isActive: true },
     });
   }

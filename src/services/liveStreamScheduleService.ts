@@ -48,7 +48,7 @@ export async function createSchedule(instructorId: string, data: CreateScheduleI
     throw new Error('Invalid start time format. Use HH:mm');
   }
 
-  const schedule = await prisma.liveStreamSchedule.create({
+  const schedule = await prisma.live_stream_schedules.create({
     data: {
       instructorId,
       title: data.title,
@@ -62,9 +62,9 @@ export async function createSchedule(instructorId: string, data: CreateScheduleI
       isActive: true,
     },
     include: {
-      instructor: {
+      instructor_profiles: {
         include: {
-          user: {
+          users: {
             select: { firstName: true, lastName: true },
           },
         },
@@ -75,7 +75,7 @@ export async function createSchedule(instructorId: string, data: CreateScheduleI
   // Calculate next stream date
   const nextStreamAt = calculateNextStreamDate(schedule);
   if (nextStreamAt) {
-    await prisma.liveStreamSchedule.update({
+    await prisma.live_stream_schedules.update({
       where: { id: schedule.id },
       data: { nextStreamAt },
     });
@@ -90,7 +90,7 @@ export async function updateSchedule(
   instructorId: string,
   data: UpdateScheduleInput,
 ) {
-  const schedule = await prisma.liveStreamSchedule.findFirst({
+  const schedule = await prisma.live_stream_schedules.findFirst({
     where: { id: scheduleId, instructorId },
   });
 
@@ -110,7 +110,7 @@ export async function updateSchedule(
     throw new Error('Invalid start time format. Use HH:mm');
   }
 
-  const updated = await prisma.liveStreamSchedule.update({
+  const updated = await prisma.live_stream_schedules.update({
     where: { id: scheduleId },
     data: {
       ...(data.title && { title: data.title }),
@@ -128,7 +128,7 @@ export async function updateSchedule(
   // Recalculate next stream date
   const nextStreamAt = calculateNextStreamDate(updated);
   if (nextStreamAt) {
-    await prisma.liveStreamSchedule.update({
+    await prisma.live_stream_schedules.update({
       where: { id: scheduleId },
       data: { nextStreamAt },
     });
@@ -139,7 +139,7 @@ export async function updateSchedule(
 }
 
 export async function deleteSchedule(scheduleId: string, instructorId: string) {
-  const schedule = await prisma.liveStreamSchedule.findFirst({
+  const schedule = await prisma.live_stream_schedules.findFirst({
     where: { id: scheduleId, instructorId },
   });
 
@@ -147,7 +147,7 @@ export async function deleteSchedule(scheduleId: string, instructorId: string) {
     throw new Error('Schedule not found or not authorized');
   }
 
-  await prisma.liveStreamSchedule.delete({
+  await prisma.live_stream_schedules.delete({
     where: { id: scheduleId },
   });
 
@@ -155,12 +155,12 @@ export async function deleteSchedule(scheduleId: string, instructorId: string) {
 }
 
 export async function getScheduleById(scheduleId: string) {
-  return prisma.liveStreamSchedule.findUnique({
+  return prisma.live_stream_schedules.findUnique({
     where: { id: scheduleId },
     include: {
-      instructor: {
+      instructor_profiles: {
         include: {
-          user: {
+          users: {
             select: { firstName: true, lastName: true },
           },
         },
@@ -170,19 +170,19 @@ export async function getScheduleById(scheduleId: string) {
 }
 
 export async function getInstructorSchedules(instructorId: string) {
-  return prisma.liveStreamSchedule.findMany({
+  return prisma.live_stream_schedules.findMany({
     where: { instructorId },
     orderBy: { createdAt: 'desc' },
   });
 }
 
 export async function getActiveSchedules() {
-  return prisma.liveStreamSchedule.findMany({
+  return prisma.live_stream_schedules.findMany({
     where: { isActive: true },
     include: {
-      instructor: {
+      instructor_profiles: {
         include: {
-          user: {
+          users: {
             select: { firstName: true, lastName: true },
           },
         },
@@ -197,9 +197,9 @@ export async function getActiveSchedules() {
 // ============================================
 
 export async function generateUpcomingStreams(scheduleId: string, count: number = 4) {
-  const schedule = await prisma.liveStreamSchedule.findUnique({
+  const schedule = await prisma.live_stream_schedules.findUnique({
     where: { id: scheduleId },
-    include: { instructor: true },
+    include: { instructor_profiles: true },
   });
 
   if (!schedule) {
@@ -215,7 +215,7 @@ export async function generateUpcomingStreams(scheduleId: string, count: number 
 
   for (const date of dates) {
     // Check if stream already exists for this date
-    const existingStream = await prisma.liveStream.findFirst({
+    const existingStream = await prisma.live_streams.findFirst({
       where: {
         instructorId: schedule.instructorId,
         scheduledStartAt: date.start,
@@ -244,7 +244,7 @@ export async function generateUpcomingStreams(scheduleId: string, count: number 
   // Update next stream date
   const nextStreamAt = calculateNextStreamDate(schedule);
   if (nextStreamAt) {
-    await prisma.liveStreamSchedule.update({
+    await prisma.live_stream_schedules.update({
       where: { id: scheduleId },
       data: { nextStreamAt },
     });
@@ -255,7 +255,7 @@ export async function generateUpcomingStreams(scheduleId: string, count: number 
 }
 
 export async function processRecurringStreams() {
-  const schedules = await prisma.liveStreamSchedule.findMany({
+  const schedules = await prisma.live_stream_schedules.findMany({
     where: {
       isActive: true,
       nextStreamAt: {

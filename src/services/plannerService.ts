@@ -16,14 +16,14 @@ function getWeekRange(weekStart?: string) {
 }
 
 function formatPlannerEntry(
-  entry: Prisma.PlannerEntryGetPayload<{
+  entry: Prisma.planner_entriesGetPayload<{
     include: {
-      session: {
+      program_sessions: {
         select: {
           id: true;
           title: true;
           durationMin: true;
-          program: {
+          programs: {
             select: {
               id: true;
               title: true;
@@ -31,7 +31,7 @@ function formatPlannerEntry(
           };
         };
       };
-      class: {
+      classes: {
         select: {
           id: true;
           title: true;
@@ -40,26 +40,26 @@ function formatPlannerEntry(
         };
       };
     };
-  }> & { session?: unknown; class?: unknown },
+  }> & { program_sessions?: unknown; classes?: unknown },
 ) {
   return {
     id: entry.id,
     itemType: entry.itemType,
     plannedAt: entry.plannedAt,
-    programSession: entry.session
+    programSession: entry.program_sessions
       ? {
-          id: entry.session.id,
-          title: entry.session.title,
-          durationMin: entry.session.durationMin,
-          program: entry.session.program,
+          id: entry.program_sessions.id,
+          title: entry.program_sessions.title,
+          durationMin: entry.program_sessions.durationMin,
+          program: entry.program_sessions.programs,
         }
       : undefined,
-    class: entry.class
+    class: entry.classes
       ? {
-          id: entry.class.id,
-          title: entry.class.title,
-          description: entry.class.description,
-          schedule: entry.class.schedule,
+          id: entry.classes.id,
+          title: entry.classes.title,
+          description: entry.classes.description,
+          schedule: entry.classes.schedule,
         }
       : undefined,
   };
@@ -68,7 +68,7 @@ function formatPlannerEntry(
 export async function getPlannerEntries(userId: string, query: PlannerQueryInput) {
   const { start, end } = getWeekRange(query.weekStart);
 
-  const entries = await prisma.plannerEntry.findMany({
+  const entries = await prisma.planner_entries.findMany({
     where: {
       userId,
       plannedAt: {
@@ -77,12 +77,12 @@ export async function getPlannerEntries(userId: string, query: PlannerQueryInput
       },
     },
     include: {
-      session: {
+      program_sessions: {
         select: {
           id: true,
           title: true,
           durationMin: true,
-          program: {
+          programs: {
             select: {
               id: true,
               title: true,
@@ -90,7 +90,7 @@ export async function getPlannerEntries(userId: string, query: PlannerQueryInput
           },
         },
       },
-      class: {
+      classes: {
         select: {
           id: true,
           title: true,
@@ -111,7 +111,7 @@ export async function createPlannerEntry(userId: string, input: CreatePlannerEnt
   const plannedAt = new Date(input.plannedAt);
 
   if (input.itemType === 'PROGRAM_SESSION') {
-    const session = await prisma.programSession.findUnique({
+    const session = await prisma.program_sessions.findUnique({
       where: { id: input.itemId },
       select: { id: true },
     });
@@ -122,7 +122,7 @@ export async function createPlannerEntry(userId: string, input: CreatePlannerEnt
       throw error;
     }
 
-    const entry = await prisma.plannerEntry.create({
+    const entry = await prisma.planner_entries.create({
       data: {
         userId,
         itemType: 'PROGRAM_SESSION',
@@ -131,12 +131,12 @@ export async function createPlannerEntry(userId: string, input: CreatePlannerEnt
         plannedAt,
       },
       include: {
-        session: {
+        program_sessions: {
           select: {
             id: true,
             title: true,
             durationMin: true,
-            program: {
+            programs: {
               select: {
                 id: true,
                 title: true,
@@ -144,14 +144,14 @@ export async function createPlannerEntry(userId: string, input: CreatePlannerEnt
             },
           },
         },
-        class: false,
+        classes: false,
       },
     });
 
-    return formatPlannerEntry({ ...entry, class: null });
+    return formatPlannerEntry({ ...entry, classes: null });
   }
 
-  const yogaClass = await prisma.class.findUnique({
+  const yogaClass = await prisma.classes.findUnique({
     where: { id: input.itemId },
     select: { id: true },
   });
@@ -162,7 +162,7 @@ export async function createPlannerEntry(userId: string, input: CreatePlannerEnt
     throw error;
   }
 
-  const entry = await prisma.plannerEntry.create({
+  const entry = await prisma.planner_entries.create({
     data: {
       userId,
       itemType: 'CLASS',
@@ -171,8 +171,8 @@ export async function createPlannerEntry(userId: string, input: CreatePlannerEnt
       plannedAt,
     },
     include: {
-      session: false,
-      class: {
+      program_sessions: false,
+      classes: {
         select: {
           id: true,
           title: true,
@@ -183,11 +183,11 @@ export async function createPlannerEntry(userId: string, input: CreatePlannerEnt
     },
   });
 
-  return formatPlannerEntry({ ...entry, session: null });
+  return formatPlannerEntry({ ...entry, program_sessions: null });
 }
 
 export async function deletePlannerEntry(userId: string, entryId: string) {
-  const entry = await prisma.plannerEntry.findUnique({
+  const entry = await prisma.planner_entries.findUnique({
     where: { id: entryId },
     select: { userId: true },
   });
@@ -204,5 +204,5 @@ export async function deletePlannerEntry(userId: string, entryId: string) {
     throw error;
   }
 
-  await prisma.plannerEntry.delete({ where: { id: entryId } });
+  await prisma.planner_entries.delete({ where: { id: entryId } });
 }

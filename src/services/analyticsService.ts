@@ -46,7 +46,7 @@ export interface TierBreakdown {
  * Calculate Monthly Recurring Revenue (MRR)
  */
 export async function calculateMRR(): Promise<number> {
-  const activeSubscriptions = await prisma.subscription.findMany({
+  const activeSubscriptions = await prisma.subscriptions.findMany({
     where: {
       status: {
         in: [SubscriptionStatus.ACTIVE, SubscriptionStatus.TRIALING],
@@ -86,7 +86,7 @@ export async function calculateChurnRate(
   endDate: Date
 ): Promise<{ rate: number; churned: number; startingCount: number }> {
   // Count subscriptions at the start of the period
-  const startingSubscriptions = await prisma.subscription.count({
+  const startingSubscriptions = await prisma.subscriptions.count({
     where: {
       createdAt: { lt: startDate },
       OR: [
@@ -99,7 +99,7 @@ export async function calculateChurnRate(
   });
 
   // Count churned subscriptions during the period
-  const churnedSubscriptions = await prisma.subscription.count({
+  const churnedSubscriptions = await prisma.subscriptions.count({
     where: {
       cancelledAt: {
         gte: startDate,
@@ -125,7 +125,7 @@ export async function calculateChurnRate(
  */
 export async function calculateLTV(): Promise<number> {
   // Get all completed payments
-  const payments = await prisma.payment.aggregate({
+  const payments = await prisma.payments.aggregate({
     where: {
       status: 'COMPLETED',
     },
@@ -136,7 +136,7 @@ export async function calculateLTV(): Promise<number> {
   });
 
   // Get total unique paying users
-  const uniquePayingUsers = await prisma.payment.groupBy({
+  const uniquePayingUsers = await prisma.payments.groupBy({
     by: ['userId'],
     where: {
       status: 'COMPLETED',
@@ -156,7 +156,7 @@ export async function calculateLTV(): Promise<number> {
  * Calculate average subscription length in days
  */
 export async function calculateAvgSubscriptionLength(): Promise<number> {
-  const subscriptions = await prisma.subscription.findMany({
+  const subscriptions = await prisma.subscriptions.findMany({
     where: {
       cancelledAt: { not: null },
     },
@@ -185,7 +185,7 @@ export async function calculateAvgSubscriptionLength(): Promise<number> {
  * Get revenue by provider
  */
 export async function getRevenueByProvider(): Promise<ProviderBreakdown[]> {
-  const result = await prisma.payment.groupBy({
+  const result = await prisma.payments.groupBy({
     by: ['provider'],
     where: {
       status: 'COMPLETED',
@@ -210,7 +210,7 @@ export async function getRevenueByProvider(): Promise<ProviderBreakdown[]> {
  * Get subscriptions by tier
  */
 export async function getSubscriptionsByTier(): Promise<TierBreakdown[]> {
-  const subscriptions = await prisma.subscription.findMany({
+  const subscriptions = await prisma.subscriptions.findMany({
     where: {
       status: {
         in: [SubscriptionStatus.ACTIVE, SubscriptionStatus.TRIALING],
@@ -223,8 +223,10 @@ export async function getSubscriptionsByTier(): Promise<TierBreakdown[]> {
 
   const tierCounts: Record<SubscriptionTier, { count: number; revenue: number }> = {
     FREE: { count: 0, revenue: 0 },
-    BASIC: { count: 0, revenue: 0 },
+    MEDITATION: { count: 0, revenue: 0 },
+    YOGA: { count: 0, revenue: 0 },
     PREMIUM: { count: 0, revenue: 0 },
+    FAMILY: { count: 0, revenue: 0 },
     ENTERPRISE: { count: 0, revenue: 0 },
   };
 
@@ -256,7 +258,7 @@ export async function getRevenueOverTime(
   endDate: Date,
   groupBy: 'day' | 'week' | 'month' = 'month'
 ): Promise<RevenueByPeriod[]> {
-  const payments = await prisma.payment.findMany({
+  const payments = await prisma.payments.findMany({
     where: {
       status: 'COMPLETED',
       paidAt: {
@@ -274,7 +276,7 @@ export async function getRevenueOverTime(
     },
   });
 
-  const newSubs = await prisma.subscription.findMany({
+  const newSubs = await prisma.subscriptions.findMany({
     where: {
       createdAt: {
         gte: startDate,
@@ -286,7 +288,7 @@ export async function getRevenueOverTime(
     },
   });
 
-  const churnedSubs = await prisma.subscription.findMany({
+  const churnedSubs = await prisma.subscriptions.findMany({
     where: {
       cancelledAt: {
         gte: startDate,
@@ -377,24 +379,24 @@ export async function getUserMetrics() {
 
   const [totalUsers, newUsersToday, newUsersThisWeek, newUsersThisMonth, activeUsersToday] =
     await Promise.all([
-      prisma.user.count(),
-      prisma.user.count({
+      prisma.users.count(),
+      prisma.users.count({
         where: {
           createdAt: { gte: today },
         },
       }),
-      prisma.user.count({
+      prisma.users.count({
         where: {
           createdAt: { gte: thisWeek },
         },
       }),
-      prisma.user.count({
+      prisma.users.count({
         where: {
           createdAt: { gte: thisMonth },
         },
       }),
       // Active users = users who have video progress today
-      prisma.videoProgress.groupBy({
+      prisma.video_progress.groupBy({
         by: ['userId'],
         where: {
           lastWatchedAt: { gte: today },
@@ -427,23 +429,23 @@ export async function getSubscriptionMetrics() {
     newSubscriptionsThisMonth,
     cancelledThisMonth,
   ] = await Promise.all([
-    prisma.subscription.count(),
-    prisma.subscription.count({
+    prisma.subscriptions.count(),
+    prisma.subscriptions.count({
       where: {
         status: SubscriptionStatus.ACTIVE,
       },
     }),
-    prisma.subscription.count({
+    prisma.subscriptions.count({
       where: {
         status: SubscriptionStatus.TRIALING,
       },
     }),
-    prisma.subscription.count({
+    prisma.subscriptions.count({
       where: {
         createdAt: { gte: thisMonth },
       },
     }),
-    prisma.subscription.count({
+    prisma.subscriptions.count({
       where: {
         cancelledAt: { gte: thisMonth },
         status: {
@@ -487,7 +489,7 @@ export async function recordRevenue(data: {
     mrrContribution = data.amount / 12;
   }
 
-  const record = await prisma.revenueRecord.create({
+  const record = await prisma.revenue_records.create({
     data: {
       userId: data.userId,
       subscriptionId: data.subscriptionId,
@@ -521,7 +523,7 @@ export async function getRevenueRecords(filters: {
   page?: number;
   limit?: number;
 }) {
-  const where: Prisma.RevenueRecordWhereInput = {};
+  const where: Prisma.revenue_recordsWhereInput = {};
 
   if (filters.startDate || filters.endDate) {
     where.recordedAt = {};
@@ -547,13 +549,13 @@ export async function getRevenueRecords(filters: {
   const skip = (page - 1) * limit;
 
   const [records, total] = await Promise.all([
-    prisma.revenueRecord.findMany({
+    prisma.revenue_records.findMany({
       where,
       orderBy: { recordedAt: 'desc' },
       skip,
       take: limit,
     }),
-    prisma.revenueRecord.count({ where }),
+    prisma.revenue_records.count({ where }),
   ]);
 
   return {
@@ -607,7 +609,7 @@ export async function createDailySnapshot(date?: Date) {
   const todayEnd = new Date(snapshotDate);
   todayEnd.setDate(todayEnd.getDate() + 1);
 
-  const todayRevenue = await prisma.payment.aggregate({
+  const todayRevenue = await prisma.payments.aggregate({
     where: {
       status: 'COMPLETED',
       paidAt: {
@@ -618,7 +620,7 @@ export async function createDailySnapshot(date?: Date) {
     _sum: { amount: true },
   });
 
-  const refundedAmount = await prisma.refund.aggregate({
+  const refundedAmount = await prisma.refunds.aggregate({
     where: {
       status: 'SUCCEEDED',
       createdAt: {
@@ -630,7 +632,7 @@ export async function createDailySnapshot(date?: Date) {
   });
 
   // Calculate total revenue
-  const totalRevenue = await prisma.payment.aggregate({
+  const totalRevenue = await prisma.payments.aggregate({
     where: {
       status: 'COMPLETED',
     },
@@ -649,7 +651,7 @@ export async function createDailySnapshot(date?: Date) {
   }
 
   // Provider subscription counts
-  const subsByProvider = await prisma.subscription.groupBy({
+  const subsByProvider = await prisma.subscriptions.groupBy({
     by: ['provider'],
     where: {
       status: {
@@ -665,7 +667,7 @@ export async function createDailySnapshot(date?: Date) {
   }
 
   // Upsert snapshot
-  const snapshot = await prisma.analyticsSnapshot.upsert({
+  const snapshot = await prisma.analytics_snapshots.upsert({
     where: { date: snapshotDate },
     update: {
       totalUsers: userMetrics.totalUsers,
@@ -730,7 +732,7 @@ export async function createDailySnapshot(date?: Date) {
  * Get analytics snapshots over time
  */
 export async function getAnalyticsSnapshots(startDate: Date, endDate: Date) {
-  return prisma.analyticsSnapshot.findMany({
+  return prisma.analytics_snapshots.findMany({
     where: {
       date: {
         gte: startDate,
@@ -745,7 +747,7 @@ export async function getAnalyticsSnapshots(startDate: Date, endDate: Date) {
  * Get the latest analytics snapshot
  */
 export async function getLatestSnapshot() {
-  return prisma.analyticsSnapshot.findFirst({
+  return prisma.analytics_snapshots.findFirst({
     orderBy: { date: 'desc' },
   });
 }

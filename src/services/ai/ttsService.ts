@@ -175,7 +175,7 @@ export const createVoiceOverJob = async (data: {
 }) => {
   const estimatedCost = estimateCost(data.text);
 
-  return prisma.voiceOverJob.create({
+  return prisma.voice_over_jobs.create({
     data: {
       text: data.text,
       languageCode: data.languageCode || 'en',
@@ -194,7 +194,7 @@ export const createVoiceOverJob = async (data: {
 
 // Process voice over job
 export const processVoiceOverJob = async (jobId: string) => {
-  const job = await prisma.voiceOverJob.findUnique({
+  const job = await prisma.voice_over_jobs.findUnique({
     where: { id: jobId },
   });
 
@@ -203,7 +203,7 @@ export const processVoiceOverJob = async (jobId: string) => {
   }
 
   // Update status to processing
-  await prisma.voiceOverJob.update({
+  await prisma.voice_over_jobs.update({
     where: { id: jobId },
     data: {
       status: VoiceJobStatus.PROCESSING,
@@ -222,7 +222,7 @@ export const processVoiceOverJob = async (jobId: string) => {
     );
 
     // Update job with result
-    await prisma.voiceOverJob.update({
+    await prisma.voice_over_jobs.update({
       where: { id: jobId },
       data: {
         status: VoiceJobStatus.COMPLETED,
@@ -236,7 +236,7 @@ export const processVoiceOverJob = async (jobId: string) => {
 
     return result;
   } catch (error) {
-    await prisma.voiceOverJob.update({
+    await prisma.voice_over_jobs.update({
       where: { id: jobId },
       data: {
         status: VoiceJobStatus.FAILED,
@@ -251,7 +251,7 @@ export const processVoiceOverJob = async (jobId: string) => {
 
 // Get voice over job
 export const getVoiceOverJob = async (jobId: string) => {
-  return prisma.voiceOverJob.findUnique({
+  return prisma.voice_over_jobs.findUnique({
     where: { id: jobId },
   });
 };
@@ -261,7 +261,7 @@ export const getUserVoiceOverJobs = async (
   userId: string,
   status?: VoiceJobStatus
 ) => {
-  return prisma.voiceOverJob.findMany({
+  return prisma.voice_over_jobs.findMany({
     where: {
       createdById: userId,
       ...(status && { status }),
@@ -273,7 +273,7 @@ export const getUserVoiceOverJobs = async (
 
 // Process pending voice over jobs (cron job)
 export const processPendingVoiceOverJobs = async () => {
-  const pendingJobs = await prisma.voiceOverJob.findMany({
+  const pendingJobs = await prisma.voice_over_jobs.findMany({
     where: { status: VoiceJobStatus.PENDING },
     take: 10, // Process 10 at a time
     orderBy: { createdAt: 'asc' },

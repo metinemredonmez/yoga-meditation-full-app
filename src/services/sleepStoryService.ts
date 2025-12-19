@@ -142,15 +142,13 @@ export async function startStory(userId: string, storyId: string) {
 
 export async function updateProgress(userId: string, storyId: string, input: UpdateProgressInput) {
   const { currentTime, duration } = input;
-  const percentage = (currentTime / duration) * 100;
-  const completed = percentage >= 95;
+  const completed = (currentTime / duration) * 100 >= 95;
 
   return prisma.sleep_story_progress.upsert({
     where: { storyId_userId: { storyId, userId } },
     update: {
       currentTime,
       duration,
-      percentage,
       completed,
       completedAt: completed ? new Date() : undefined,
       lastPlayedAt: new Date(),
@@ -160,7 +158,6 @@ export async function updateProgress(userId: string, storyId: string, input: Upd
       userId,
       currentTime,
       duration,
-      percentage,
       completed,
       completedAt: completed ? new Date() : undefined,
     },
@@ -180,7 +177,6 @@ export async function completeStory(userId: string, storyId: string) {
     where: { storyId_userId: { storyId, userId } },
     update: {
       currentTime: story.duration,
-      percentage: 100,
       completed: true,
       completedAt: new Date(),
       lastPlayedAt: new Date(),
@@ -190,7 +186,6 @@ export async function completeStory(userId: string, storyId: string) {
       userId,
       currentTime: story.duration,
       duration: story.duration,
-      percentage: 100,
       completed: true,
       completedAt: new Date(),
     },
@@ -273,7 +268,6 @@ export async function getListeningHistory(userId: string, page: number = 1, limi
       progress: {
         currentTime: p.currentTime,
         duration: p.duration,
-        percentage: p.percentage,
         completed: p.completed,
         lastPlayedAt: p.lastPlayedAt,
       },
@@ -287,7 +281,7 @@ export async function getContinueWatching(userId: string, limit: number = 5) {
     where: {
       userId,
       completed: false,
-      percentage: { gt: 0 },
+      currentTime: { gt: 0 },
     },
     take: limit,
     orderBy: { lastPlayedAt: 'desc' },
@@ -303,7 +297,6 @@ export async function getContinueWatching(userId: string, limit: number = 5) {
     progress: {
       currentTime: p.currentTime,
       duration: p.duration,
-      percentage: p.percentage,
       lastPlayedAt: p.lastPlayedAt,
     },
   }));
@@ -376,9 +369,14 @@ export async function createSleepStory(input: CreateSleepStoryInput) {
 }
 
 export async function updateSleepStory(id: string, input: UpdateSleepStoryInput) {
+  const updateData: any = { ...input };
+  if (input.category) {
+    updateData.category = input.category as any;
+  }
+
   return prisma.sleep_stories.update({
     where: { id },
-    data: input,
+    data: updateData,
     include: { backgroundSound: true },
   });
 }

@@ -196,7 +196,7 @@ const BLOCKED_IP_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
 export async function getBlockedIPs() {
   try {
-    const blockedIPs = await prisma.blockedIP.findMany({
+    const blockedIPs = await prisma.blocked_ips.findMany({
       where: { isActive: true },
       orderBy: { blockedAt: 'desc' },
     });
@@ -214,7 +214,7 @@ export async function blockIP(
   expiresAt?: Date | null
 ): Promise<boolean> {
   try {
-    await prisma.blockedIP.upsert({
+    await prisma.blocked_ips.upsert({
       where: { ipAddress },
       update: {
         reason,
@@ -252,7 +252,7 @@ export async function blockIP(
 
 export async function unblockIP(ipAddress: string): Promise<boolean> {
   try {
-    await prisma.blockedIP.updateMany({
+    await prisma.blocked_ips.updateMany({
       where: { ipAddress },
       data: { isActive: false },
     });
@@ -308,7 +308,7 @@ export async function isIPBlocked(ipAddress: string): Promise<boolean> {
 
   // Check database
   try {
-    const blockedIP = await prisma.blockedIP.findFirst({
+    const blockedIP = await prisma.blocked_ips.findFirst({
       where: {
         ipAddress,
         isActive: true,
@@ -361,7 +361,7 @@ export async function logRateLimitEvent(
   }
 
   try {
-    await prisma.rateLimitLog.create({
+    await prisma.rate_limit_logs.create({
       data: {
         identifier,
         endpoint,
@@ -394,15 +394,15 @@ export async function getRateLimitStats(
     };
 
     const [totalBlocked, byEndpoint, byIdentifier] = await Promise.all([
-      prisma.rateLimitLog.count({ where }),
-      prisma.rateLimitLog.groupBy({
+      prisma.rate_limit_logs.count({ where }),
+      prisma.rate_limit_logs.groupBy({
         by: ['endpoint'],
         where,
         _count: { endpoint: true },
         orderBy: { _count: { endpoint: 'desc' } },
         take: 10,
       }),
-      prisma.rateLimitLog.groupBy({
+      prisma.rate_limit_logs.groupBy({
         by: ['identifier'],
         where,
         _count: { identifier: true },

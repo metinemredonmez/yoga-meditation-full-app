@@ -29,7 +29,8 @@ export type IntegrationCategory =
   | 'payment'
   | 'storage'
   | 'streaming'
-  | 'monitoring';
+  | 'monitoring'
+  | 'ai';
 
 export type IntegrationProvider = string;
 
@@ -616,6 +617,102 @@ export const INTEGRATIONS: Record<
   },
 
   // ============================================
+  // AI Services
+  // ============================================
+  ai: {
+    openai: {
+      name: 'OpenAI',
+      icon: '🤖',
+      description: 'ChatGPT ve GPT modelleri ile AI özellikleri',
+      docsUrl: 'https://platform.openai.com/',
+      testable: true,
+      fields: [
+        {
+          key: 'api_key',
+          label: 'API Key',
+          type: 'password',
+          required: true,
+          placeholder: 'sk-xxx',
+          description: 'OpenAI API anahtarı',
+        },
+        {
+          key: 'organization_id',
+          label: 'Organization ID (Optional)',
+          type: 'text',
+          required: false,
+          placeholder: 'org-xxx',
+          description: 'OpenAI organizasyon ID',
+        },
+        {
+          key: 'model',
+          label: 'Default Model',
+          type: 'text',
+          required: false,
+          placeholder: 'gpt-4o-mini',
+          description: 'Varsayılan GPT modeli',
+        },
+      ],
+    },
+    elevenlabs: {
+      name: 'ElevenLabs',
+      icon: '🎙️',
+      description: 'AI ile ses sentezi (Text-to-Speech)',
+      docsUrl: 'https://elevenlabs.io/',
+      testable: true,
+      fields: [
+        {
+          key: 'api_key',
+          label: 'API Key',
+          type: 'password',
+          required: true,
+          description: 'ElevenLabs API anahtarı',
+        },
+        {
+          key: 'voice_id',
+          label: 'Default Voice ID',
+          type: 'text',
+          required: false,
+          placeholder: '21m00Tcm4TlvDq8ikWAM',
+          description: 'Varsayılan ses ID',
+        },
+        {
+          key: 'model_id',
+          label: 'Model ID',
+          type: 'text',
+          required: false,
+          placeholder: 'eleven_multilingual_v2',
+          description: 'TTS model ID',
+        },
+      ],
+    },
+    anthropic: {
+      name: 'Anthropic (Claude)',
+      icon: '🧠',
+      description: 'Claude AI modelleri',
+      docsUrl: 'https://console.anthropic.com/',
+      testable: true,
+      fields: [
+        {
+          key: 'api_key',
+          label: 'API Key',
+          type: 'password',
+          required: true,
+          placeholder: 'sk-ant-xxx',
+          description: 'Anthropic API anahtarı',
+        },
+        {
+          key: 'model',
+          label: 'Default Model',
+          type: 'text',
+          required: false,
+          placeholder: 'claude-3-5-sonnet-20241022',
+          description: 'Varsayılan Claude modeli',
+        },
+      ],
+    },
+  },
+
+  // ============================================
   // Monitoring
   // ============================================
   monitoring: {
@@ -697,6 +794,7 @@ export const CATEGORY_NAMES: Record<IntegrationCategory, string> = {
   storage: 'Dosya Depolama',
   streaming: 'Canlı Yayın',
   monitoring: 'İzleme & Log',
+  ai: 'Yapay Zeka',
 };
 
 /**
@@ -711,4 +809,5 @@ export const CATEGORY_ICONS: Record<IntegrationCategory, string> = {
   storage: 'cloud',
   streaming: 'video',
   monitoring: 'activity',
+  ai: 'cpu',
 };

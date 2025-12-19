@@ -23,7 +23,7 @@ export async function createBooking(req: Request, res: Response) {
 
     const payload = createBookingSchema.parse(req.body);
 
-    const yogaClass = await prisma.class.findUnique({
+    const yogaClass = await prisma.classes.findUnique({
       where: { id: payload.classId },
       select: {
         id: true,
@@ -35,7 +35,7 @@ export async function createBooking(req: Request, res: Response) {
       return res.status(404).json({ error: 'Class not found' });
     }
 
-    const existingBooking = await prisma.booking.findFirst({
+    const existingBooking = await prisma.bookings.findFirst({
       where: {
         userId: req.user.userId,
         classId: payload.classId,
@@ -46,14 +46,14 @@ export async function createBooking(req: Request, res: Response) {
       return res.status(409).json({ error: 'You already booked this class' });
     }
 
-    const booking = await prisma.booking.create({
+    const booking = await prisma.bookings.create({
       data: {
         userId: req.user.userId,
         classId: payload.classId,
         status: 'PENDING',
       },
       include: {
-        class: {
+        classes: {
           select: {
             id: true,
             title: true,
@@ -63,7 +63,7 @@ export async function createBooking(req: Request, res: Response) {
       },
     });
 
-    await prisma.auditLog.create({
+    await prisma.audit_logs.create({
       data: {
         userId: req.user.userId,
         actorRole: req.user.role,
@@ -95,16 +95,16 @@ export async function getMyBookings(req: Request, res: Response) {
       return res.status(401).json({ error: 'Authentication required' });
     }
 
-    const bookings = await prisma.booking.findMany({
+    const bookings = await prisma.bookings.findMany({
       where: { userId: req.user.userId },
       orderBy: { createdAt: 'desc' },
       include: {
-        class: {
+        classes: {
           select: {
             id: true,
             title: true,
             schedule: true,
-            instructor: {
+            users: {
               select: {
                 id: true,
                 firstName: true,
@@ -113,7 +113,7 @@ export async function getMyBookings(req: Request, res: Response) {
             },
           },
         },
-        payment: {
+        payments: {
           select: {
             id: true,
             amount: true,
@@ -140,7 +140,7 @@ export async function cancelBooking(req: Request, res: Response) {
       return res.status(401).json({ error: 'Authentication required' });
     }
 
-    const booking = await prisma.booking.findUnique({
+    const booking = await prisma.bookings.findUnique({
       where: { id },
     });
 
@@ -152,14 +152,14 @@ export async function cancelBooking(req: Request, res: Response) {
       return res.status(403).json({ error: 'Insufficient permissions' });
     }
 
-    const updatedBooking = await prisma.booking.update({
+    const updatedBooking = await prisma.bookings.update({
       where: { id },
       data: {
         status: 'CANCELLED',
       },
     });
 
-    await prisma.auditLog.create({
+    await prisma.audit_logs.create({
       data: {
         userId: req.user.userId,
         actorRole: req.user.role,
@@ -193,7 +193,7 @@ export async function updateBooking(req: Request, res: Response) {
       return res.status(401).json({ error: 'Authentication required' });
     }
 
-    const booking = await prisma.booking.findUnique({ where: { id } });
+    const booking = await prisma.bookings.findUnique({ where: { id } });
 
     if (!booking) {
       return res.status(404).json({ error: 'Booking not found' });
@@ -206,14 +206,14 @@ export async function updateBooking(req: Request, res: Response) {
       return res.status(403).json({ error: 'Insufficient permissions' });
     }
 
-    const updatedBooking = await prisma.booking.update({
+    const updatedBooking = await prisma.bookings.update({
       where: { id },
       data: {
         status: payload.status ?? booking.status,
       },
     });
 
-    await prisma.auditLog.create({
+    await prisma.audit_logs.create({
       data: {
         userId: req.user.userId,
         actorRole: req.user.role,

@@ -15,14 +15,14 @@ export async function getFrames(filters?: { rarity?: TitleRarity; isActive?: boo
     where.rarity = filters.rarity;
   }
 
-  return prisma.avatarFrame.findMany({
+  return prisma.avatar_frames.findMany({
     where,
     orderBy: [{ rarity: 'desc' }, { name: 'asc' }],
   });
 }
 
 export async function getFrameById(id: string) {
-  return prisma.avatarFrame.findUnique({
+  return prisma.avatar_frames.findUnique({
     where: { id },
   });
 }
@@ -32,9 +32,9 @@ export async function getFrameById(id: string) {
 // ============================================
 
 export async function getUserFrames(userId: string) {
-  const userFrames = await prisma.userAvatarFrame.findMany({
+  const userFrames = await prisma.user_avatar_frames.findMany({
     where: { userId },
-    include: { frame: true },
+    include: { avatar_frames: true },
     orderBy: { earnedAt: 'desc' },
   });
 
@@ -43,17 +43,17 @@ export async function getUserFrames(userId: string) {
 
 export async function unlockFrame(userId: string, frameId: string) {
   // Check if already owned
-  const existing = await prisma.userAvatarFrame.findUnique({
-    where: { userId_frameId: { userId, frameId } },
+  const existing = await prisma.user_avatar_frames.findFirst({
+    where: { userId, frameId },
   });
 
   if (existing) {
     return { success: false, message: 'Frame already owned', userFrame: existing };
   }
 
-  const userFrame = await prisma.userAvatarFrame.create({
+  const userFrame = await prisma.user_avatar_frames.create({
     data: { userId, frameId },
-    include: { frame: true },
+    include: { avatar_frames: true },
   });
 
   logger.info({ userId, frameId }, 'Avatar frame unlocked');
@@ -63,8 +63,8 @@ export async function unlockFrame(userId: string, frameId: string) {
 
 export async function equipFrame(userId: string, frameId: string) {
   // Check if user owns the frame
-  const userFrame = await prisma.userAvatarFrame.findUnique({
-    where: { userId_frameId: { userId, frameId } },
+  const userFrame = await prisma.user_avatar_frames.findFirst({
+    where: { userId, frameId },
   });
 
   if (!userFrame) {
@@ -72,19 +72,19 @@ export async function equipFrame(userId: string, frameId: string) {
   }
 
   // Unequip current frame
-  await prisma.userAvatarFrame.updateMany({
+  await prisma.user_avatar_frames.updateMany({
     where: { userId, isEquipped: true },
     data: { isEquipped: false },
   });
 
   // Equip new frame
-  await prisma.userAvatarFrame.update({
+  await prisma.user_avatar_frames.update({
     where: { id: userFrame.id },
     data: { isEquipped: true },
   });
 
   // Update user's equipped frame ID
-  await prisma.user.update({
+  await prisma.users.update({
     where: { id: userId },
     data: { equippedFrameId: frameId },
   });
@@ -95,12 +95,12 @@ export async function equipFrame(userId: string, frameId: string) {
 }
 
 export async function unequipFrame(userId: string) {
-  await prisma.userAvatarFrame.updateMany({
+  await prisma.user_avatar_frames.updateMany({
     where: { userId, isEquipped: true },
     data: { isEquipped: false },
   });
 
-  await prisma.user.update({
+  await prisma.users.update({
     where: { id: userId },
     data: { equippedFrameId: null },
   });
@@ -109,12 +109,12 @@ export async function unequipFrame(userId: string) {
 }
 
 export async function getEquippedFrame(userId: string) {
-  const equippedFrame = await prisma.userAvatarFrame.findFirst({
+  const equippedFrame = await prisma.user_avatar_frames.findFirst({
     where: { userId, isEquipped: true },
-    include: { frame: true },
+    include: { avatar_frames: true },
   });
 
-  return equippedFrame?.frame || null;
+  return equippedFrame?.avatar_frames || null;
 }
 
 // ============================================
@@ -125,12 +125,12 @@ export async function checkFrameUnlocks(userId: string) {
   const newFrames: any[] = [];
 
   // Get all frames with unlock conditions
-  const frames = await prisma.avatarFrame.findMany({
+  const frames = await prisma.avatar_frames.findMany({
     where: { isActive: true },
   });
 
   // Get user's current frames
-  const userFrames = await prisma.userAvatarFrame.findMany({
+  const userFrames = await prisma.user_avatar_frames.findMany({
     where: { userId },
     select: { frameId: true },
   });
@@ -138,12 +138,12 @@ export async function checkFrameUnlocks(userId: string) {
 
   // Get user stats
   const [userLevel, achievements, user] = await Promise.all([
-    prisma.userLevel.findUnique({ where: { userId } }),
-    prisma.userAchievement.findMany({
+    prisma.user_levels.findUnique({ where: { userId } }),
+    prisma.user_achievements.findMany({
       where: { userId, isCompleted: true },
       select: { achievementId: true },
     }),
-    prisma.user.findUnique({
+    prisma.users.findUnique({
       where: { id: userId },
       select: { subscriptionTier: true },
     }),
@@ -209,7 +209,7 @@ export async function createFrame(data: {
   rarity: TitleRarity;
   isAnimated?: boolean;
 }) {
-  return prisma.avatarFrame.create({ data });
+  return prisma.avatar_frames.create({ data });
 }
 
 export async function updateFrame(
@@ -224,7 +224,7 @@ export async function updateFrame(
     isActive: boolean;
   }>,
 ) {
-  return prisma.avatarFrame.update({
+  return prisma.avatar_frames.update({
     where: { id },
     data,
   });
@@ -232,8 +232,8 @@ export async function updateFrame(
 
 export async function deleteFrame(id: string) {
   // Remove from all users first
-  await prisma.userAvatarFrame.deleteMany({ where: { frameId: id } });
-  return prisma.avatarFrame.delete({ where: { id } });
+  await prisma.user_avatar_frames.deleteMany({ where: { frameId: id } });
+  return prisma.avatar_frames.delete({ where: { id } });
 }
 
 export async function grantFrameToUser(userId: string, frameId: string) {
@@ -241,8 +241,8 @@ export async function grantFrameToUser(userId: string, frameId: string) {
 }
 
 export async function revokeFrameFromUser(userId: string, frameId: string) {
-  const userFrame = await prisma.userAvatarFrame.findUnique({
-    where: { userId_frameId: { userId, frameId } },
+  const userFrame = await prisma.user_avatar_frames.findFirst({
+    where: { userId, frameId },
   });
 
   if (!userFrame) {
@@ -251,13 +251,13 @@ export async function revokeFrameFromUser(userId: string, frameId: string) {
 
   // Unequip if equipped
   if (userFrame.isEquipped) {
-    await prisma.user.update({
+    await prisma.users.update({
       where: { id: userId },
       data: { equippedFrameId: null },
     });
   }
 
-  await prisma.userAvatarFrame.delete({ where: { id: userFrame.id } });
+  await prisma.user_avatar_frames.delete({ where: { id: userFrame.id } });
 
   return { success: true };
 }

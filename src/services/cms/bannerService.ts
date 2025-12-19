@@ -16,18 +16,18 @@ export interface BannerFilters {
 export async function getBanners(filters: BannerFilters) {
   const { position, isActive, page = 1, limit = 20 } = filters;
 
-  const where: Prisma.BannerWhereInput = {};
+  const where: Prisma.bannersWhereInput = {};
   if (position) where.position = position;
   if (isActive !== undefined) where.isActive = isActive;
 
   const [banners, total] = await Promise.all([
-    prisma.banner.findMany({
+    prisma.banners.findMany({
       where,
       skip: (page - 1) * limit,
       take: limit,
       orderBy: [{ sortOrder: 'asc' }, { createdAt: 'desc' }],
     }),
-    prisma.banner.count({ where }),
+    prisma.banners.count({ where }),
   ]);
 
   return {
@@ -37,7 +37,7 @@ export async function getBanners(filters: BannerFilters) {
 }
 
 export async function getBanner(bannerId: string) {
-  const banner = await prisma.banner.findUnique({
+  const banner = await prisma.banners.findUnique({
     where: { id: bannerId },
   });
 
@@ -64,7 +64,7 @@ export async function createBanner(
     targetAudience?: object;
   }
 ) {
-  return prisma.banner.create({
+  return prisma.banners.create({
     data: {
       name: data.name,
       title: data.title,
@@ -106,10 +106,10 @@ export async function updateBanner(
     targetAudience?: object;
   }
 ) {
-  const banner = await prisma.banner.findUnique({ where: { id: bannerId } });
+  const banner = await prisma.banners.findUnique({ where: { id: bannerId } });
   if (!banner) throw new HttpError(404, 'Banner not found');
 
-  return prisma.banner.update({
+  return prisma.banners.update({
     where: { id: bannerId },
     data: {
       name: data.name,
@@ -132,18 +132,18 @@ export async function updateBanner(
 }
 
 export async function deleteBanner(bannerId: string) {
-  const banner = await prisma.banner.findUnique({ where: { id: bannerId } });
+  const banner = await prisma.banners.findUnique({ where: { id: bannerId } });
   if (!banner) throw new HttpError(404, 'Banner not found');
 
-  await prisma.banner.delete({ where: { id: bannerId } });
+  await prisma.banners.delete({ where: { id: bannerId } });
   return { deleted: true };
 }
 
 export async function toggleBannerStatus(bannerId: string) {
-  const banner = await prisma.banner.findUnique({ where: { id: bannerId } });
+  const banner = await prisma.banners.findUnique({ where: { id: bannerId } });
   if (!banner) throw new HttpError(404, 'Banner not found');
 
-  return prisma.banner.update({
+  return prisma.banners.update({
     where: { id: bannerId },
     data: { isActive: !banner.isActive },
   });
@@ -151,7 +151,7 @@ export async function toggleBannerStatus(bannerId: string) {
 
 export async function reorderBanners(bannerIds: string[]) {
   const updates = bannerIds.map((id, index) =>
-    prisma.banner.update({
+    prisma.banners.update({
       where: { id },
       data: { sortOrder: index },
     })
@@ -168,7 +168,7 @@ export async function reorderBanners(bannerIds: string[]) {
 export async function getActiveBanners(position?: string) {
   const now = new Date();
 
-  const where: Prisma.BannerWhereInput = {
+  const where: Prisma.bannersWhereInput = {
     isActive: true,
     OR: [
       { startsAt: null, endsAt: null },
@@ -180,7 +180,7 @@ export async function getActiveBanners(position?: string) {
 
   if (position) where.position = position;
 
-  return prisma.banner.findMany({
+  return prisma.banners.findMany({
     where,
     orderBy: { sortOrder: 'asc' },
     select: {
@@ -201,14 +201,14 @@ export async function getActiveBanners(position?: string) {
 }
 
 export async function incrementBannerImpressions(bannerId: string) {
-  return prisma.banner.update({
+  return prisma.banners.update({
     where: { id: bannerId },
     data: { impressions: { increment: 1 } },
   });
 }
 
 export async function incrementBannerClicks(bannerId: string) {
-  return prisma.banner.update({
+  return prisma.banners.update({
     where: { id: bannerId },
     data: { clicks: { increment: 1 } },
   });

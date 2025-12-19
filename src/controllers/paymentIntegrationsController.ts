@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { z } from 'zod';
 import { prisma } from '../utils/database';
+import { Prisma } from '@prisma/client';
 import { logger } from '../utils/logger';
 import { encrypt, decrypt } from '../utils/encryption';
 
@@ -22,12 +23,12 @@ const updateIntegrationSchema = integrationSchema.partial().extend({
 // Get all payment integrations
 export async function getPaymentIntegrations(req: Request, res: Response) {
   try {
-    const settings = await prisma.systemSetting.findMany({
+    const settings = await prisma.system_settings.findMany({
       where: {
         key: {
           startsWith: PAYMENT_INTEGRATION_KEY,
         },
-        category: 'PAYMENT',
+        category: 'PAYMENTS',
       },
     });
 
@@ -57,7 +58,7 @@ export async function getPaymentIntegrations(req: Request, res: Response) {
           webhookSecret: null,
           sandboxMode: true,
           isActive: false,
-          lastUpdated: null,
+          lastUpdated: new Date(0),
         });
       }
     });
@@ -74,7 +75,7 @@ export async function getPaymentIntegration(req: Request, res: Response) {
   try {
     const { provider } = req.params;
 
-    const setting = await prisma.systemSetting.findUnique({
+    const setting = await prisma.system_settings.findUnique({
       where: {
         key: `${PAYMENT_INTEGRATION_KEY}${provider}`,
       },
@@ -131,19 +132,19 @@ export async function updatePaymentIntegration(req: Request, res: Response) {
       encryptedData.webhookSecret = encrypt(webhookSecret);
     }
 
-    const setting = await prisma.systemSetting.upsert({
+    const setting = await prisma.system_settings.upsert({
       where: {
         key: `${PAYMENT_INTEGRATION_KEY}${provider}`,
       },
       update: {
-        value: encryptedData,
+        value: encryptedData as Prisma.InputJsonValue,
         updatedById: req.user?.userId,
       },
       create: {
         key: `${PAYMENT_INTEGRATION_KEY}${provider}`,
-        value: encryptedData,
-        type: 'OBJECT',
-        category: 'PAYMENT',
+        value: encryptedData as Prisma.InputJsonValue,
+        type: 'JSON',
+        category: 'PAYMENTS',
         description: `${provider.charAt(0).toUpperCase() + provider.slice(1)} payment integration settings`,
         isPublic: false,
         updatedById: req.user?.userId,
@@ -151,7 +152,7 @@ export async function updatePaymentIntegration(req: Request, res: Response) {
     });
 
     // Audit log
-    await prisma.auditLog.create({
+    await prisma.audit_logs.create({
       data: {
         userId: req.user?.userId ?? null,
         actorRole: req.user?.role ?? null,
@@ -188,7 +189,7 @@ export async function togglePaymentIntegration(req: Request, res: Response) {
   try {
     const { provider } = req.params;
 
-    const setting = await prisma.systemSetting.findUnique({
+    const setting = await prisma.system_settings.findUnique({
       where: {
         key: `${PAYMENT_INTEGRATION_KEY}${provider}`,
       },
@@ -208,7 +209,7 @@ export async function togglePaymentIntegration(req: Request, res: Response) {
       });
     }
 
-    await prisma.systemSetting.update({
+    await prisma.system_settings.update({
       where: {
         key: `${PAYMENT_INTEGRATION_KEY}${provider}`,
       },
@@ -219,7 +220,7 @@ export async function togglePaymentIntegration(req: Request, res: Response) {
     });
 
     // Audit log
-    await prisma.auditLog.create({
+    await prisma.audit_logs.create({
       data: {
         userId: req.user?.userId ?? null,
         actorRole: req.user?.role ?? null,
@@ -244,7 +245,7 @@ export async function testPaymentIntegration(req: Request, res: Response) {
   try {
     const { provider } = req.params;
 
-    const setting = await prisma.systemSetting.findUnique({
+    const setting = await prisma.system_settings.findUnique({
       where: {
         key: `${PAYMENT_INTEGRATION_KEY}${provider}`,
       },

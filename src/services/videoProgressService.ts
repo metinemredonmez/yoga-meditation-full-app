@@ -41,7 +41,7 @@ export async function updateProgress({
   const percentage = duration > 0 ? Math.min((currentTime / duration) * 100, 100) : 0;
   const completed = percentage >= COMPLETION_THRESHOLD;
 
-  const progress = await prisma.videoProgress.upsert({
+  const progress = await prisma.video_progress.upsert({
     where: {
       userId_lessonId_lessonType: {
         userId,
@@ -98,7 +98,7 @@ export async function getProgress(
   lessonId: string,
   lessonType: LessonType,
 ): Promise<ProgressResult | null> {
-  const progress = await prisma.videoProgress.findUnique({
+  const progress = await prisma.video_progress.findUnique({
     where: {
       userId_lessonId_lessonType: {
         userId,
@@ -138,13 +138,13 @@ export async function getUserProgress(
   };
 
   const [items, total] = await Promise.all([
-    prisma.videoProgress.findMany({
+    prisma.video_progress.findMany({
       where,
       orderBy: { lastWatchedAt: 'desc' },
       skip,
       take: limit,
     }),
-    prisma.videoProgress.count({ where }),
+    prisma.video_progress.count({ where }),
   ]);
 
   return {
@@ -174,7 +174,7 @@ export async function getCompletedLessons(
     ...(lessonType && { lessonType }),
   };
 
-  const items = await prisma.videoProgress.findMany({
+  const items = await prisma.video_progress.findMany({
     where,
     orderBy: { lastWatchedAt: 'desc' },
   });
@@ -196,7 +196,7 @@ export async function markAsCompleted(
   lessonId: string,
   lessonType: LessonType,
 ): Promise<ProgressResult> {
-  const progress = await prisma.videoProgress.upsert({
+  const progress = await prisma.video_progress.upsert({
     where: {
       userId_lessonId_lessonType: {
         userId,
@@ -241,7 +241,7 @@ export async function resetProgress(
   lessonType: LessonType,
 ): Promise<boolean> {
   try {
-    await prisma.videoProgress.delete({
+    await prisma.video_progress.delete({
       where: {
         userId_lessonId_lessonType: {
           userId,
@@ -269,7 +269,7 @@ export async function getProgramProgress(
   sessions: ProgressResult[];
 }> {
   // Get all sessions for this program
-  const sessions = await prisma.programSession.findMany({
+  const sessions = await prisma.program_sessions.findMany({
     where: { programId },
     select: { id: true },
   });
@@ -277,7 +277,7 @@ export async function getProgramProgress(
   const sessionIds = sessions.map((s) => s.id);
 
   // Get progress for these sessions
-  const progressRecords = await prisma.videoProgress.findMany({
+  const progressRecords = await prisma.video_progress.findMany({
     where: {
       userId,
       lessonId: { in: sessionIds },

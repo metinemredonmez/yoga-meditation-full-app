@@ -3,7 +3,7 @@
  * Manages user notification preferences, quiet hours, and subscription tokens
  */
 
-import { NotificationType, NotificationPreference, Prisma } from '@prisma/client';
+import { NotificationType, notification_preferences, Prisma } from '@prisma/client';
 
 // Define NotificationChannel locally since it's not used by any Prisma model
 export type NotificationChannel = 'EMAIL' | 'SMS' | 'PUSH' | 'IN_APP';
@@ -14,7 +14,7 @@ import { config } from '../utils/config';
 import { isWithinQuietHours, isValidTimezone } from '../utils/quietHours';
 
 // Default preferences for new users
-const DEFAULT_PREFERENCES: Omit<NotificationPreference, 'id' | 'userId' | 'createdAt' | 'updatedAt'> = {
+const DEFAULT_PREFERENCES: Omit<notification_preferences, 'id' | 'userId' | 'createdAt' | 'updatedAt'> = {
   emailEnabled: true,
   smsEnabled: false,
   pushEnabled: true,
@@ -36,7 +36,7 @@ const DEFAULT_PREFERENCES: Omit<NotificationPreference, 'id' | 'userId' | 'creat
 };
 
 // Mapping from NotificationType to preference field
-const TYPE_TO_PREFERENCE_MAP: Record<NotificationType, keyof NotificationPreference> = {
+const TYPE_TO_PREFERENCE_MAP: Record<NotificationType, keyof notification_preferences> = {
   MARKETING: 'marketingEmails', // Also check marketingSms for SMS channel
   CHALLENGE_REMINDER: 'challengeReminders',
   CHALLENGE_UPDATE: 'challengeUpdates',
@@ -49,7 +49,7 @@ const TYPE_TO_PREFERENCE_MAP: Record<NotificationType, keyof NotificationPrefere
 };
 
 // Channel to preference field mapping
-const CHANNEL_TO_PREFERENCE_MAP: Record<NotificationChannel, keyof NotificationPreference> = {
+const CHANNEL_TO_PREFERENCE_MAP: Record<NotificationChannel, keyof notification_preferences> = {
   EMAIL: 'emailEnabled',
   SMS: 'smsEnabled',
   PUSH: 'pushEnabled',
@@ -89,13 +89,13 @@ export interface AvailableOption {
 /**
  * Get user's notification preferences (creates default if not exists)
  */
-export async function getPreferences(userId: string): Promise<NotificationPreference> {
-  let preferences = await prisma.notificationPreference.findUnique({
+export async function getPreferences(userId: string): Promise<notification_preferences> {
+  let preferences = await prisma.notification_preferences.findUnique({
     where: { userId },
   });
 
   if (!preferences) {
-    preferences = await prisma.notificationPreference.create({
+    preferences = await prisma.notification_preferences.create({
       data: {
         userId,
         ...DEFAULT_PREFERENCES,
@@ -113,7 +113,7 @@ export async function getPreferences(userId: string): Promise<NotificationPrefer
 export async function updatePreferences(
   userId: string,
   updates: PreferenceUpdateInput,
-): Promise<NotificationPreference> {
+): Promise<notification_preferences> {
   // Ensure preferences exist
   await getPreferences(userId);
 
@@ -137,9 +137,9 @@ export async function updatePreferences(
     }
   }
 
-  const preferences = await prisma.notificationPreference.update({
+  const preferences = await prisma.notification_preferences.update({
     where: { userId },
-    data: safeUpdates as Prisma.NotificationPreferenceUpdateInput,
+    data: safeUpdates as Prisma.notification_preferencesUpdateInput,
   });
 
   logger.info({ userId, updates: Object.keys(safeUpdates) }, 'Updated notification preferences');
@@ -150,10 +150,10 @@ export async function updatePreferences(
 /**
  * Reset preferences to defaults
  */
-export async function resetToDefaults(userId: string): Promise<NotificationPreference> {
+export async function resetToDefaults(userId: string): Promise<notification_preferences> {
   await getPreferences(userId);
 
-  const preferences = await prisma.notificationPreference.update({
+  const preferences = await prisma.notification_preferences.update({
     where: { userId },
     data: DEFAULT_PREFERENCES,
   });
@@ -245,7 +245,7 @@ export async function getEligibleUsers(
   const typeField = TYPE_TO_PREFERENCE_MAP[type];
 
   // Build query conditions
-  const where: Prisma.NotificationPreferenceWhereInput = {};
+  const where: Prisma.notification_preferencesWhereInput = {};
 
   // Set channel condition
   if (channelField === 'emailEnabled') where.emailEnabled = true;
@@ -279,7 +279,7 @@ export async function getEligibleUsers(
     where.userId = { in: userIds };
   }
 
-  const preferences = await prisma.notificationPreference.findMany({
+  const preferences = await prisma.notification_preferences.findMany({
     where,
     select: { userId: true, quietHoursEnabled: true, quietHoursStart: true, quietHoursEnd: true, timezone: true },
   });
@@ -329,7 +329,7 @@ export async function generateUnsubscribeToken(
     .update(token)
     .digest('hex');
 
-  await prisma.unsubscribeToken.create({
+  await prisma.unsubscribe_tokens.create({
     data: {
       userId,
       token: hashedToken,
@@ -355,9 +355,9 @@ export async function unsubscribeByToken(
     .update(token)
     .digest('hex');
 
-  const tokenRecord = await prisma.unsubscribeToken.findUnique({
+  const tokenRecord = await prisma.unsubscribe_tokens.findUnique({
     where: { token: hashedToken },
-    include: { user: true },
+    include: { users: true },
   });
 
   if (!tokenRecord) {
@@ -373,7 +373,7 @@ export async function unsubscribeByToken(
   }
 
   // Mark token as used
-  await prisma.unsubscribeToken.update({
+  await prisma.unsubscribe_tokens.update({
     where: { id: tokenRecord.id },
     data: { usedAt: new Date() },
   });
@@ -385,7 +385,7 @@ export async function unsubscribeByToken(
   await getPreferences(tokenRecord.userId);
 
   // Update preferences based on type
-  const updates: Prisma.NotificationPreferenceUpdateInput = {};
+  const updates: Prisma.notification_preferencesUpdateInput = {};
 
   if (effectiveType) {
     // Unsubscribe from specific type
@@ -425,7 +425,7 @@ export async function unsubscribeByToken(
     updates.marketingSms = false;
   }
 
-  await prisma.notificationPreference.update({
+  await prisma.notification_preferences.update({
     where: { userId: tokenRecord.userId },
     data: updates,
   });
@@ -454,7 +454,7 @@ export async function resubscribe(
     return { success: true, message: 'Security alerts are always enabled' };
   }
 
-  const updates: Prisma.NotificationPreferenceUpdateInput = {};
+  const updates: Prisma.notification_preferencesUpdateInput = {};
 
   switch (type) {
     case 'MARKETING':
@@ -484,7 +484,7 @@ export async function resubscribe(
   }
 
   await getPreferences(userId);
-  await prisma.notificationPreference.update({
+  await prisma.notification_preferences.update({
     where: { userId },
     data: updates,
   });
@@ -535,8 +535,8 @@ export function getAvailableOptions(): AvailableOption[] {
 /**
  * Create default preferences for a new user (called during registration)
  */
-export async function createDefaultPreferences(userId: string): Promise<NotificationPreference> {
-  const existing = await prisma.notificationPreference.findUnique({
+export async function createDefaultPreferences(userId: string): Promise<notification_preferences> {
+  const existing = await prisma.notification_preferences.findUnique({
     where: { userId },
   });
 
@@ -544,7 +544,7 @@ export async function createDefaultPreferences(userId: string): Promise<Notifica
     return existing;
   }
 
-  const preferences = await prisma.notificationPreference.create({
+  const preferences = await prisma.notification_preferences.create({
     data: {
       userId,
       ...DEFAULT_PREFERENCES,

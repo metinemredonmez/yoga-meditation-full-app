@@ -142,7 +142,7 @@ export async function adminCreateProgramSession(req: Request, res: Response) {
     const { programId } = programIdParamSchema.parse(req.params);
     const payload = createProgramSessionSchema.parse(req.body);
 
-    const existingProgram = await prisma.program.findUnique({
+    const existingProgram = await prisma.programs.findUnique({
       where: { id: programId },
       select: { id: true },
     });
@@ -176,7 +176,7 @@ export async function adminUpdateProgramSession(req: Request, res: Response) {
     const { programId, sessionId } = programIdParamSchema.merge(programSessionIdParamSchema).parse(req.params);
     const payload = updateProgramSessionSchema.parse(req.body);
 
-    const belongsToProgram = await prisma.programSession.findFirst({
+    const belongsToProgram = await prisma.program_sessions.findFirst({
       where: {
         id: sessionId,
         programId,
@@ -213,7 +213,7 @@ export async function adminDeleteProgramSession(req: Request, res: Response) {
   try {
     const { programId, sessionId } = programIdParamSchema.merge(programSessionIdParamSchema).parse(req.params);
 
-    const existing = await prisma.programSession.findFirst({
+    const existing = await prisma.program_sessions.findFirst({
       where: {
         id: sessionId,
         programId,

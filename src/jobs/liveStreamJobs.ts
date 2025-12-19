@@ -15,7 +15,7 @@ export async function sendStreamReminders() {
     const oneHourFromNow = new Date(Date.now() + 60 * 60 * 1000);
     const fiftyFiveMinutesFromNow = new Date(Date.now() + 55 * 60 * 1000);
 
-    const streamsIn1Hour = await prisma.liveStream.findMany({
+    const streamsIn1Hour = await prisma.live_streams.findMany({
       where: {
         status: 'SCHEDULED',
         scheduledStartAt: {
@@ -24,17 +24,17 @@ export async function sendStreamReminders() {
         },
       },
       include: {
-        registrations: {
+        live_stream_registrations: {
           where: { reminderSent: false },
           include: {
-            user: {
+            users: {
               select: { id: true, email: true, firstName: true },
             },
           },
         },
-        instructor: {
+        instructor_profiles: {
           include: {
-            user: {
+            users: {
               select: { firstName: true, lastName: true },
             },
           },
@@ -45,7 +45,7 @@ export async function sendStreamReminders() {
     let remindersCount = 0;
 
     for (const stream of streamsIn1Hour) {
-      for (const registration of stream.registrations) {
+      for (const registration of stream.live_stream_registrations) {
         // TODO: Send actual notification
         // await pushNotificationService.sendPush(registration.userId, {
         //   title: 'Stream Starting Soon',
@@ -56,7 +56,7 @@ export async function sendStreamReminders() {
       }
 
       // Mark reminders as sent
-      await prisma.liveStreamRegistration.updateMany({
+      await prisma.live_stream_registrations.updateMany({
         where: {
           streamId: stream.id,
           reminderSent: false,
@@ -69,7 +69,7 @@ export async function sendStreamReminders() {
     const fifteenMinutesFromNow = new Date(Date.now() + 15 * 60 * 1000);
     const tenMinutesFromNow = new Date(Date.now() + 10 * 60 * 1000);
 
-    const streamsIn15Min = await prisma.liveStream.findMany({
+    const streamsIn15Min = await prisma.live_streams.findMany({
       where: {
         status: 'SCHEDULED',
         scheduledStartAt: {
@@ -78,9 +78,9 @@ export async function sendStreamReminders() {
         },
       },
       include: {
-        registrations: {
+        live_stream_registrations: {
           include: {
-            user: {
+            users: {
               select: { id: true, email: true, firstName: true },
             },
           },
@@ -89,7 +89,7 @@ export async function sendStreamReminders() {
     });
 
     for (const stream of streamsIn15Min) {
-      for (const registration of stream.registrations) {
+      for (const registration of stream.live_stream_registrations) {
         // TODO: Send 15-minute reminder
         remindersCount++;
       }
@@ -132,7 +132,7 @@ export async function cleanupEndedStreams() {
     const now = new Date();
     const gracePeriod = new Date(now.getTime() - 30 * 60 * 1000); // 30 minutes grace
 
-    const staleStreams = await prisma.liveStream.findMany({
+    const staleStreams = await prisma.live_streams.findMany({
       where: {
         status: 'LIVE',
         scheduledEndAt: { lt: gracePeriod },
@@ -143,13 +143,13 @@ export async function cleanupEndedStreams() {
 
     for (const stream of staleStreams) {
       // Check if there are any active participants
-      const activeParticipants = await prisma.liveStreamParticipant.count({
+      const activeParticipants = await prisma.live_stream_participants.count({
         where: { streamId: stream.id, isActive: true },
       });
 
       if (activeParticipants === 0) {
         // Mark all participants as left
-        await prisma.liveStreamParticipant.updateMany({
+        await prisma.live_stream_participants.updateMany({
           where: { streamId: stream.id, isActive: true },
           data: { isActive: false, leftAt: now },
         });
@@ -160,7 +160,7 @@ export async function cleanupEndedStreams() {
           : 0;
 
         // End the stream
-        await prisma.liveStream.update({
+        await prisma.live_streams.update({
           where: { id: stream.id },
           data: {
             status: 'ENDED',
@@ -192,10 +192,10 @@ export async function processRecordings() {
 
   try {
     // Find recordings that are still processing
-    const processingRecordings = await prisma.liveStreamRecording.findMany({
+    const processingRecordings = await prisma.live_stream_recordings.findMany({
       where: { status: 'PROCESSING' },
       include: {
-        stream: true,
+        live_streams: true,
       },
     });
 
@@ -208,7 +208,7 @@ export async function processRecordings() {
 
       if (recording.createdAt < fiveMinutesAgo) {
         // Mark as ready (in production, verify with Agora API)
-        await prisma.liveStreamRecording.update({
+        await prisma.live_stream_recordings.update({
           where: { id: recording.id },
           data: {
             status: 'READY',
@@ -240,7 +240,7 @@ export async function expireOldRecordings() {
     const now = new Date();
 
     // Find expired recordings
-    const expiredRecordings = await prisma.liveStreamRecording.findMany({
+    const expiredRecordings = await prisma.live_stream_recordings.findMany({
       where: {
         expiresAt: { lt: now },
         status: 'READY',
@@ -254,12 +254,12 @@ export async function expireOldRecordings() {
       // await storageService.deleteFile(recording.url);
 
       // Delete from database
-      await prisma.liveStreamRecording.delete({
+      await prisma.live_stream_recordings.delete({
         where: { id: recording.id },
       });
 
       // Update stream's recording URL
-      await prisma.liveStream.update({
+      await prisma.live_streams.update({
         where: { id: recording.streamId },
         data: { recordingUrl: null },
       });
@@ -285,19 +285,19 @@ export async function updateStreamStats() {
 
   try {
     // Get all live streams
-    const liveStreams = await prisma.liveStream.findMany({
+    const liveStreams = await prisma.live_streams.findMany({
       where: { status: 'LIVE' },
     });
 
     for (const stream of liveStreams) {
       // Count active participants
-      const activeCount = await prisma.liveStreamParticipant.count({
+      const activeCount = await prisma.live_stream_participants.count({
         where: { streamId: stream.id, isActive: true },
       });
 
       // Update if different
       if (stream.currentParticipants !== activeCount) {
-        await prisma.liveStream.update({
+        await prisma.live_streams.update({
           where: { id: stream.id },
           data: { currentParticipants: activeCount },
         });

@@ -63,12 +63,12 @@ async function seedTranslationsForLanguage(
       const fullKey = `${namespace}.${keyName}`;
 
       // Ensure translation key exists
-      let translationKey = await prisma.translationKey.findUnique({
+      let translationKey = await prisma.translation_keys.findUnique({
         where: { key: fullKey },
       });
 
       if (!translationKey) {
-        translationKey = await prisma.translationKey.create({
+        translationKey = await prisma.translation_keys.create({
           data: {
             key: fullKey,
             namespace,
@@ -78,7 +78,7 @@ async function seedTranslationsForLanguage(
       }
 
       // Set translation
-      await prisma.translation.upsert({
+      await prisma.translations.upsert({
         where: {
           keyId_languageId: {
             keyId: translationKey.id,

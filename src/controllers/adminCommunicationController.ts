@@ -546,17 +546,17 @@ export async function listScheduledMessages(
     if (status) where.status = status;
 
     const [messages, total] = await Promise.all([
-      prisma.scheduledMessage.findMany({
+      prisma.scheduled_messages.findMany({
         where,
         include: {
-          template: { select: { id: true, name: true, slug: true } },
-          user: { select: { id: true, firstName: true, lastName: true, email: true } },
+          message_templates: { select: { id: true, name: true, slug: true } },
+          users: { select: { id: true, firstName: true, lastName: true, email: true } },
         },
         orderBy: { scheduledAt: 'asc' },
         skip,
         take: limitNum,
       }),
-      prisma.scheduledMessage.count({ where }),
+      prisma.scheduled_messages.count({ where }),
     ]);
 
     res.json({
@@ -582,7 +582,7 @@ export async function cancelScheduledMessage(
   try {
     const id = req.params.id as string;
 
-    await prisma.scheduledMessage.update({
+    await prisma.scheduled_messages.update({
       where: { id },
       data: { status: 'CANCELLED' },
     });
@@ -619,22 +619,22 @@ export async function getCommunicationStats(
       totalFailed,
       byChannel,
     ] = await Promise.all([
-      prisma.messageLog.count({
+      prisma.message_logs.count({
         where: { status: { in: ['SENT', 'DELIVERED', 'OPENED', 'CLICKED'] } },
       }),
-      prisma.messageLog.count({
+      prisma.message_logs.count({
         where: { status: { in: ['DELIVERED', 'OPENED', 'CLICKED'] } },
       }),
-      prisma.messageLog.count({
+      prisma.message_logs.count({
         where: { status: { in: ['OPENED', 'CLICKED'] } },
       }),
-      prisma.messageLog.count({
+      prisma.message_logs.count({
         where: { status: 'CLICKED' },
       }),
-      prisma.messageLog.count({
+      prisma.message_logs.count({
         where: { status: 'FAILED' },
       }),
-      prisma.messageLog.groupBy({
+      prisma.message_logs.groupBy({
         by: ['channel'],
         _count: true,
       }),
@@ -642,11 +642,11 @@ export async function getCommunicationStats(
 
     // Campaign stats
     const [totalCampaigns, activeCampaigns, completedCampaigns] = await Promise.all([
-      prisma.communicationCampaign.count(),
-      prisma.communicationCampaign.count({
+      prisma.communication_campaigns.count(),
+      prisma.communication_campaigns.count({
         where: { status: { in: ['DRAFT', 'SCHEDULED', 'IN_PROGRESS'] } },
       }),
-      prisma.communicationCampaign.count({
+      prisma.communication_campaigns.count({
         where: { status: 'COMPLETED' },
       }),
     ]);
@@ -694,7 +694,7 @@ export async function getDailyStats(
     const daysNum = parseInt(days as string);
     const startDate = new Date(Date.now() - daysNum * 24 * 60 * 60 * 1000);
 
-    const dailyStats = await prisma.messageLog.groupBy({
+    const dailyStats = await prisma.message_logs.groupBy({
       by: ['createdAt'],
       where: {
         createdAt: { gte: startDate },
@@ -724,7 +724,7 @@ export async function getStatsByTemplate(
   next: NextFunction,
 ) {
   try {
-    const stats = await prisma.messageLog.groupBy({
+    const stats = await prisma.message_logs.groupBy({
       by: ['templateId'],
       _count: true,
       where: {
@@ -734,12 +734,12 @@ export async function getStatsByTemplate(
 
     // Get template names
     const templateIds = stats.map((s) => s.templateId).filter(Boolean) as string[];
-    const templates = await prisma.messageTemplate.findMany({
+    const templates = await prisma.message_templates.findMany({
       where: { id: { in: templateIds } },
       select: { id: true, name: true, slug: true },
     });
 
-    const templateMap = new Map(templates.map((t) => [t.id, t]));
+    const templateMap = new Map(templates.map((t: any) => [t.id, t]));
 
     const result = stats.map((s) => ({
       template: templateMap.get(s.templateId!),
@@ -761,7 +761,7 @@ export async function getStatsByChannel(
   next: NextFunction,
 ) {
   try {
-    const stats = await prisma.messageLog.groupBy({
+    const stats = await prisma.message_logs.groupBy({
       by: ['channel', 'status'],
       _count: true,
     });

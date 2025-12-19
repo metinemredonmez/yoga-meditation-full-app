@@ -107,7 +107,7 @@ router.get('/categories', async (req: Request, res: Response) => {
 router.get('/:category', async (req: Request, res: Response) => {
   const { category } = req.params;
 
-  if (!validateCategory(category)) {
+  if (!category || !validateCategory(category)) {
     return res.status(400).json({
       success: false,
       error: 'Invalid category',
@@ -150,14 +150,14 @@ router.get('/:category', async (req: Request, res: Response) => {
 router.get('/:category/:provider', async (req: Request, res: Response) => {
   const { category, provider } = req.params;
 
-  if (!validateCategory(category)) {
+  if (!category || !validateCategory(category)) {
     return res.status(400).json({
       success: false,
       error: 'Invalid category',
     });
   }
 
-  if (!validateProvider(category, provider)) {
+  if (!provider || !validateProvider(category, provider)) {
     return res.status(400).json({
       success: false,
       error: 'Invalid provider',
@@ -166,6 +166,13 @@ router.get('/:category/:provider', async (req: Request, res: Response) => {
 
   try {
     const providerDef = INTEGRATIONS[category][provider as IntegrationProvider];
+    if (!providerDef) {
+      return res.status(404).json({
+        success: false,
+        error: 'Provider not found',
+      });
+    }
+
     const config = await integrationSettingsService.getProviderConfig(category, provider);
     const status = await integrationSettingsService.getProviderStatus(category, provider);
 
@@ -175,7 +182,7 @@ router.get('/:category/:provider', async (req: Request, res: Response) => {
       const value = config[field.key];
       if (value) {
         maskedConfig[field.key] =
-          field.type === 'password' || field.type === 'secret'
+          field.type === 'password'
             ? integrationEncryption.maskValue(value)
             : value;
       } else {
@@ -207,14 +214,14 @@ router.get('/:category/:provider', async (req: Request, res: Response) => {
 router.put('/:category/:provider', async (req: Request, res: Response) => {
   const { category, provider } = req.params;
 
-  if (!validateCategory(category)) {
+  if (!category || !validateCategory(category)) {
     return res.status(400).json({
       success: false,
       error: 'Invalid category',
     });
   }
 
-  if (!validateProvider(category, provider)) {
+  if (!provider || !validateProvider(category, provider)) {
     return res.status(400).json({
       success: false,
       error: 'Invalid provider',
@@ -279,14 +286,14 @@ router.put('/:category/:provider', async (req: Request, res: Response) => {
 router.post('/:category/:provider/test', async (req: Request, res: Response) => {
   const { category, provider } = req.params;
 
-  if (!validateCategory(category)) {
+  if (!category || !validateCategory(category)) {
     return res.status(400).json({
       success: false,
       error: 'Invalid category',
     });
   }
 
-  if (!validateProvider(category, provider)) {
+  if (!provider || !validateProvider(category, provider)) {
     return res.status(400).json({
       success: false,
       error: 'Invalid provider',
@@ -294,7 +301,7 @@ router.post('/:category/:provider/test', async (req: Request, res: Response) => 
   }
 
   const providerDef = INTEGRATIONS[category][provider as IntegrationProvider];
-  if (!providerDef.testable) {
+  if (!providerDef || !providerDef.testable) {
     return res.status(400).json({
       success: false,
       error: 'Connection test not supported for this provider',
@@ -329,14 +336,14 @@ router.post('/:category/:provider/test', async (req: Request, res: Response) => 
 router.patch('/:category/:provider/toggle', async (req: Request, res: Response) => {
   const { category, provider } = req.params;
 
-  if (!validateCategory(category)) {
+  if (!category || !validateCategory(category)) {
     return res.status(400).json({
       success: false,
       error: 'Invalid category',
     });
   }
 
-  if (!validateProvider(category, provider)) {
+  if (!provider || !validateProvider(category, provider)) {
     return res.status(400).json({
       success: false,
       error: 'Invalid provider',
@@ -378,14 +385,14 @@ router.patch('/:category/:provider/toggle', async (req: Request, res: Response) 
 router.delete('/:category/:provider', async (req: Request, res: Response) => {
   const { category, provider } = req.params;
 
-  if (!validateCategory(category)) {
+  if (!category || !validateCategory(category)) {
     return res.status(400).json({
       success: false,
       error: 'Invalid category',
     });
   }
 
-  if (!validateProvider(category, provider)) {
+  if (!provider || !validateProvider(category, provider)) {
     return res.status(400).json({
       success: false,
       error: 'Invalid provider',
@@ -453,7 +460,7 @@ function getCategoryLabel(key: string): string {
     notification: 'Push Notifications',
     sms: 'SMS Services',
     email: 'Email Services',
-    payment: 'Payment Gateways',
+    payments: 'Payment Gateways',
     storage: 'Cloud Storage',
     streaming: 'Streaming & Media',
     monitoring: 'Monitoring & Analytics',

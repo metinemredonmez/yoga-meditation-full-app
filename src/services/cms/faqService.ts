@@ -8,10 +8,10 @@ import { HttpError } from '../../middleware/errorHandler';
 
 export async function getFaqCategories(includeItems = false) {
   if (includeItems) {
-    return prisma.faqCategory.findMany({
+    return prisma.faq_categories.findMany({
       orderBy: { sortOrder: 'asc' },
       include: {
-        faqs: {
+        faq_items: {
           where: { isPublished: true },
           orderBy: { sortOrder: 'asc' },
         },
@@ -19,16 +19,16 @@ export async function getFaqCategories(includeItems = false) {
     });
   }
 
-  return prisma.faqCategory.findMany({
+  return prisma.faq_categories.findMany({
     orderBy: { sortOrder: 'asc' },
   });
 }
 
 export async function getFaqCategory(categoryId: string) {
-  const category = await prisma.faqCategory.findUnique({
+  const category = await prisma.faq_categories.findUnique({
     where: { id: categoryId },
     include: {
-      faqs: { orderBy: { sortOrder: 'asc' } },
+      faq_items: { orderBy: { sortOrder: 'asc' } },
     },
   });
 
@@ -43,10 +43,10 @@ export async function createFaqCategory(data: {
   icon?: string;
   sortOrder?: number;
 }) {
-  const existing = await prisma.faqCategory.findUnique({ where: { slug: data.slug } });
+  const existing = await prisma.faq_categories.findUnique({ where: { slug: data.slug } });
   if (existing) throw new HttpError(400, 'FAQ category with this slug already exists');
 
-  return prisma.faqCategory.create({
+  return prisma.faq_categories.create({
     data: {
       name: data.name,
       slug: data.slug,
@@ -69,15 +69,15 @@ export async function updateFaqCategory(
     isActive?: boolean;
   }
 ) {
-  const category = await prisma.faqCategory.findUnique({ where: { id: categoryId } });
+  const category = await prisma.faq_categories.findUnique({ where: { id: categoryId } });
   if (!category) throw new HttpError(404, 'FAQ category not found');
 
   if (data.slug && data.slug !== category.slug) {
-    const existing = await prisma.faqCategory.findUnique({ where: { slug: data.slug } });
+    const existing = await prisma.faq_categories.findUnique({ where: { slug: data.slug } });
     if (existing) throw new HttpError(400, 'FAQ category with this slug already exists');
   }
 
-  return prisma.faqCategory.update({
+  return prisma.faq_categories.update({
     where: { id: categoryId },
     data: {
       name: data.name,
@@ -91,23 +91,23 @@ export async function updateFaqCategory(
 }
 
 export async function deleteFaqCategory(categoryId: string) {
-  const category = await prisma.faqCategory.findUnique({
+  const category = await prisma.faq_categories.findUnique({
     where: { id: categoryId },
-    include: { faqs: { select: { id: true } } },
+    include: { faq_items: { select: { id: true } } },
   });
 
   if (!category) throw new HttpError(404, 'FAQ category not found');
-  if (category.faqs.length > 0) {
+  if (category.faq_items.length > 0) {
     throw new HttpError(400, 'Category must be empty before deletion');
   }
 
-  await prisma.faqCategory.delete({ where: { id: categoryId } });
+  await prisma.faq_categories.delete({ where: { id: categoryId } });
   return { deleted: true };
 }
 
 export async function reorderFaqCategories(categoryIds: string[]) {
   const updates = categoryIds.map((id, index) =>
-    prisma.faqCategory.update({
+    prisma.faq_categories.update({
       where: { id },
       data: { sortOrder: index },
     })
@@ -132,7 +132,7 @@ export interface FaqItemFilters {
 export async function getFaqItems(filters: FaqItemFilters) {
   const { categoryId, isPublished, search, page = 1, limit = 20 } = filters;
 
-  const where: Prisma.FaqItemWhereInput = {};
+  const where: Prisma.faq_itemsWhereInput = {};
   if (categoryId) where.categoryId = categoryId;
   if (isPublished !== undefined) where.isPublished = isPublished;
   if (search) {
@@ -143,16 +143,16 @@ export async function getFaqItems(filters: FaqItemFilters) {
   }
 
   const [items, total] = await Promise.all([
-    prisma.faqItem.findMany({
+    prisma.faq_items.findMany({
       where,
       skip: (page - 1) * limit,
       take: limit,
       orderBy: [{ sortOrder: 'asc' }, { createdAt: 'desc' }],
       include: {
-        category: { select: { id: true, name: true, slug: true } },
+        faq_categories: { select: { id: true, name: true, slug: true } },
       },
     }),
-    prisma.faqItem.count({ where }),
+    prisma.faq_items.count({ where }),
   ]);
 
   return {
@@ -162,10 +162,10 @@ export async function getFaqItems(filters: FaqItemFilters) {
 }
 
 export async function getFaqItem(itemId: string) {
-  const item = await prisma.faqItem.findUnique({
+  const item = await prisma.faq_items.findUnique({
     where: { id: itemId },
     include: {
-      category: { select: { id: true, name: true, slug: true } },
+      faq_categories: { select: { id: true, name: true, slug: true } },
     },
   });
 
@@ -179,10 +179,10 @@ export async function createFaqItem(data: {
   categoryId: string;
   sortOrder?: number;
 }) {
-  const category = await prisma.faqCategory.findUnique({ where: { id: data.categoryId } });
+  const category = await prisma.faq_categories.findUnique({ where: { id: data.categoryId } });
   if (!category) throw new HttpError(404, 'FAQ category not found');
 
-  return prisma.faqItem.create({
+  return prisma.faq_items.create({
     data: {
       question: data.question,
       answer: data.answer,
@@ -191,7 +191,7 @@ export async function createFaqItem(data: {
       isPublished: true,
     },
     include: {
-      category: { select: { id: true, name: true, slug: true } },
+      faq_categories: { select: { id: true, name: true, slug: true } },
     },
   });
 }
@@ -206,15 +206,15 @@ export async function updateFaqItem(
     isPublished?: boolean;
   }
 ) {
-  const item = await prisma.faqItem.findUnique({ where: { id: itemId } });
+  const item = await prisma.faq_items.findUnique({ where: { id: itemId } });
   if (!item) throw new HttpError(404, 'FAQ item not found');
 
   if (data.categoryId) {
-    const category = await prisma.faqCategory.findUnique({ where: { id: data.categoryId } });
+    const category = await prisma.faq_categories.findUnique({ where: { id: data.categoryId } });
     if (!category) throw new HttpError(404, 'FAQ category not found');
   }
 
-  return prisma.faqItem.update({
+  return prisma.faq_items.update({
     where: { id: itemId },
     data: {
       question: data.question,
@@ -224,24 +224,24 @@ export async function updateFaqItem(
       isPublished: data.isPublished,
     },
     include: {
-      category: { select: { id: true, name: true, slug: true } },
+      faq_categories: { select: { id: true, name: true, slug: true } },
     },
   });
 }
 
 export async function deleteFaqItem(itemId: string) {
-  const item = await prisma.faqItem.findUnique({ where: { id: itemId } });
+  const item = await prisma.faq_items.findUnique({ where: { id: itemId } });
   if (!item) throw new HttpError(404, 'FAQ item not found');
 
-  await prisma.faqItem.delete({ where: { id: itemId } });
+  await prisma.faq_items.delete({ where: { id: itemId } });
   return { deleted: true };
 }
 
 export async function toggleFaqItemStatus(itemId: string) {
-  const item = await prisma.faqItem.findUnique({ where: { id: itemId } });
+  const item = await prisma.faq_items.findUnique({ where: { id: itemId } });
   if (!item) throw new HttpError(404, 'FAQ item not found');
 
-  return prisma.faqItem.update({
+  return prisma.faq_items.update({
     where: { id: itemId },
     data: { isPublished: !item.isPublished },
   });
@@ -249,7 +249,7 @@ export async function toggleFaqItemStatus(itemId: string) {
 
 export async function reorderFaqItems(itemIds: string[]) {
   const updates = itemIds.map((id, index) =>
-    prisma.faqItem.update({
+    prisma.faq_items.update({
       where: { id },
       data: { sortOrder: index },
     })
@@ -264,10 +264,10 @@ export async function reorderFaqItems(itemIds: string[]) {
 // ============================================
 
 export async function getPublicFaqs(categorySlug?: string) {
-  const where: Prisma.FaqCategoryWhereInput = { isActive: true };
+  const where: Prisma.faq_categoriesWhereInput = { isActive: true };
   if (categorySlug) where.slug = categorySlug;
 
-  return prisma.faqCategory.findMany({
+  return prisma.faq_categories.findMany({
     where,
     orderBy: { sortOrder: 'asc' },
     select: {
@@ -276,7 +276,7 @@ export async function getPublicFaqs(categorySlug?: string) {
       slug: true,
       description: true,
       icon: true,
-      faqs: {
+      faq_items: {
         where: { isPublished: true },
         orderBy: { sortOrder: 'asc' },
         select: {
@@ -290,10 +290,10 @@ export async function getPublicFaqs(categorySlug?: string) {
 }
 
 export async function searchFaqs(query: string) {
-  return prisma.faqItem.findMany({
+  return prisma.faq_items.findMany({
     where: {
       isPublished: true,
-      category: { isActive: true },
+      faq_categories: { isActive: true },
       OR: [
         { question: { contains: query, mode: 'insensitive' } },
         { answer: { contains: query, mode: 'insensitive' } },
@@ -304,17 +304,17 @@ export async function searchFaqs(query: string) {
       id: true,
       question: true,
       answer: true,
-      category: { select: { name: true, slug: true } },
+      faq_categories: { select: { name: true, slug: true } },
     },
     take: 20,
   });
 }
 
 export async function markFaqHelpful(itemId: string, helpful: boolean) {
-  const item = await prisma.faqItem.findUnique({ where: { id: itemId } });
+  const item = await prisma.faq_items.findUnique({ where: { id: itemId } });
   if (!item) throw new HttpError(404, 'FAQ item not found');
 
-  return prisma.faqItem.update({
+  return prisma.faq_items.update({
     where: { id: itemId },
     data: helpful ? { helpfulYes: { increment: 1 } } : { helpfulNo: { increment: 1 } },
   });

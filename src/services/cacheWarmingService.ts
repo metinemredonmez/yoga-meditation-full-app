@@ -26,7 +26,7 @@ export async function warmProgramCache(limit: number = 20): Promise<number> {
 
   try {
     // Get most recently updated or popular programs
-    const programs = await prisma.program.findMany({
+    const programs = await prisma.programs.findMany({
       orderBy: { updatedAt: 'desc' },
       take: limit,
       select: { id: true },
@@ -71,7 +71,7 @@ export async function warmPoseCache(): Promise<number> {
   }
 
   try {
-    const poses = await prisma.pose.findMany({
+    const poses = await prisma.poses.findMany({
       select: { id: true },
     });
 

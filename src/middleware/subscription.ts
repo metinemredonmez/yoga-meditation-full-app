@@ -12,7 +12,7 @@ import { logger } from '../utils/logger';
  * Middleware to require an active subscription
  */
 export function requireSubscription(req: Request, res: Response, next: NextFunction) {
-  return requireTier('BASIC')(req, res, next);
+  return requireTier('MEDITATION')(req, res, next);
 }
 
 /**
@@ -21,9 +21,11 @@ export function requireSubscription(req: Request, res: Response, next: NextFunct
 export function requireTier(minimumTier: SubscriptionTier) {
   const tierOrder: Record<SubscriptionTier, number> = {
     FREE: 0,
-    BASIC: 1,
-    PREMIUM: 2,
-    ENTERPRISE: 3,
+    MEDITATION: 1,
+    YOGA: 2,
+    PREMIUM: 3,
+    FAMILY: 4,
+    ENTERPRISE: 5,
   };
 
   return async (req: Request, res: Response, next: NextFunction) => {
@@ -144,10 +146,10 @@ export async function checkGracePeriod(req: Request, res: Response, next: NextFu
 
       if (status.isInGracePeriod) {
         res.set('X-Subscription-Warning', 'grace-period');
-        res.set('X-Grace-Period-Ends', status.subscription?.gracePeriodEnd?.toISOString() || '');
+        res.set('X-Grace-Period-Ends', status.subscriptions?.gracePeriodEnd?.toISOString() || '');
       }
 
-      if (status.subscription?.status === 'PAST_DUE') {
+      if (status.subscriptions?.status === 'PAST_DUE') {
         res.set('X-Subscription-Warning', 'payment-past-due');
       }
     }
@@ -165,8 +167,10 @@ export async function checkGracePeriod(req: Request, res: Response, next: NextFu
 export function tierBasedRateLimit() {
   const tierLimits: Record<SubscriptionTier, number> = {
     FREE: 100, // 100 requests per hour
-    BASIC: 500, // 500 requests per hour
+    MEDITATION: 500, // 500 requests per hour
+    YOGA: 500, // 500 requests per hour
     PREMIUM: 2000, // 2000 requests per hour
+    FAMILY: 2000, // 2000 requests per hour
     ENTERPRISE: 10000, // 10000 requests per hour
   };
 
@@ -223,12 +227,12 @@ export function tierBasedRateLimit() {
 export function requireFeature(featureName: string) {
   // Feature availability by tier
   const features: Record<string, SubscriptionTier[]> = {
-    'offline-download': ['PREMIUM', 'ENTERPRISE'],
-    'hd-video': ['BASIC', 'PREMIUM', 'ENTERPRISE'],
-    'live-classes': ['PREMIUM', 'ENTERPRISE'],
+    'offline-download': ['PREMIUM', 'FAMILY', 'ENTERPRISE'],
+    'hd-video': ['MEDITATION', 'YOGA', 'PREMIUM', 'FAMILY', 'ENTERPRISE'],
+    'live-classes': ['PREMIUM', 'FAMILY', 'ENTERPRISE'],
     'personal-instructor': ['ENTERPRISE'],
-    'unlimited-programs': ['PREMIUM', 'ENTERPRISE'],
-    'analytics': ['BASIC', 'PREMIUM', 'ENTERPRISE'],
+    'unlimited-programs': ['PREMIUM', 'FAMILY', 'ENTERPRISE'],
+    'analytics': ['MEDITATION', 'YOGA', 'PREMIUM', 'FAMILY', 'ENTERPRISE'],
     'api-access': ['ENTERPRISE'],
     'white-label': ['ENTERPRISE'],
   };

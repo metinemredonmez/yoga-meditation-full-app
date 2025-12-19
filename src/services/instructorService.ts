@@ -96,7 +96,7 @@ async function generateUniqueSlug(baseName: string): Promise<string> {
 
   while (true) {
     const finalSlug = suffix === 0 ? slug : `${slug}-${suffix}`;
-    const existing = await prisma.instructorProfile.findUnique({
+    const existing = await prisma.instructor_profiles.findUnique({
       where: { slug: finalSlug },
     });
 
@@ -185,7 +185,7 @@ export async function createInstructorProfile(
   input: CreateInstructorProfileInput,
 ) {
   // Check if user already has an instructor profile
-  const existing = await prisma.instructorProfile.findUnique({
+  const existing = await prisma.instructor_profiles.findUnique({
     where: { userId },
   });
 
@@ -198,7 +198,7 @@ export async function createInstructorProfile(
     ? await generateUniqueSlug(input.slug)
     : await generateUniqueSlug(input.displayName);
 
-  const profile = await prisma.instructorProfile.create({
+  const profile = await prisma.instructor_profiles.create({
     data: {
       userId,
       displayName: input.displayName,
@@ -219,7 +219,7 @@ export async function createInstructorProfile(
       tier: 'STARTER',
     },
     include: {
-      user: {
+      users: {
         select: { id: true, email: true, firstName: true, lastName: true },
       },
     },
@@ -237,7 +237,7 @@ export async function updateInstructorProfile(
   instructorId: string,
   input: UpdateInstructorProfileInput,
 ) {
-  const profile = await prisma.instructorProfile.update({
+  const profile = await prisma.instructor_profiles.update({
     where: { id: instructorId },
     data: {
       displayName: input.displayName,
@@ -255,7 +255,7 @@ export async function updateInstructorProfile(
       timezone: input.timezone,
     },
     include: {
-      user: {
+      users: {
         select: { id: true, email: true, firstName: true, lastName: true },
       },
     },
@@ -270,10 +270,10 @@ export async function updateInstructorProfile(
  * Get instructor by slug (public)
  */
 export async function getInstructorBySlug(slug: string) {
-  return prisma.instructorProfile.findUnique({
+  return prisma.instructor_profiles.findUnique({
     where: { slug, status: 'APPROVED' },
     include: {
-      user: {
+      users: {
         select: {
           id: true,
           firstName: true,
@@ -294,10 +294,10 @@ export async function getInstructorBySlug(slug: string) {
  * Get instructor by ID
  */
 export async function getInstructorById(id: string) {
-  return prisma.instructorProfile.findUnique({
+  return prisma.instructor_profiles.findUnique({
     where: { id },
     include: {
-      user: {
+      users: {
         select: {
           id: true,
           email: true,
@@ -305,7 +305,7 @@ export async function getInstructorById(id: string) {
           lastName: true,
         },
       },
-      payoutSettings: true,
+      instructor_payout_settings: true,
     },
   });
 }
@@ -314,10 +314,10 @@ export async function getInstructorById(id: string) {
  * Get instructor by user ID
  */
 export async function getInstructorByUserId(userId: string) {
-  return prisma.instructorProfile.findUnique({
+  return prisma.instructor_profiles.findUnique({
     where: { userId },
     include: {
-      user: {
+      users: {
         select: {
           id: true,
           email: true,
@@ -325,7 +325,7 @@ export async function getInstructorByUserId(userId: string) {
           lastName: true,
         },
       },
-      payoutSettings: true,
+      instructor_payout_settings: true,
     },
   });
 }
@@ -344,7 +344,7 @@ export async function getAllInstructors(
     sortOrder = 'desc',
   } = pagination;
 
-  const where: Prisma.InstructorProfileWhereInput = {
+  const where: Prisma.instructor_profilesWhereInput = {
     status: filters.status || 'APPROVED',
   };
 
@@ -372,7 +372,7 @@ export async function getAllInstructors(
     };
   }
 
-  const orderBy: Prisma.InstructorProfileOrderByWithRelationInput = {};
+  const orderBy: Prisma.instructor_profilesOrderByWithRelationInput = {};
   switch (sortBy) {
     case 'rating':
       orderBy.averageRating = sortOrder;
@@ -388,7 +388,7 @@ export async function getAllInstructors(
   }
 
   const [items, total] = await Promise.all([
-    prisma.instructorProfile.findMany({
+    prisma.instructor_profiles.findMany({
       where,
       orderBy,
       skip: (page - 1) * limit,
@@ -406,7 +406,7 @@ export async function getAllInstructors(
         },
       },
     }),
-    prisma.instructorProfile.count({ where }),
+    prisma.instructor_profiles.count({ where }),
   ]);
 
   return {
@@ -422,7 +422,7 @@ export async function getAllInstructors(
  * Get featured instructors
  */
 export async function getFeaturedInstructors(limit: number = 6) {
-  return prisma.instructorProfile.findMany({
+  return prisma.instructor_profiles.findMany({
     where: {
       status: 'APPROVED',
       isFeatured: true,
@@ -430,7 +430,7 @@ export async function getFeaturedInstructors(limit: number = 6) {
     orderBy: { averageRating: 'desc' },
     take: limit,
     include: {
-      user: {
+      users: {
         select: {
           id: true,
           firstName: true,
@@ -451,7 +451,7 @@ export async function searchInstructors(
 ) {
   const { page = 1, limit = 20 } = pagination;
 
-  const where: Prisma.InstructorProfileWhereInput = {
+  const where: Prisma.instructor_profilesWhereInput = {
     status: 'APPROVED',
     OR: [
       { displayName: { contains: query, mode: 'insensitive' } },
@@ -474,13 +474,13 @@ export async function searchInstructors(
   }
 
   const [items, total] = await Promise.all([
-    prisma.instructorProfile.findMany({
+    prisma.instructor_profiles.findMany({
       where,
       orderBy: { averageRating: 'desc' },
       skip: (page - 1) * limit,
       take: limit,
       include: {
-        user: {
+        users: {
           select: {
             id: true,
             firstName: true,
@@ -489,7 +489,7 @@ export async function searchInstructors(
         },
       },
     }),
-    prisma.instructorProfile.count({ where }),
+    prisma.instructor_profiles.count({ where }),
   ]);
 
   return {
@@ -518,7 +518,7 @@ export async function submitForVerification(
   instructorId: string,
   documents?: VerificationDocument[],
 ) {
-  const data: Prisma.InstructorProfileUpdateInput = {
+  const data: Prisma.instructor_profilesUpdateInput = {
     status: 'PENDING',
   };
 
@@ -526,7 +526,7 @@ export async function submitForVerification(
     data.verificationDocs = documents as unknown as Prisma.InputJsonValue;
   }
 
-  const profile = await prisma.instructorProfile.update({
+  const profile = await prisma.instructor_profiles.update({
     where: { id: instructorId },
     data,
   });
@@ -544,7 +544,7 @@ export async function approveInstructor(
   adminId: string,
   options: { tier?: InstructorTier; commissionRate?: number; notes?: string } = {},
 ) {
-  const data: Prisma.InstructorProfileUpdateInput = {
+  const data: Prisma.instructor_profilesUpdateInput = {
     status: 'APPROVED',
     isVerified: true,
     verifiedAt: new Date(),
@@ -559,13 +559,13 @@ export async function approveInstructor(
     data.commissionRate = options.commissionRate;
   }
 
-  const profile = await prisma.instructorProfile.update({
+  const profile = await prisma.instructor_profiles.update({
     where: { id: instructorId },
     data,
   });
 
   // Create audit log
-  await prisma.auditLog.create({
+  await prisma.audit_logs.create({
     data: {
       userId: adminId,
       action: 'INSTRUCTOR_APPROVED',
@@ -586,7 +586,7 @@ export async function rejectInstructor(
   adminId: string,
   reason: string,
 ) {
-  const profile = await prisma.instructorProfile.update({
+  const profile = await prisma.instructor_profiles.update({
     where: { id: instructorId },
     data: {
       status: 'REJECTED',
@@ -595,7 +595,7 @@ export async function rejectInstructor(
   });
 
   // Create audit log
-  await prisma.auditLog.create({
+  await prisma.audit_logs.create({
     data: {
       userId: adminId,
       action: 'INSTRUCTOR_REJECTED',
@@ -616,7 +616,7 @@ export async function suspendInstructor(
   adminId: string,
   reason: string,
 ) {
-  const profile = await prisma.instructorProfile.update({
+  const profile = await prisma.instructor_profiles.update({
     where: { id: instructorId },
     data: {
       status: 'SUSPENDED',
@@ -625,7 +625,7 @@ export async function suspendInstructor(
   });
 
   // Create audit log
-  await prisma.auditLog.create({
+  await prisma.audit_logs.create({
     data: {
       userId: adminId,
       action: 'INSTRUCTOR_SUSPENDED',
@@ -642,7 +642,7 @@ export async function suspendInstructor(
  * Reactivate instructor (admin)
  */
 export async function reactivateInstructor(instructorId: string, adminId: string) {
-  const profile = await prisma.instructorProfile.update({
+  const profile = await prisma.instructor_profiles.update({
     where: { id: instructorId },
     data: {
       status: 'APPROVED',
@@ -650,7 +650,7 @@ export async function reactivateInstructor(instructorId: string, adminId: string
     },
   });
 
-  await prisma.auditLog.create({
+  await prisma.audit_logs.create({
     data: {
       userId: adminId,
       action: 'INSTRUCTOR_REACTIVATED',
@@ -677,7 +677,7 @@ export async function updateInstructorTier(
 ) {
   const benefits = calculateTierBenefits(tier);
 
-  const profile = await prisma.instructorProfile.update({
+  const profile = await prisma.instructor_profiles.update({
     where: { id: instructorId },
     data: {
       tier,
@@ -702,7 +702,7 @@ export async function updateCommissionRate(
     throw new Error('Commission rate must be between 0 and 1');
   }
 
-  const profile = await prisma.instructorProfile.update({
+  const profile = await prisma.instructor_profiles.update({
     where: { id: instructorId },
     data: {
       commissionRate,
@@ -722,7 +722,7 @@ export async function updateCommissionRate(
  * Get instructor's programs
  */
 export async function getInstructorPrograms(instructorId: string) {
-  const instructor = await prisma.instructorProfile.findUnique({
+  const instructor = await prisma.instructor_profiles.findUnique({
     where: { id: instructorId },
   });
 
@@ -730,7 +730,7 @@ export async function getInstructorPrograms(instructorId: string) {
     throw new Error('Instructor not found');
   }
 
-  return prisma.program.findMany({
+  return prisma.programs.findMany({
     where: {
       OR: [
         { instructorId: instructor.userId },
@@ -749,7 +749,7 @@ export async function getInstructorPrograms(instructorId: string) {
  * Get instructor's classes
  */
 export async function getInstructorClasses(instructorId: string) {
-  const instructor = await prisma.instructorProfile.findUnique({
+  const instructor = await prisma.instructor_profiles.findUnique({
     where: { id: instructorId },
   });
 
@@ -757,7 +757,7 @@ export async function getInstructorClasses(instructorId: string) {
     throw new Error('Instructor not found');
   }
 
-  return prisma.class.findMany({
+  return prisma.classes.findMany({
     where: {
       OR: [
         { instructorId: instructor.userId },
@@ -794,7 +794,7 @@ export async function isContentOwner(
   contentType: 'PROGRAM' | 'CLASS',
 ): Promise<boolean> {
   if (contentType === 'PROGRAM') {
-    const program = await prisma.program.findUnique({
+    const program = await prisma.programs.findUnique({
       where: { id: contentId },
     });
 
@@ -807,7 +807,7 @@ export async function isContentOwner(
   }
 
   if (contentType === 'CLASS') {
-    const classItem = await prisma.class.findUnique({
+    const classItem = await prisma.classes.findUnique({
       where: { id: contentId },
     });
 
@@ -830,14 +830,14 @@ export async function isContentOwner(
  * Update instructor stats (called by cron job)
  */
 export async function updateInstructorStats(instructorId: string) {
-  const instructor = await prisma.instructorProfile.findUnique({
+  const instructor = await prisma.instructor_profiles.findUnique({
     where: { id: instructorId },
   });
 
   if (!instructor) return;
 
   // Count programs
-  const totalPrograms = await prisma.program.count({
+  const totalPrograms = await prisma.programs.count({
     where: {
       OR: [
         { instructorId: instructor.userId },
@@ -847,7 +847,7 @@ export async function updateInstructorStats(instructorId: string) {
   });
 
   // Count classes
-  const totalClasses = await prisma.class.count({
+  const totalClasses = await prisma.classes.count({
     where: {
       OR: [
         { instructorId: instructor.userId },
@@ -857,7 +857,7 @@ export async function updateInstructorStats(instructorId: string) {
   });
 
   // Calculate average rating
-  const reviewStats = await prisma.instructorReview.aggregate({
+  const reviewStats = await prisma.instructor_reviews.aggregate({
     where: {
       instructorId,
       status: 'APPROVED',
@@ -867,10 +867,13 @@ export async function updateInstructorStats(instructorId: string) {
   });
 
   // Count unique students (from bookings)
-  const bookings = await prisma.booking.findMany({
+  const bookings = await prisma.bookings.findMany({
     where: {
-      class: {
-        instructorId: instructor.userId,
+      classId: {
+        in: (await prisma.classes.findMany({
+          where: { instructorId: instructor.userId },
+          select: { id: true },
+        })).map(c => c.id),
       },
       status: 'CONFIRMED',
     },
@@ -881,7 +884,7 @@ export async function updateInstructorStats(instructorId: string) {
   const totalStudents = bookings.length;
 
   // Update profile
-  await prisma.instructorProfile.update({
+  await prisma.instructor_profiles.update({
     where: { id: instructorId },
     data: {
       totalPrograms,
@@ -899,7 +902,7 @@ export async function updateInstructorStats(instructorId: string) {
  * Update all instructor stats (for cron job)
  */
 export async function updateAllInstructorStats() {
-  const instructors = await prisma.instructorProfile.findMany({
+  const instructors = await prisma.instructor_profiles.findMany({
     where: { status: 'APPROVED' },
     select: { id: true },
   });
@@ -919,11 +922,11 @@ export async function updateAllInstructorStats() {
  * Get pending instructors for admin review
  */
 export async function getPendingInstructors() {
-  return prisma.instructorProfile.findMany({
+  return prisma.instructor_profiles.findMany({
     where: { status: 'PENDING' },
     orderBy: { createdAt: 'asc' },
     include: {
-      user: {
+      users: {
         select: {
           id: true,
           email: true,
@@ -940,10 +943,10 @@ export async function getPendingInstructors() {
  * Get instructor details for admin
  */
 export async function getInstructorDetailsForAdmin(instructorId: string) {
-  return prisma.instructorProfile.findUnique({
+  return prisma.instructor_profiles.findUnique({
     where: { id: instructorId },
     include: {
-      user: {
+      users: {
         select: {
           id: true,
           email: true,
@@ -953,7 +956,7 @@ export async function getInstructorDetailsForAdmin(instructorId: string) {
           phoneNumber: true,
         },
       },
-      payoutSettings: true,
+      instructor_payout_settings: true,
       _count: {
         select: {
           instructor_earnings: true,

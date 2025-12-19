@@ -28,17 +28,17 @@ export async function getDashboardStats(): Promise<DashboardStats> {
   const monthAgo = new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000);
 
   const [totalUsers, newUsers, usersByRole, activeSubscriptions, programs, classes, poses, challenges, dailyRevenue, weeklyRevenue, monthlyRevenue] = await Promise.all([
-    prisma.user.count(),
-    prisma.user.count({ where: { createdAt: { gte: monthAgo } } }),
-    prisma.user.groupBy({ by: ['role'], _count: true }),
-    prisma.subscription.count({ where: { status: 'ACTIVE' } }),
-    prisma.program.count(),
-    prisma.class.count(),
-    prisma.pose.count(),
-    prisma.challenge.count(),
-    prisma.payment.aggregate({ _sum: { amount: true }, where: { status: 'COMPLETED', createdAt: { gte: today } } }),
-    prisma.payment.aggregate({ _sum: { amount: true }, where: { status: 'COMPLETED', createdAt: { gte: weekAgo } } }),
-    prisma.payment.aggregate({ _sum: { amount: true }, where: { status: 'COMPLETED', createdAt: { gte: monthAgo } } }),
+    prisma.users.count(),
+    prisma.users.count({ where: { createdAt: { gte: monthAgo } } }),
+    prisma.users.groupBy({ by: ['role'], _count: true }),
+    prisma.subscriptions.count({ where: { status: 'ACTIVE' } }),
+    prisma.programs.count(),
+    prisma.classes.count(),
+    prisma.poses.count(),
+    prisma.challenges.count(),
+    prisma.payments.aggregate({ _sum: { amount: true }, where: { status: 'COMPLETED', createdAt: { gte: today } } }),
+    prisma.payments.aggregate({ _sum: { amount: true }, where: { status: 'COMPLETED', createdAt: { gte: weekAgo } } }),
+    prisma.payments.aggregate({ _sum: { amount: true }, where: { status: 'COMPLETED', createdAt: { gte: monthAgo } } }),
   ]);
 
   const roleMap: Record<string, number> = {};
@@ -56,10 +56,10 @@ export async function getQuickStats() {
   const now = new Date();
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   const [totalUsers, newUsersToday, activeSubscriptions, revenueToday] = await Promise.all([
-    prisma.user.count(),
-    prisma.user.count({ where: { createdAt: { gte: today } } }),
-    prisma.subscription.count({ where: { status: 'ACTIVE' } }),
-    prisma.payment.aggregate({ _sum: { amount: true }, where: { status: 'COMPLETED', createdAt: { gte: today } } }),
+    prisma.users.count(),
+    prisma.users.count({ where: { createdAt: { gte: today } } }),
+    prisma.subscriptions.count({ where: { status: 'ACTIVE' } }),
+    prisma.payments.aggregate({ _sum: { amount: true }, where: { status: 'COMPLETED', createdAt: { gte: today } } }),
   ]);
   return {
     totalUsers: { value: totalUsers, change: 0 },
@@ -70,21 +70,21 @@ export async function getQuickStats() {
 }
 
 export async function getRecentActivity(limit = 20) {
-  const recentUsers = await prisma.user.findMany({ take: limit, orderBy: { createdAt: 'desc' }, select: { id: true, firstName: true, lastName: true, email: true, createdAt: true } });
+  const recentUsers = await prisma.users.findMany({ take: limit, orderBy: { createdAt: 'desc' }, select: { id: true, firstName: true, lastName: true, email: true, createdAt: true } });
   return recentUsers.map(user => ({
     type: 'user_registered',
-    message: `New user: ${user.firstName || user.email}`,
+    message: `New users: ${user.firstName || user.email}`,
     timestamp: user.createdAt,
     data: { userId: user.id },
   }));
 }
 
 export async function getDashboardPreference(adminId: string) {
-  return prisma.adminDashboardPreference.findUnique({ where: { adminId } });
+  return prisma.admin_dashboard_preferences.findUnique({ where: { adminId } });
 }
 
 export async function setDashboardPreference(adminId: string, widgets: DashboardWidget[]) {
-  return prisma.adminDashboardPreference.upsert({
+  return prisma.admin_dashboard_preferences.upsert({
     where: { adminId },
     update: { widgets: widgets as unknown as Prisma.JsonArray },
     create: { adminId, widgets: widgets as unknown as Prisma.JsonArray },
@@ -101,7 +101,7 @@ export async function getChartData(metric: string, days = 30) {
   const startDate = new Date();
   startDate.setDate(startDate.getDate() - days);
   if (metric === 'users') {
-    const users = await prisma.user.findMany({ where: { createdAt: { gte: startDate } }, select: { createdAt: true } });
+    const users = await prisma.users.findMany({ where: { createdAt: { gte: startDate } }, select: { createdAt: true } });
     const grouped: Record<string, number> = {};
     users.forEach(u => { const d = u.createdAt.toISOString().split('T')[0]!; grouped[d] = (grouped[d] || 0) + 1; });
     return Object.entries(grouped).map(([date, count]) => ({ date, count }));

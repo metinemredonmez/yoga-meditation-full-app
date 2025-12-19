@@ -20,7 +20,7 @@ export async function getDashboardOverview(instructorId: string) {
   const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
 
   // Get instructor profile
-  const instructor = await prisma.instructorProfile.findUnique({
+  const instructor = await prisma.instructor_profiles.findUnique({
     where: { id: instructorId },
     select: {
       id: true,
@@ -73,7 +73,7 @@ export async function getDashboardOverview(instructorId: string) {
 
   // Count active content
   const [programCount, upcomingClassCount] = await Promise.all([
-    prisma.program.count({
+    prisma.programs.count({
       where: {
         OR: [
           { instructorId: instructor.id },
@@ -81,7 +81,7 @@ export async function getDashboardOverview(instructorId: string) {
         ],
       },
     }),
-    prisma.class.count({
+    prisma.classes.count({
       where: {
         instructorId: instructor.id,
         schedule: { gte: now },
@@ -126,7 +126,7 @@ export async function getDashboardOverview(instructorId: string) {
  * Get recent activity for instructor dashboard
  */
 export async function getRecentActivity(instructorId: string, limit: number = 10) {
-  const instructor = await prisma.instructorProfile.findUnique({
+  const instructor = await prisma.instructor_profiles.findUnique({
     where: { id: instructorId },
   });
 
@@ -135,9 +135,9 @@ export async function getRecentActivity(instructorId: string, limit: number = 10
   }
 
   // Get recent enrollments/bookings
-  const recentBookings = await prisma.booking.findMany({
+  const recentBookings = await prisma.bookings.findMany({
     where: {
-      class: {
+      classes: {
         instructorId: instructor.userId,
       },
       status: 'CONFIRMED',
@@ -145,17 +145,17 @@ export async function getRecentActivity(instructorId: string, limit: number = 10
     orderBy: { createdAt: 'desc' },
     take: limit,
     include: {
-      user: {
+      users: {
         select: { id: true, firstName: true, lastName: true },
       },
-      class: {
+      classes: {
         select: { id: true, title: true },
       },
     },
   });
 
   // Get recent reviews
-  const recentReviews = await prisma.instructorReview.findMany({
+  const recentReviews = await prisma.instructor_reviews.findMany({
     where: {
       instructorId,
       status: 'APPROVED',
@@ -163,14 +163,14 @@ export async function getRecentActivity(instructorId: string, limit: number = 10
     orderBy: { createdAt: 'desc' },
     take: limit,
     include: {
-      student: {
+      users: {
         select: { id: true, firstName: true, lastName: true },
       },
     },
   });
 
   // Get recent earnings
-  const recentEarnings = await prisma.instructorEarning.findMany({
+  const recentEarnings = await prisma.instructor_earnings.findMany({
     where: {
       instructorId,
       status: { not: 'CANCELLED' },
@@ -180,12 +180,12 @@ export async function getRecentActivity(instructorId: string, limit: number = 10
   });
 
   // Get recent followers
-  const recentFollowers = await prisma.instructorFollower.findMany({
+  const recentFollowers = await prisma.instructor_followers.findMany({
     where: { instructorId },
     orderBy: { followedAt: 'desc' },
     take: limit,
     include: {
-      user: {
+      users: {
         select: { id: true, firstName: true, lastName: true },
       },
     },
@@ -201,8 +201,8 @@ export async function getRecentActivity(instructorId: string, limit: number = 10
       type: 'booking' as const,
       date: b.createdAt,
       data: {
-        user: b.user,
-        class: b.class,
+        users: b.users,
+        classes: b.classes,
       },
     })),
     ...recentReviews.map((r) => ({
@@ -212,7 +212,7 @@ export async function getRecentActivity(instructorId: string, limit: number = 10
         id: r.id,
         rating: r.rating,
         title: r.title,
-        student: r.student,
+        users: r.users,
       },
     })),
     ...recentEarnings.map((e) => ({
@@ -228,7 +228,7 @@ export async function getRecentActivity(instructorId: string, limit: number = 10
       type: 'follower' as const,
       date: f.followedAt,
       data: {
-        user: f.user,
+        users: f.users,
       },
     })),
   ];
@@ -350,7 +350,7 @@ export async function getPerformanceMetrics(
  * Get content performance metrics
  */
 export async function getContentPerformance(instructorId: string) {
-  const instructor = await prisma.instructorProfile.findUnique({
+  const instructor = await prisma.instructor_profiles.findUnique({
     where: { id: instructorId },
   });
 
@@ -359,7 +359,7 @@ export async function getContentPerformance(instructorId: string) {
   }
 
   // Get programs with stats
-  const programs = await prisma.program.findMany({
+  const programs = await prisma.programs.findMany({
     where: {
       OR: [
         { instructorId: instructor.userId },
@@ -394,7 +394,7 @@ export async function getContentPerformance(instructorId: string) {
   });
 
   // Get upcoming classes
-  const upcomingClasses = await prisma.class.findMany({
+  const upcomingClasses = await prisma.classes.findMany({
     where: {
       instructorId: instructor.userId,
       schedule: { gte: new Date() },
@@ -437,7 +437,7 @@ export async function getQuickStats(instructorId: string) {
     newFollowersToday,
     upcomingClassesCount,
   ] = await Promise.all([
-    prisma.instructorEarning.aggregate({
+    prisma.instructor_earnings.aggregate({
       where: {
         instructorId,
         createdAt: { gte: startOfDay },
@@ -445,23 +445,23 @@ export async function getQuickStats(instructorId: string) {
       },
       _sum: { netAmount: true },
     }),
-    prisma.instructorReview.count({
+    prisma.instructor_reviews.count({
       where: {
         instructorId,
         instructorReply: null,
         status: 'APPROVED',
       },
     }),
-    prisma.instructorFollower.count({
+    prisma.instructor_followers.count({
       where: {
         instructorId,
         followedAt: { gte: startOfDay },
       },
     }),
-    prisma.class.count({
+    prisma.classes.count({
       where: {
-        instructor: {
-          instructorProfile: {
+        users: {
+          instructor_profiles: {
             id: instructorId,
           },
         },

@@ -78,10 +78,10 @@ describe('Auth Unit Tests', () => {
         updatedAt: new Date(),
       };
 
-      // Mock prisma.user.create
-      prisma.user.create.mockResolvedValue(mockUserData as any);
+      // Mock prisma.users.create
+      prisma.users.create.mockResolvedValue(mockUserData as any);
 
-      const result = await prisma.user.create({
+      const result = await prisma.users.create({
         data: {
           email: 'test@example.com',
           password: 'hashedPassword',
@@ -90,7 +90,7 @@ describe('Auth Unit Tests', () => {
         },
       });
 
-      expect(prisma.user.create).toHaveBeenCalledTimes(1);
+      expect(prisma.users.create).toHaveBeenCalledTimes(1);
       expect(result.email).toBe('test@example.com');
       expect(result.firstName).toBe('Test');
     });
@@ -108,22 +108,22 @@ describe('Auth Unit Tests', () => {
         updatedAt: new Date(),
       };
 
-      prisma.user.findUnique.mockResolvedValue(mockUser as any);
+      prisma.users.findUnique.mockResolvedValue(mockUser as any);
 
-      const result = await prisma.user.findUnique({
+      const result = await prisma.users.findUnique({
         where: { email: 'test@example.com' },
       });
 
-      expect(prisma.user.findUnique).toHaveBeenCalledWith({
+      expect(prisma.users.findUnique).toHaveBeenCalledWith({
         where: { email: 'test@example.com' },
       });
       expect(result).toEqual(mockUser);
     });
 
     it('should return null for non-existent user', async () => {
-      prisma.user.findUnique.mockResolvedValue(null);
+      prisma.users.findUnique.mockResolvedValue(null);
 
-      const result = await prisma.user.findUnique({
+      const result = await prisma.users.findUnique({
         where: { email: 'nonexistent@example.com' },
       });
 

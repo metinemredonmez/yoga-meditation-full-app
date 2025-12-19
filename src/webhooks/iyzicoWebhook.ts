@@ -140,12 +140,12 @@ export async function handle3DSecureCallback(req: Request, res: Response) {
     logger.info({ paymentId: callbackData.paymentId, status: callbackData.status }, '3D Secure callback received');
 
     // Find pending payment
-    const payment = await prisma.payment.findFirst({
+    const payment = await prisma.payments.findFirst({
       where: {
-        providerPaymentId: callbackData.paymentId,
+        transactionId: callbackData.paymentId,
         status: 'PENDING'
       },
-      include: { user: true, subscription: true }
+      include: { users: true, subscriptions: true }
     });
 
     if (!payment) {
@@ -155,7 +155,7 @@ export async function handle3DSecureCallback(req: Request, res: Response) {
 
     if (callbackData.status === 'success' && callbackData.mdStatus === '1') {
       // Payment successful
-      await prisma.payment.update({
+      await prisma.payments.update({
         where: { id: payment.id },
         data: {
           status: 'COMPLETED',
@@ -170,7 +170,7 @@ export async function handle3DSecureCallback(req: Request, res: Response) {
 
       // If subscription payment, activate subscription
       if (payment.subscriptionId) {
-        await prisma.subscription.update({
+        await prisma.subscriptions.update({
           where: { id: payment.subscriptionId },
           data: {
             status: 'ACTIVE',
@@ -180,13 +180,13 @@ export async function handle3DSecureCallback(req: Request, res: Response) {
         });
 
         // Update user tier
-        const subscription = await prisma.subscription.findUnique({
+        const subscription = await prisma.subscriptions.findUnique({
           where: { id: payment.subscriptionId },
           include: { plan: true }
         });
 
         if (subscription) {
-          await prisma.user.update({
+          await prisma.users.update({
             where: { id: payment.userId },
             data: {
               subscriptionTier: subscription.plan.tier,
@@ -197,24 +197,25 @@ export async function handle3DSecureCallback(req: Request, res: Response) {
       }
 
       // Emit success event
-      eventEmitter.emit('payment.completed', {
-        paymentId: payment.id,
+      eventEmitter.emit('payment.succeeded', {
         userId: payment.userId,
+        subscriptionId: payment.subscriptionId || '',
         amount: Number(payment.amount),
         currency: payment.currency,
-        provider: 'IYZICO'
+        provider: 'IYZICO',
+        transactionId: payment.transactionId || undefined
       });
 
       return res.redirect(`${config.FRONTEND_URL}/payment/success?payment_id=${payment.id}`);
     } else {
       // Payment failed
-      const failureReason = get3DSecureFailureReason(callbackData.mdStatus);
+      const failureMessage = get3DSecureFailureReason(callbackData.mdStatus);
 
-      await prisma.payment.update({
+      await prisma.payments.update({
         where: { id: payment.id },
         data: {
           status: 'FAILED',
-          failureReason,
+          failureMessage,
           metadata: {
             ...(payment.metadata as object || {}),
             mdStatus: callbackData.mdStatus,
@@ -225,15 +226,16 @@ export async function handle3DSecureCallback(req: Request, res: Response) {
 
       // Emit failure event
       eventEmitter.emit('payment.failed', {
-        paymentId: payment.id,
         userId: payment.userId,
+        subscriptionId: payment.subscriptionId || '',
         amount: Number(payment.amount),
         currency: payment.currency,
         provider: 'IYZICO',
-        reason: failureReason
+        transactionId: payment.transactionId || undefined,
+        reason: failureMessage
       });
 
-      return res.redirect(`${config.FRONTEND_URL}/payment/error?reason=${encodeURIComponent(failureReason)}`);
+      return res.redirect(`${config.FRONTEND_URL}/payment/error?reason=${encodeURIComponent(failureMessage)}`);
     }
   } catch (error) {
     logger.error({ err: error }, '3D Secure callback processing failed');
@@ -246,12 +248,12 @@ export async function handle3DSecureCallback(req: Request, res: Response) {
 // ============================================
 
 async function handlePaymentSuccess(payload: IyzicoWebhookPayload) {
-  const payment = await prisma.payment.findFirst({
-    where: { providerPaymentId: payload.paymentId }
+  const payment = await prisma.payments.findFirst({
+    where: { transactionId: payload.paymentId }
   });
 
   if (payment) {
-    await prisma.payment.update({
+    await prisma.payments.update({
       where: { id: payment.id },
       data: {
         status: 'COMPLETED',
@@ -259,12 +261,13 @@ async function handlePaymentSuccess(payload: IyzicoWebhookPayload) {
       }
     });
 
-    eventEmitter.emit('payment.completed', {
-      paymentId: payment.id,
+    eventEmitter.emit('payment.succeeded', {
       userId: payment.userId,
+      subscriptionId: payment.subscriptionId || '',
       amount: Number(payment.amount),
       currency: payment.currency,
-      provider: 'IYZICO'
+      provider: 'IYZICO',
+      transactionId: payment.transactionId || undefined
     });
 
     logger.info({ paymentId: payment.id }, 'Iyzico payment marked as completed');
@@ -272,25 +275,26 @@ async function handlePaymentSuccess(payload: IyzicoWebhookPayload) {
 }
 
 async function handlePaymentFailure(payload: IyzicoWebhookPayload) {
-  const payment = await prisma.payment.findFirst({
-    where: { providerPaymentId: payload.paymentId }
+  const payment = await prisma.payments.findFirst({
+    where: { transactionId: payload.paymentId }
   });
 
   if (payment) {
-    await prisma.payment.update({
+    await prisma.payments.update({
       where: { id: payment.id },
       data: {
         status: 'FAILED',
-        failureReason: 'Payment failed via webhook'
+        failureMessage: 'Payment failed via webhook'
       }
     });
 
     eventEmitter.emit('payment.failed', {
-      paymentId: payment.id,
       userId: payment.userId,
+      subscriptionId: payment.subscriptionId || '',
       amount: Number(payment.amount),
       currency: payment.currency,
       provider: 'IYZICO',
+      transactionId: payment.transactionId || undefined,
       reason: 'Payment failed'
     });
 
@@ -299,22 +303,23 @@ async function handlePaymentFailure(payload: IyzicoWebhookPayload) {
 }
 
 async function handleRefundSuccess(payload: IyzicoWebhookPayload) {
-  const payment = await prisma.payment.findFirst({
-    where: { providerPaymentId: payload.paymentId }
+  const payment = await prisma.payments.findFirst({
+    where: { transactionId: payload.paymentId }
   });
 
   if (payment) {
-    await prisma.payment.update({
+    await prisma.payments.update({
       where: { id: payment.id },
       data: { status: 'REFUNDED' }
     });
 
     eventEmitter.emit('payment.refunded', {
-      paymentId: payment.id,
       userId: payment.userId,
+      subscriptionId: payment.subscriptionId || '',
       amount: Number(payment.amount),
       currency: payment.currency,
-      provider: 'IYZICO'
+      provider: 'IYZICO',
+      transactionId: payment.transactionId || undefined
     });
 
     logger.info({ paymentId: payment.id }, 'Iyzico refund completed');
@@ -330,15 +335,18 @@ async function handleSubscriptionCreated(payload: IyzicoWebhookPayload) {
   logger.info({ referenceCode: payload.iyziReferenceCode }, 'Iyzico subscription created');
 
   // Find subscription by reference code
-  const subscription = await prisma.subscription.findFirst({
+  const subscription = await prisma.subscriptions.findFirst({
     where: {
-      iyzicoSubscriptionReferenceCode: payload.iyziReferenceCode
+      // TODO: Add iyzicoSubscriptionReferenceCode field to subscriptions schema
+      // iyzicoSubscriptionReferenceCode: payload.iyziReferenceCode
+      // For now, using googleOrderId as a workaround to store Iyzico reference
+      googleOrderId: payload.iyziReferenceCode
     },
-    include: { plan: true, user: true }
+    include: { plan: true, users: true }
   });
 
   if (subscription) {
-    await prisma.subscription.update({
+    await prisma.subscriptions.update({
       where: { id: subscription.id },
       data: {
         status: 'ACTIVE',
@@ -360,9 +368,12 @@ async function handleSubscriptionCreated(payload: IyzicoWebhookPayload) {
 async function handleSubscriptionRenewed(payload: IyzicoWebhookPayload) {
   logger.info({ referenceCode: payload.iyziReferenceCode }, 'Iyzico subscription renewed');
 
-  const subscription = await prisma.subscription.findFirst({
+  const subscription = await prisma.subscriptions.findFirst({
     where: {
-      iyzicoSubscriptionReferenceCode: payload.iyziReferenceCode
+      // TODO: Add iyzicoSubscriptionReferenceCode field to subscriptions schema
+      // iyzicoSubscriptionReferenceCode: payload.iyziReferenceCode
+      // For now, using googleOrderId as a workaround to store Iyzico reference
+      googleOrderId: payload.iyziReferenceCode
     },
     include: { plan: true }
   });
@@ -375,7 +386,7 @@ async function handleSubscriptionRenewed(payload: IyzicoWebhookPayload) {
       newPeriodEnd.setFullYear(newPeriodEnd.getFullYear() + 1);
     }
 
-    await prisma.subscription.update({
+    await prisma.subscriptions.update({
       where: { id: subscription.id },
       data: {
         status: 'ACTIVE',
@@ -386,15 +397,17 @@ async function handleSubscriptionRenewed(payload: IyzicoWebhookPayload) {
     });
 
     // Update user expiration
-    await prisma.user.update({
+    await prisma.users.update({
       where: { id: subscription.userId },
       data: { subscriptionExpiresAt: newPeriodEnd }
     });
 
-    eventEmitter.emit('subscription.renewed', {
+    eventEmitter.emit('subscription.updated', {
       subscriptionId: subscription.id,
       userId: subscription.userId,
       plan: subscription.plan.name,
+      status: 'ACTIVE',
+      previousStatus: 'ACTIVE',
       provider: 'IYZICO',
       currentPeriodEnd: newPeriodEnd
     });
@@ -404,15 +417,18 @@ async function handleSubscriptionRenewed(payload: IyzicoWebhookPayload) {
 async function handleSubscriptionCancelled(payload: IyzicoWebhookPayload) {
   logger.info({ referenceCode: payload.iyziReferenceCode }, 'Iyzico subscription cancelled');
 
-  const subscription = await prisma.subscription.findFirst({
+  const subscription = await prisma.subscriptions.findFirst({
     where: {
-      iyzicoSubscriptionReferenceCode: payload.iyziReferenceCode
+      // TODO: Add iyzicoSubscriptionReferenceCode field to subscriptions schema
+      // iyzicoSubscriptionReferenceCode: payload.iyziReferenceCode
+      // For now, using googleOrderId as a workaround to store Iyzico reference
+      googleOrderId: payload.iyziReferenceCode
     },
     include: { plan: true }
   });
 
   if (subscription) {
-    await prisma.subscription.update({
+    await prisma.subscriptions.update({
       where: { id: subscription.id },
       data: {
         status: 'CANCELLED',
@@ -422,7 +438,7 @@ async function handleSubscriptionCancelled(payload: IyzicoWebhookPayload) {
     });
 
     // Update user tier to FREE when subscription ends
-    await prisma.user.update({
+    await prisma.users.update({
       where: { id: subscription.userId },
       data: {
         subscriptionTier: 'FREE',

@@ -7,7 +7,7 @@ const prisma = new PrismaClient();
 
 // Validation schemas
 const goalTemplateSchema = z.object({
-  type: z.enum(['PRACTICE', 'MEDITATION', 'BREATHWORK', 'MINDFULNESS', 'SLEEP', 'EXERCISE', 'HYDRATION', 'READING', 'CUSTOM']),
+  type: z.enum(['PRACTICE_DAYS', 'PRACTICE_MINUTES', 'MEDITATION_COUNT', 'BREATHWORK_COUNT', 'STREAK', 'MOOD_LOG', 'JOURNAL_ENTRIES', 'SLEEP_TRACKING', 'CUSTOM']),
   title: z.string().min(1).max(100),
   description: z.string().optional(),
   targetValue: z.number().min(1),
@@ -156,7 +156,13 @@ router.post('/', async (req: Request, res: Response) => {
 
     const template = await prisma.goal_templates.create({
       data: {
-        ...validated,
+        type: validated.type,
+        title: validated.title,
+        description: validated.description,
+        targetValue: validated.targetValue,
+        unit: validated.unit,
+        period: validated.period,
+        icon: validated.icon,
         sortOrder: validated.sortOrder ?? (maxOrder._max.sortOrder || 0) + 1,
         isActive: validated.isActive ?? true,
       },
@@ -165,7 +171,7 @@ router.post('/', async (req: Request, res: Response) => {
     res.status(201).json(template);
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return res.status(400).json({ error: 'Validation error', details: error.errors });
+      return res.status(400).json({ error: 'Validation error', details: error.issues });
     }
     console.error('Error creating goal template:', error);
     res.status(500).json({ error: 'Internal server error' });
@@ -201,15 +207,37 @@ router.put('/:id', async (req: Request, res: Response) => {
     const { id } = req.params;
     const validated = goalTemplateSchema.partial().parse(req.body);
 
+    const updateData: {
+      type?: typeof validated.type;
+      title?: string;
+      description?: string | null;
+      targetValue?: number;
+      unit?: string;
+      period?: typeof validated.period;
+      icon?: string | null;
+      sortOrder?: number;
+      isActive?: boolean;
+    } = {};
+
+    if (validated.type) updateData.type = validated.type;
+    if (validated.title) updateData.title = validated.title;
+    if (validated.description !== undefined) updateData.description = validated.description || null;
+    if (validated.targetValue) updateData.targetValue = validated.targetValue;
+    if (validated.unit) updateData.unit = validated.unit;
+    if (validated.period) updateData.period = validated.period;
+    if (validated.icon !== undefined) updateData.icon = validated.icon || null;
+    if (validated.sortOrder !== undefined) updateData.sortOrder = validated.sortOrder;
+    if (validated.isActive !== undefined) updateData.isActive = validated.isActive;
+
     const template = await prisma.goal_templates.update({
       where: { id },
-      data: validated,
+      data: updateData,
     });
 
     res.json(template);
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return res.status(400).json({ error: 'Validation error', details: error.errors });
+      return res.status(400).json({ error: 'Validation error', details: error.issues });
     }
     console.error('Error updating goal template:', error);
     res.status(500).json({ error: 'Internal server error' });
@@ -288,7 +316,7 @@ router.put('/reorder', async (req: Request, res: Response) => {
     res.json({ message: 'Templates reordered successfully' });
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return res.status(400).json({ error: 'Validation error', details: error.errors });
+      return res.status(400).json({ error: 'Validation error', details: error.issues });
     }
     console.error('Error reordering goal templates:', error);
     res.status(500).json({ error: 'Internal server error' });

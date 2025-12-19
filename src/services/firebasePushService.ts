@@ -10,20 +10,21 @@ export function initializeFirebase(): boolean {
   if (firebaseApp) return true;
 
   try {
-    const serviceAccount = config.FIREBASE_SERVICE_ACCOUNT;
+    const { FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL, FIREBASE_PRIVATE_KEY } = config;
 
-    if (!serviceAccount) {
-      logger.warn('Firebase service account not configured');
+    if (!FIREBASE_PROJECT_ID || !FIREBASE_CLIENT_EMAIL || !FIREBASE_PRIVATE_KEY) {
+      logger.warn('Firebase configuration not complete');
       return false;
     }
 
-    // Parse service account if it's a string (from env variable)
-    const credentials = typeof serviceAccount === 'string'
-      ? JSON.parse(serviceAccount)
-      : serviceAccount;
+    const credentials: any = {
+      project_id: FIREBASE_PROJECT_ID,
+      client_email: FIREBASE_CLIENT_EMAIL,
+      private_key: FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n'),
+    };
 
     firebaseApp = admin.initializeApp({
-      credential: admin.credential.cert(credentials),
+      credential: admin.credential.cert(credentials as admin.ServiceAccount),
       projectId: credentials.project_id
     });
 
@@ -165,12 +166,15 @@ export async function sendPushToMultipleDevices(payload: MulticastPayload): Prom
     const failedTokens: string[] = [];
     response.responses.forEach((resp, idx) => {
       if (!resp.success) {
-        failedTokens.push(payload.tokens[idx]);
-        // Remove invalid tokens
-        const errorCode = resp.error?.code;
-        if (errorCode === 'messaging/registration-token-not-registered' ||
-            errorCode === 'messaging/invalid-registration-token') {
-          removeInvalidToken(payload.tokens[idx]);
+        const token = payload.tokens[idx];
+        if (token) {
+          failedTokens.push(token);
+          // Remove invalid tokens
+          const errorCode = resp.error?.code;
+          if (errorCode === 'messaging/registration-token-not-registered' ||
+              errorCode === 'messaging/invalid-registration-token') {
+            removeInvalidToken(token);
+          }
         }
       }
     });
@@ -269,7 +273,7 @@ export async function sendPushToUser(
   data?: Record<string, string>
 ): Promise<{ sent: number; failed: number }> {
   // Get user's registered devices
-  const devices = await prisma.userDevice.findMany({
+  const devices = await prisma.device_tokens.findMany({
     where: { userId, isActive: true },
     select: { token: true }
   });
@@ -291,7 +295,7 @@ export async function sendPushToUsers(
   data?: Record<string, string>
 ): Promise<{ sent: number; failed: number }> {
   // Get all devices for these users
-  const devices = await prisma.userDevice.findMany({
+  const devices = await prisma.device_tokens.findMany({
     where: { userId: { in: userIds }, isActive: true },
     select: { token: true }
   });
@@ -317,14 +321,14 @@ export async function sendPushToUsers(
 }
 
 export async function sendPushByRole(
-  role: string,
+  role: 'STUDENT' | 'TEACHER' | 'ADMIN',
   title: string,
   body: string,
   data?: Record<string, string>
 ): Promise<{ sent: number; failed: number }> {
   // Get all users with this role
-  const users = await prisma.user.findMany({
-    where: { role: role as 'USER' | 'TEACHER' | 'ADMIN', isActive: true },
+  const users = await prisma.users.findMany({
+    where: { role, isActive: true },
     select: { id: true }
   });
 
@@ -413,7 +417,7 @@ export async function sendNewEpisodeNotification(
 
 async function removeInvalidToken(token: string): Promise<void> {
   try {
-    await prisma.userDevice.updateMany({
+    await prisma.device_tokens.updateMany({
       where: { token },
       data: { isActive: false }
     });

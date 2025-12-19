@@ -139,13 +139,13 @@ async function processGoogleSubscription(
     : 'ACTIVE';
 
   // Check if subscription already exists
-  let subscription = await prisma.subscription.findFirst({
+  let subscription = await prisma.subscriptions.findFirst({
     where: { googlePurchaseToken: purchaseToken },
   });
 
   if (subscription) {
     // Update existing subscription
-    subscription = await prisma.subscription.update({
+    subscription = await prisma.subscriptions.update({
       where: { id: subscription.id },
       data: {
         status: subscriptionStatus,
@@ -160,12 +160,12 @@ async function processGoogleSubscription(
   } else {
     // Create new subscription
     // First, cancel any existing subscriptions for this user
-    await prisma.subscription.updateMany({
+    await prisma.subscriptions.updateMany({
       where: { userId, status: { in: ['ACTIVE', 'TRIALING'] } },
       data: { status: 'CANCELLED', cancelledAt: new Date() },
     });
 
-    subscription = await prisma.subscription.create({
+    subscription = await prisma.subscriptions.create({
       data: {
         userId,
         planId: plan.id,
@@ -184,7 +184,7 @@ async function processGoogleSubscription(
     });
 
     // Update user tier
-    await prisma.user.update({
+    await prisma.users.update({
       where: { id: userId },
       data: {
         subscriptionTier: plan.tier,
@@ -244,7 +244,7 @@ async function verifyGoogleProduct(
   }
 
   // Create payment record for one-time purchase
-  const payment = await prisma.payment.create({
+  const payment = await prisma.payments.create({
     data: {
       userId,
       provider: 'GOOGLE',
@@ -319,9 +319,9 @@ async function processGoogleSubscriptionNotification(
   subscriptionId: string
 ) {
   // Find subscription by purchase token
-  const subscription = await prisma.subscription.findFirst({
+  const subscription = await prisma.subscriptions.findFirst({
     where: { googlePurchaseToken: purchaseToken },
-    include: { plan: true, user: true },
+    include: { plan: true, users: true },
   });
 
   if (!subscription) {
@@ -346,7 +346,7 @@ async function processGoogleSubscriptionNotification(
         ? new Date(parseInt(purchase.expiryTimeMillis, 10))
         : subscription.currentPeriodEnd;
 
-      await prisma.subscription.update({
+      await prisma.subscriptions.update({
         where: { id: subscription.id },
         data: {
           status: 'ACTIVE',
@@ -360,7 +360,7 @@ async function processGoogleSubscriptionNotification(
       break;
 
     case GOOGLE_NOTIFICATION_TYPES.SUBSCRIPTION_CANCELED:
-      await prisma.subscription.update({
+      await prisma.subscriptions.update({
         where: { id: subscription.id },
         data: {
           cancelAtPeriodEnd: true,
@@ -372,7 +372,7 @@ async function processGoogleSubscriptionNotification(
       break;
 
     case GOOGLE_NOTIFICATION_TYPES.SUBSCRIPTION_EXPIRED:
-      await prisma.subscription.update({
+      await prisma.subscriptions.update({
         where: { id: subscription.id },
         data: {
           status: 'EXPIRED',
@@ -392,7 +392,7 @@ async function processGoogleSubscriptionNotification(
       break;
 
     case GOOGLE_NOTIFICATION_TYPES.SUBSCRIPTION_ON_HOLD:
-      await prisma.subscription.update({
+      await prisma.subscriptions.update({
         where: { id: subscription.id },
         data: {
           status: 'PAST_DUE',
@@ -412,9 +412,9 @@ async function processGoogleSubscriptionNotification(
     case GOOGLE_NOTIFICATION_TYPES.SUBSCRIPTION_IN_GRACE_PERIOD:
       const gracePeriodEnd = purchase?.expiryTimeMillis
         ? new Date(parseInt(purchase.expiryTimeMillis, 10))
-        : new Date(Date.now() + config.payment.gracePeriodDays * 24 * 60 * 60 * 1000);
+        : new Date(Date.now() + config.payments.gracePeriodDays * 24 * 60 * 60 * 1000);
 
-      await prisma.subscription.update({
+      await prisma.subscriptions.update({
         where: { id: subscription.id },
         data: {
           status: 'GRACE_PERIOD',
@@ -425,7 +425,7 @@ async function processGoogleSubscriptionNotification(
       break;
 
     case GOOGLE_NOTIFICATION_TYPES.SUBSCRIPTION_PAUSED:
-      await prisma.subscription.update({
+      await prisma.subscriptions.update({
         where: { id: subscription.id },
         data: {
           status: 'PAUSED',
@@ -435,7 +435,7 @@ async function processGoogleSubscriptionNotification(
       break;
 
     case GOOGLE_NOTIFICATION_TYPES.SUBSCRIPTION_REVOKED:
-      await prisma.subscription.update({
+      await prisma.subscriptions.update({
         where: { id: subscription.id },
         data: {
           status: 'CANCELLED',
@@ -471,7 +471,7 @@ async function processGoogleSubscriptionNotification(
 // ==================== Helper Functions ====================
 
 async function findPlanByGoogleProductId(productId: string) {
-  return prisma.subscriptionPlan.findFirst({
+  return prisma.subscription_plans.findFirst({
     where: {
       OR: [
         { googleProductIdMonthly: productId },
@@ -487,7 +487,7 @@ async function updateUserTier(
   tier: string,
   expiresAt: Date | null
 ) {
-  await prisma.user.update({
+  await prisma.users.update({
     where: { id: userId },
     data: {
       subscriptionTier: tier as any,
@@ -509,7 +509,7 @@ async function logGooglePurchaseValidation(
     ? parseInt(purchase.expiryTimeMillis, 10)
     : null;
 
-  await prisma.purchaseReceipt.create({
+  await prisma.purchase_receipts.create({
     data: {
       userId,
       provider: 'GOOGLE',
@@ -540,7 +540,7 @@ async function createGooglePayment(
   const amount = priceMicros > 0 ? priceMicros / 1000000 : Number(plan.priceMonthly);
   const currency = purchase.priceCurrencyCode || 'TRY';
 
-  await prisma.payment.create({
+  await prisma.payments.create({
     data: {
       userId,
       subscriptionId,

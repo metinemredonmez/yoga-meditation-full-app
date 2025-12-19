@@ -31,6 +31,9 @@ import moodTagsRoutes from './moodTags';
 // Integration Settings
 import integrationsRoutes from './integrations';
 
+// AI Agent System
+import aiAgentsRoutes from './aiAgents';
+
 const router = Router();
 
 // All admin routes require authentication and admin role
@@ -66,5 +69,8 @@ router.use('/mood-tags', moodTagsRoutes);
 
 // Integration Settings Management
 router.use('/integrations', integrationsRoutes);
+
+// AI Agent System
+router.use('/ai-agents', aiAgentsRoutes);
 
 export default router;

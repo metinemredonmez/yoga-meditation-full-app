@@ -32,7 +32,7 @@ import userRoutes from './routes/user';
 import adminRoutes from './routes/admin';
 import adminProgramRoutes from './routes/adminProgram';
 import adminReportRoutes from './routes/adminReport';
-import adminChallengeRoutes from './routes/adminChallenge';
+// adminChallengeRoutes removed - challenges feature deleted
 import adminPoseRoutes from './routes/adminPose';
 import classRoutes from './routes/class';
 import bookingRoutes from './routes/booking';
@@ -41,7 +41,7 @@ import notificationRoutes from './routes/notification';
 import programRoutes from './routes/program';
 import tagRoutes from './routes/tag';
 import searchRoutes from './routes/search';
-import challengeRoutes from './routes/challenge';
+// challengeRoutes removed - challenges feature deleted
 import reminderRoutes from './routes/reminder';
 import progressRoutes from './routes/progress';
 import plannerRoutes from './routes/planner';
@@ -73,25 +73,16 @@ import adminInstructorRoutes from './routes/adminInstructor';
 import liveStreamRoutes from './routes/liveStream';
 import adminLiveStreamRoutes from './routes/adminLiveStream';
 
-// Sprint 20: Community & Social System Routes
-import forumRoutes from './routes/forum';
+// Sprint 20: Comment & Report Routes (Social features removed)
 import commentRoutes from './routes/comment';
-import socialRoutes from './routes/social';
-import messagingRoutes from './routes/messaging';
-import groupRoutes from './routes/group';
-import leaderboardRoutes from './routes/leaderboard';
 import reportRoutes from './routes/report';
 
-// Sprint 21: Gamification & Achievements System Routes
-import gamificationRoutes from './routes/gamification';
+// Sprint 21: Achievements System Routes (Gamification simplified)
 import achievementRoutes from './routes/achievement';
-import questRoutes from './routes/quest';
 import eventRoutes from './routes/event';
 import referralRoutes from './routes/referral';
-import shopRoutes from './routes/shop';
 import customizationRoutes from './routes/customization';
 import dailyRewardRoutes from './routes/dailyReward';
-import adminGamificationRoutes from './routes/adminGamification';
 
 // Sprint 22: Multi-language (i18n) System Routes
 import i18nRoutes from './routes/i18n';
@@ -153,6 +144,9 @@ import userReminderRoutes from './routes/userReminder';
 import playlistRoutes from './routes/playlist';
 import adminPlaylistRoutes from './routes/admin/playlist';
 import wellnessRoutes from './routes/wellness';
+
+// AI Services
+import aiRoutes from './routes/ai';
 
 import swaggerUi from 'swagger-ui-express';
 import { createServer } from 'http';
@@ -221,13 +215,13 @@ app.use('/api/users', userRoutes);
 app.use('/api/admin/programs', adminProgramRoutes);
 app.use('/api/admin/reports', adminReportRoutes);
 app.use('/api/admin', adminRoutes);
-app.use('/api/admin/challenges', adminChallengeRoutes);
+// app.use('/api/admin/challenges', adminChallengeRoutes); // REMOVED
 app.use('/api/admin/poses', adminPoseRoutes);
 app.use('/api/classes', classRoutes);
 app.use('/api/bookings', bookingRoutes);
 app.use('/api/payments', paymentRoutes);
 app.use('/api/notifications', notificationRoutes);
-app.use('/api/challenges', challengeRoutes);
+// app.use('/api/challenges', challengeRoutes); // REMOVED
 app.use('/api/reminders', reminderRoutes);
 app.use('/api/programs', programRoutes);
 app.use('/api/tags', tagRoutes);
@@ -262,25 +256,16 @@ app.use('/api/admin/instructors', adminInstructorRoutes);
 app.use('/api/live-streams', liveStreamRoutes);
 app.use('/api/admin/live-streams', adminLiveStreamRoutes);
 
-// Sprint 20: Community & Social System
-app.use('/api/forum', forumRoutes);
+// Sprint 20: Comment & Report Routes (Social features removed)
 app.use('/api/comments', commentRoutes);
-app.use('/api/social', socialRoutes);
-app.use('/api/messaging', messagingRoutes);
-app.use('/api/groups', groupRoutes);
-app.use('/api/leaderboard', leaderboardRoutes);
 app.use('/api/reports', reportRoutes);
 
-// Sprint 21: Gamification & Achievements System
-app.use('/api/gamification', gamificationRoutes);
+// Sprint 21: Achievements System (Gamification simplified - removed leaderboard, quests, shop, gamification)
 app.use('/api/achievements', achievementRoutes);
-app.use('/api/quests', questRoutes);
 app.use('/api/events', eventRoutes);
 app.use('/api/referrals', referralRoutes);
-app.use('/api/shop', shopRoutes);
 app.use('/api/customization', customizationRoutes);
 app.use('/api/daily-rewards', dailyRewardRoutes);
-app.use('/api/admin/gamification', adminGamificationRoutes);
 
 // Sprint 22: Multi-language (i18n) System
 app.use('/api/i18n', i18nRoutes);
@@ -341,6 +326,9 @@ app.use('/api/user-reminders', userReminderRoutes);
 app.use('/api/playlists', playlistRoutes);
 app.use('/api/admin/playlists', adminPlaylistRoutes);
 app.use('/api/wellness', wellnessRoutes);
+
+// AI Services
+app.use('/api/ai', aiRoutes);
 
 // External Webhooks (Iyzico, Twilio, SendGrid) - No auth required
 app.use('/webhooks', externalWebhookRoutes);
@@ -425,6 +413,11 @@ async function start() {
     initializeGamificationJobs();
     logger.info('Gamification jobs initialized');
 
+    // Initialize AI Agent jobs
+    const { initializeAIAgentJobs } = await import('./jobs/aiAgentJobs');
+    initializeAIAgentJobs();
+    logger.info('AI Agent jobs initialized');
+
     // Initialize Kafka (if enabled)
     if (config.kafka?.enabled) {
       const { initializeKafka, getProducer } = await import('./services/kafkaService');
@@ -508,6 +501,10 @@ async function gracefulShutdown(signal: string) {
   // Stop gamification jobs
   const { stopGamificationJobs } = await import('./jobs/gamificationJobs');
   stopGamificationJobs();
+
+  // Stop AI Agent jobs
+  const { stopAIAgentJobs } = await import('./jobs/aiAgentJobs');
+  stopAIAgentJobs();
 
   // Close Socket.IO
   const { closeSocketServer } = await import('./services/liveStreamSocketService');

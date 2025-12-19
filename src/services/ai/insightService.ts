@@ -11,7 +11,7 @@ export const generateDailyInsight = async (userId: string) => {
   today.setHours(0, 0, 0, 0);
 
   // Check if insight already exists for today
-  const existingInsight = await prisma.dailyInsight.findUnique({
+  const existingInsight = await prisma.daily_insights.findUnique({
     where: {
       userId_date: { userId, date: today },
     },
@@ -28,7 +28,7 @@ export const generateDailyInsight = async (userId: string) => {
   const insights = await generateInsightContent(userId, metricsSnapshot);
 
   // Create daily insight
-  const dailyInsight = await prisma.dailyInsight.create({
+  const dailyInsight = await prisma.daily_insights.create({
     data: {
       userId,
       date: today,
@@ -49,7 +49,7 @@ export const getDailyInsight = async (userId: string, date?: Date) => {
   const targetDate = date || new Date();
   targetDate.setHours(0, 0, 0, 0);
 
-  return prisma.dailyInsight.findUnique({
+  return prisma.daily_insights.findUnique({
     where: {
       userId_date: { userId, date: targetDate },
     },
@@ -58,7 +58,7 @@ export const getDailyInsight = async (userId: string, date?: Date) => {
 
 // Mark insight as viewed
 export const markInsightViewed = async (insightId: string) => {
-  return prisma.dailyInsight.update({
+  return prisma.daily_insights.update({
     where: { id: insightId },
     data: {
       isViewed: true,
@@ -72,7 +72,7 @@ export const getInsightHistory = async (
   userId: string,
   limit: number = 30
 ) => {
-  return prisma.dailyInsight.findMany({
+  return prisma.daily_insights.findMany({
     where: { userId },
     orderBy: { date: 'desc' },
     take: limit,
@@ -81,7 +81,7 @@ export const getInsightHistory = async (
 
 // Generate insight audio
 export const generateInsightAudio = async (insightId: string) => {
-  const insight = await prisma.dailyInsight.findUnique({
+  const insight = await prisma.daily_insights.findUnique({
     where: { id: insightId },
   });
 
@@ -100,7 +100,7 @@ export const generateInsightAudio = async (insightId: string) => {
   );
 
   // Update insight with audio URL
-  await prisma.dailyInsight.update({
+  await prisma.daily_insights.update({
     where: { id: insightId },
     data: { audioUrl: audio.audioUrl },
   });
@@ -125,7 +125,7 @@ const collectUserMetrics = async (userId: string) => {
     recentActivity,
   ] = await Promise.all([
     // Classes completed yesterday
-    prisma.videoProgress.count({
+    prisma.video_progress.count({
       where: {
         userId,
         completed: true,
@@ -137,7 +137,7 @@ const collectUserMetrics = async (userId: string) => {
     }),
 
     // Total classes completed
-    prisma.videoProgress.count({
+    prisma.video_progress.count({
       where: {
         userId,
         completed: true,
@@ -145,7 +145,7 @@ const collectUserMetrics = async (userId: string) => {
     }),
 
     // Current streak (from user level if exists)
-    prisma.userLevel
+    prisma.user_levels
       .findUnique({
         where: { userId },
         select: { currentStreak: true },
@@ -153,12 +153,12 @@ const collectUserMetrics = async (userId: string) => {
       .then((ul) => ul?.currentStreak || 0),
 
     // Active challenge progress
-    prisma.challengeEnrollment.findMany({
+    prisma.challenge_enrollments.findMany({
       where: {
         userId,
       },
       include: {
-        challenge: {
+        challenges: {
           select: {
             title: true,
           },
@@ -168,7 +168,7 @@ const collectUserMetrics = async (userId: string) => {
     }),
 
     // Recent activity summary
-    prisma.userBehavior.findMany({
+    prisma.user_behaviors.findMany({
       where: {
         userId,
         createdAt: {
@@ -183,7 +183,7 @@ const collectUserMetrics = async (userId: string) => {
     classesCompletedYesterday,
     totalClassesCompleted,
     currentStreak,
-    activeChallenges: challengeProgress.map((cp) => ({
+    activeChallenges: challengeProgress.map((cp: any) => ({
       title: cp.challenge.title,
       recentActivity: true,
     })),
@@ -197,7 +197,7 @@ const generateInsightContent = async (
   userId: string,
   metrics: ReturnType<typeof collectUserMetrics> extends Promise<infer T> ? T : never
 ) => {
-  const user = await prisma.user.findUnique({
+  const user = await prisma.users.findUnique({
     where: { id: userId },
     select: { firstName: true },
   });
@@ -208,7 +208,7 @@ Generate a personalized daily insight for ${user?.firstName || 'this user'} base
 - Classes completed yesterday: ${metrics.classesCompletedYesterday}
 - Total classes completed: ${metrics.totalClassesCompleted}
 - Current streak: ${metrics.currentStreak} days
-- Active challenges: ${metrics.activeChallenges.map((c) => c.title).join(', ') || 'None'}
+- Active challenges: ${metrics.activeChallenges.map((c: any) => c.title).join(', ') || 'None'}
 - Recent activity: ${metrics.recentActivityCount > 0 ? 'Active' : 'Inactive'}
 
 Please provide:
@@ -306,10 +306,10 @@ const buildAudioScript = (insight: {
 // Generate all daily insights (cron job - run early morning)
 export const generateAllDailyInsights = async () => {
   // Get all active users
-  const activeUsers = await prisma.user.findMany({
+  const activeUsers = await prisma.users.findMany({
     where: {
       // Only users who have been active in the last 30 days
-      videoProgress: {
+      video_progress: {
         some: {
           updatedAt: {
             gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),

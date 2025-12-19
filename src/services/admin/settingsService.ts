@@ -7,22 +7,22 @@ import { HttpError } from '../../middleware/errorHandler';
 // ============================================
 
 export async function getSettings(category?: SettingCategory) {
-  const where: Prisma.SystemSettingWhereInput = category ? { category } : {};
+  const where: Prisma.system_settingsWhereInput = category ? { category } : {};
 
-  return prisma.systemSetting.findMany({
+  return prisma.system_settings.findMany({
     where,
     orderBy: [{ category: 'asc' }, { key: 'asc' }],
     include: {
-      updatedBy: { select: { firstName: true, lastName: true, email: true } },
+      users: { select: { firstName: true, lastName: true, email: true } },
     },
   });
 }
 
 export async function getSetting(key: string) {
-  const setting = await prisma.systemSetting.findUnique({
+  const setting = await prisma.system_settings.findUnique({
     where: { key },
     include: {
-      updatedBy: { select: { firstName: true, lastName: true, email: true } },
+      users: { select: { firstName: true, lastName: true, email: true } },
     },
   });
 
@@ -31,7 +31,7 @@ export async function getSetting(key: string) {
 }
 
 export async function getSettingValue<T>(key: string, defaultValue: T): Promise<T> {
-  const setting = await prisma.systemSetting.findUnique({
+  const setting = await prisma.system_settings.findUnique({
     where: { key },
   });
 
@@ -58,10 +58,10 @@ export async function setSetting(
     isPublic?: boolean;
   },
 ) {
-  const existing = await prisma.systemSetting.findUnique({ where: { key } });
+  const existing = await prisma.system_settings.findUnique({ where: { key } });
 
   if (existing) {
-    return prisma.systemSetting.update({
+    return prisma.system_settings.update({
       where: { key },
       data: {
         value: value as Prisma.InputJsonValue,
@@ -71,7 +71,7 @@ export async function setSetting(
     });
   }
 
-  return prisma.systemSetting.create({
+  return prisma.system_settings.create({
     data: {
       key,
       value: value as Prisma.InputJsonValue,
@@ -85,15 +85,15 @@ export async function setSetting(
 }
 
 export async function deleteSetting(key: string) {
-  const setting = await prisma.systemSetting.findUnique({ where: { key } });
+  const setting = await prisma.system_settings.findUnique({ where: { key } });
   if (!setting) throw new HttpError(404, 'Setting not found');
 
-  await prisma.systemSetting.delete({ where: { key } });
+  await prisma.system_settings.delete({ where: { key } });
   return { deleted: true };
 }
 
 export async function getPublicSettings() {
-  return prisma.systemSetting.findMany({
+  return prisma.system_settings.findMany({
     where: { isPublic: true },
     select: { key: true, value: true, type: true },
   });
@@ -104,22 +104,22 @@ export async function getPublicSettings() {
 // ============================================
 
 export async function getFeatureFlags(includeInactive = false) {
-  const where: Prisma.FeatureFlagWhereInput = includeInactive ? {} : { isEnabled: true };
+  const where: Prisma.feature_flagsWhereInput = includeInactive ? {} : { isEnabled: true };
 
-  return prisma.featureFlag.findMany({
+  return prisma.feature_flags.findMany({
     where,
     orderBy: { key: 'asc' },
     include: {
-      updatedBy: { select: { firstName: true, lastName: true, email: true } },
+      users: { select: { firstName: true, lastName: true, email: true } },
     },
   });
 }
 
 export async function getFeatureFlag(key: string) {
-  const flag = await prisma.featureFlag.findUnique({
+  const flag = await prisma.feature_flags.findUnique({
     where: { key },
     include: {
-      updatedBy: { select: { firstName: true, lastName: true, email: true } },
+      users: { select: { firstName: true, lastName: true, email: true } },
     },
   });
 
@@ -128,7 +128,7 @@ export async function getFeatureFlag(key: string) {
 }
 
 export async function isFeatureEnabled(key: string, userId?: string): Promise<boolean> {
-  const flag = await prisma.featureFlag.findUnique({ where: { key } });
+  const flag = await prisma.feature_flags.findUnique({ where: { key } });
   if (!flag || !flag.isEnabled) return false;
 
   // Check user allowlist
@@ -167,10 +167,10 @@ export async function createFeatureFlag(
     metadata?: object;
   },
 ) {
-  const existing = await prisma.featureFlag.findUnique({ where: { key: data.key } });
+  const existing = await prisma.feature_flags.findUnique({ where: { key: data.key } });
   if (existing) throw new HttpError(400, 'Feature flag already exists');
 
-  return prisma.featureFlag.create({
+  return prisma.feature_flags.create({
     data: {
       key: data.key,
       name: data.name || data.key,
@@ -196,10 +196,10 @@ export async function updateFeatureFlag(
     metadata: object;
   }>,
 ) {
-  const flag = await prisma.featureFlag.findUnique({ where: { key } });
+  const flag = await prisma.feature_flags.findUnique({ where: { key } });
   if (!flag) throw new HttpError(404, 'Feature flag not found');
 
-  return prisma.featureFlag.update({
+  return prisma.feature_flags.update({
     where: { key },
     data: {
       ...data,
@@ -210,10 +210,10 @@ export async function updateFeatureFlag(
 }
 
 export async function toggleFeatureFlag(key: string, adminId: string) {
-  const flag = await prisma.featureFlag.findUnique({ where: { key } });
+  const flag = await prisma.feature_flags.findUnique({ where: { key } });
   if (!flag) throw new HttpError(404, 'Feature flag not found');
 
-  return prisma.featureFlag.update({
+  return prisma.feature_flags.update({
     where: { key },
     data: {
       isEnabled: !flag.isEnabled,
@@ -223,10 +223,10 @@ export async function toggleFeatureFlag(key: string, adminId: string) {
 }
 
 export async function deleteFeatureFlag(key: string) {
-  const flag = await prisma.featureFlag.findUnique({ where: { key } });
+  const flag = await prisma.feature_flags.findUnique({ where: { key } });
   if (!flag) throw new HttpError(404, 'Feature flag not found');
 
-  await prisma.featureFlag.delete({ where: { key } });
+  await prisma.feature_flags.delete({ where: { key } });
   return { deleted: true };
 }
 
@@ -253,9 +253,9 @@ export async function seedDefaultSettings(adminId: string) {
 
   const results = [];
   for (const setting of defaultSettings) {
-    const existing = await prisma.systemSetting.findUnique({ where: { key: setting.key } });
+    const existing = await prisma.system_settings.findUnique({ where: { key: setting.key } });
     if (!existing) {
-      await prisma.systemSetting.create({
+      await prisma.system_settings.create({
         data: {
           key: setting.key,
           value: setting.value as Prisma.InputJsonValue,
@@ -289,9 +289,9 @@ export async function seedDefaultFeatureFlags(adminId: string) {
 
   const results = [];
   for (const flag of defaultFlags) {
-    const existing = await prisma.featureFlag.findUnique({ where: { key: flag.key } });
+    const existing = await prisma.feature_flags.findUnique({ where: { key: flag.key } });
     if (!existing) {
-      await prisma.featureFlag.create({
+      await prisma.feature_flags.create({
         data: {
           key: flag.key,
           name: flag.name,

@@ -9,10 +9,9 @@ const prisma = new PrismaClient();
 const moodTagSchema = z.object({
   name: z.string().min(1).max(50),
   nameEn: z.string().min(1).max(50).optional(),
-  category: z.enum(['EMOTION', 'ACTIVITY', 'LOCATION', 'WEATHER', 'SOCIAL', 'HEALTH', 'OTHER']).optional(),
+  category: z.enum(['ACTIVITY', 'SOCIAL', 'HEALTH', 'WEATHER', 'OTHER']),
   icon: z.string().optional(),
   color: z.string().optional(),
-  sortOrder: z.number().optional(),
   isActive: z.boolean().optional(),
 });
 
@@ -69,7 +68,7 @@ router.get('/', async (req: Request, res: Response) => {
         where,
         skip,
         take: Number(limit),
-        orderBy: [{ category: 'asc' }, { sortOrder: 'asc' }, { name: 'asc' }],
+        orderBy: [{ category: 'asc' }, { name: 'asc' }],
       }),
       prisma.mood_tags.count({ where }),
     ]);
@@ -148,16 +147,13 @@ router.post('/', async (req: Request, res: Response) => {
   try {
     const validated = moodTagSchema.parse(req.body);
 
-    // Get max sort order for the category
-    const maxOrder = await prisma.mood_tags.aggregate({
-      where: { category: validated.category },
-      _max: { sortOrder: true },
-    });
-
     const tag = await prisma.mood_tags.create({
       data: {
-        ...validated,
-        sortOrder: validated.sortOrder ?? (maxOrder._max.sortOrder || 0) + 1,
+        name: validated.name,
+        nameEn: validated.nameEn,
+        category: validated.category,
+        icon: validated.icon,
+        color: validated.color,
         isActive: validated.isActive ?? true,
       },
     });
@@ -165,7 +161,7 @@ router.post('/', async (req: Request, res: Response) => {
     res.status(201).json(tag);
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return res.status(400).json({ error: 'Validation error', details: error.errors });
+      return res.status(400).json({ error: 'Validation error', details: error.issues });
     }
     console.error('Error creating mood tag:', error);
     res.status(500).json({ error: 'Internal server error' });
@@ -201,15 +197,23 @@ router.put('/:id', async (req: Request, res: Response) => {
     const { id } = req.params;
     const validated = moodTagSchema.partial().parse(req.body);
 
+    const updateData: any = {};
+    if (validated.name !== undefined) updateData.name = validated.name;
+    if (validated.nameEn !== undefined) updateData.nameEn = validated.nameEn;
+    if (validated.category !== undefined) updateData.category = validated.category;
+    if (validated.icon !== undefined) updateData.icon = validated.icon;
+    if (validated.color !== undefined) updateData.color = validated.color;
+    if (validated.isActive !== undefined) updateData.isActive = validated.isActive;
+
     const tag = await prisma.mood_tags.update({
       where: { id },
-      data: validated,
+      data: updateData,
     });
 
     res.json(tag);
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return res.status(400).json({ error: 'Validation error', details: error.errors });
+      return res.status(400).json({ error: 'Validation error', details: error.issues });
     }
     console.error('Error updating mood tag:', error);
     res.status(500).json({ error: 'Internal server error' });
@@ -341,9 +345,12 @@ router.post('/bulk', async (req: Request, res: Response) => {
     });
 
     const created = await prisma.mood_tags.createMany({
-      data: validatedTags.map((tag, index) => ({
-        ...tag,
-        sortOrder: tag.sortOrder ?? index + 1,
+      data: validatedTags.map((tag) => ({
+        name: tag.name,
+        nameEn: tag.nameEn,
+        category: tag.category,
+        icon: tag.icon,
+        color: tag.color,
         isActive: tag.isActive ?? true,
       })),
       skipDuplicates: true,

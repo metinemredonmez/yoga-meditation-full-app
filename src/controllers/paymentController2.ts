@@ -24,16 +24,16 @@ export async function getPaymentHistoryHandler(req: Request, res: Response, next
     const skip = (page - 1) * limit;
 
     const [payments, total] = await Promise.all([
-      prisma.payment.findMany({
+      prisma.payments.findMany({
         where: { userId },
         include: {
-          subscription: true,
+          subscriptions: true,
         },
         orderBy: { createdAt: 'desc' },
         skip,
         take: limit,
       }),
-      prisma.payment.count({ where: { userId } }),
+      prisma.payments.count({ where: { userId } }),
     ]);
 
     res.json({
@@ -63,13 +63,13 @@ export async function getPaymentHandler(req: Request, res: Response, next: NextF
       return res.status(400).json({ success: false, error: 'Payment ID required' });
     }
 
-    const payment = await prisma.payment.findFirst({
+    const payment = await prisma.payments.findFirst({
       where: {
         id: paymentId,
         userId,
       },
       include: {
-        subscription: true,
+        subscriptions: true,
         refunds: true,
       },
     });
@@ -99,7 +99,7 @@ export async function getPaymentMethodsHandler(req: Request, res: Response, next
   try {
     const userId = req.user!.userId;
 
-    const user = await prisma.user.findUnique({
+    const user = await prisma.users.findUnique({
       where: { id: userId },
     });
 
@@ -148,7 +148,7 @@ export async function addPaymentMethodHandler(req: Request, res: Response, next:
       });
     }
 
-    const user = await prisma.user.findUnique({
+    const user = await prisma.users.findUnique({
       where: { id: userId },
     });
 
@@ -206,7 +206,7 @@ export async function removePaymentMethodHandler(req: Request, res: Response, ne
       return res.status(400).json({ success: false, error: 'Payment method ID required' });
     }
 
-    const user = await prisma.user.findUnique({
+    const user = await prisma.users.findUnique({
       where: { id: userId },
     });
 
@@ -245,7 +245,7 @@ export async function setDefaultPaymentMethodHandler(req: Request, res: Response
       });
     }
 
-    const user = await prisma.user.findUnique({
+    const user = await prisma.users.findUnique({
       where: { id: userId },
     });
 
@@ -276,7 +276,7 @@ export async function createSetupIntentHandler(req: Request, res: Response, next
   try {
     const userId = req.user!.userId;
 
-    const user = await prisma.user.findUnique({
+    const user = await prisma.users.findUnique({
       where: { id: userId },
     });
 
@@ -329,7 +329,7 @@ export async function requestRefundHandler(req: Request, res: Response, next: Ne
     }
 
     // Verify the payment belongs to the user
-    const payment = await prisma.payment.findFirst({
+    const payment = await prisma.payments.findFirst({
       where: {
         id: paymentId,
         userId,
@@ -393,7 +393,7 @@ export async function getPaymentRefundsHandler(req: Request, res: Response, next
     }
 
     // Verify the payment belongs to the user
-    const payment = await prisma.payment.findFirst({
+    const payment = await prisma.payments.findFirst({
       where: {
         id: paymentId,
         userId,
@@ -436,18 +436,18 @@ export async function getAllPaymentsHandler(req: Request, res: Response, next: N
     if (provider) where.provider = provider;
 
     const [payments, total] = await Promise.all([
-      prisma.payment.findMany({
+      prisma.payments.findMany({
         where,
         include: {
-          user: { select: { id: true, email: true, firstName: true, lastName: true } },
-          subscription: true,
+          users: { select: { id: true, email: true, firstName: true, lastName: true } },
+          subscriptions: true,
           refunds: true,
         },
         orderBy: { createdAt: 'desc' },
         skip,
         take: limit,
       }),
-      prisma.payment.count({ where }),
+      prisma.payments.count({ where }),
     ]);
 
     res.json({
@@ -533,14 +533,14 @@ export async function getPaymentStatsHandler(req: Request, res: Response, next: 
       totalRevenue,
       paymentsByProvider,
     ] = await Promise.all([
-      prisma.payment.count({ where }),
-      prisma.payment.count({ where: { ...where, status: 'COMPLETED' } }),
-      prisma.payment.count({ where: { ...where, status: { in: ['REFUNDED', 'PARTIALLY_REFUNDED'] } } }),
-      prisma.payment.aggregate({
+      prisma.payments.count({ where }),
+      prisma.payments.count({ where: { ...where, status: 'COMPLETED' } }),
+      prisma.payments.count({ where: { ...where, status: { in: ['REFUNDED', 'PARTIALLY_REFUNDED'] } } }),
+      prisma.payments.aggregate({
         where: { ...where, status: 'COMPLETED' },
         _sum: { amount: true },
       }),
-      prisma.payment.groupBy({
+      prisma.payments.groupBy({
         by: ['provider'],
         where: { ...where, status: 'COMPLETED' },
         _count: true,

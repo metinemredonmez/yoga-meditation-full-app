@@ -36,7 +36,7 @@ export async function registerDevice(
   deviceName?: string,
 ): Promise<DeviceInfo> {
   // Upsert - aynı token varsa güncelle, yoksa oluştur
-  const device = await prisma.deviceToken.upsert({
+  const device = await prisma.device_tokens.upsert({
     where: { token },
     create: {
       userId,
@@ -68,7 +68,7 @@ export async function registerDevice(
 
 export async function unregisterDevice(userId: string, token: string): Promise<boolean> {
   try {
-    await prisma.deviceToken.deleteMany({
+    await prisma.device_tokens.deleteMany({
       where: {
         userId,
         token,
@@ -83,7 +83,7 @@ export async function unregisterDevice(userId: string, token: string): Promise<b
 }
 
 export async function getUserDevices(userId: string): Promise<DeviceInfo[]> {
-  const devices = await prisma.deviceToken.findMany({
+  const devices = await prisma.device_tokens.findMany({
     where: { userId, isActive: true },
     orderBy: { updatedAt: 'desc' },
   });
@@ -104,7 +104,7 @@ async function createNotificationLog(
   status: NotificationStatus,
   errorMessage?: string,
 ): Promise<string> {
-  const log = await prisma.notificationLog.create({
+  const log = await prisma.notification_logs.create({
     data: {
       userId,
       title: payload.title,
@@ -123,7 +123,7 @@ async function updateNotificationLog(
   status: NotificationStatus,
   errorMessage?: string,
 ): Promise<void> {
-  await prisma.notificationLog.update({
+  await prisma.notification_logs.update({
     where: { id: logId },
     data: {
       status,
@@ -148,7 +148,7 @@ export async function sendToUser(
   }
 
   // Get user's active device tokens
-  const devices = await prisma.deviceToken.findMany({
+  const devices = await prisma.device_tokens.findMany({
     where: { userId, isActive: true },
     select: { id: true, token: true },
   });
@@ -199,7 +199,7 @@ export async function sendToUser(
 
     // Deactivate invalid tokens
     if (invalidTokens.length > 0) {
-      await prisma.deviceToken.updateMany({
+      await prisma.device_tokens.updateMany({
         where: { token: { in: invalidTokens } },
         data: { isActive: false },
       });
@@ -347,7 +347,7 @@ export async function getUserNotificationHistory(
   sentAt: Date | null;
   createdAt: Date;
 }[]> {
-  const logs = await prisma.notificationLog.findMany({
+  const logs = await prisma.notification_logs.findMany({
     where: { userId },
     orderBy: { createdAt: 'desc' },
     take: limit,

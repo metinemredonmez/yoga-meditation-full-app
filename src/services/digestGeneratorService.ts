@@ -23,7 +23,7 @@ export async function generateWeeklyDigestData(userId: string): Promise<WeeklyDi
   const weekStart = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
 
   // Get completed sessions this week
-  const completedSessions = await prisma.dailyCheck.count({
+  const completedSessions = await prisma.daily_checks.count({
     where: {
       userId,
       date: {
@@ -34,7 +34,7 @@ export async function generateWeeklyDigestData(userId: string): Promise<WeeklyDi
   });
 
   // Get total practice minutes from video progress
-  const videoProgress = await prisma.videoProgress.findMany({
+  const videoProgress = await prisma.video_progress.findMany({
     where: {
       userId,
       lastWatchedAt: {
@@ -52,14 +52,14 @@ export async function generateWeeklyDigestData(userId: string): Promise<WeeklyDi
   );
 
   // Get current streak from engagement stats
-  const engagementStats = await prisma.userEngagementStats.findUnique({
+  const engagementStats = await prisma.user_engagement_stats.findUnique({
     where: { userId },
   });
 
   const currentStreak = engagementStats?.currentStreak || 0;
 
   // Get new content tried this week
-  const newSessions = await prisma.videoProgress.findMany({
+  const newSessions = await prisma.video_progress.findMany({
     where: {
       userId,
       createdAt: {
@@ -127,7 +127,7 @@ export async function generateMonthlyDigestData(userId: string): Promise<Monthly
   const monthName = monthNames[now.getMonth()]!;
 
   // Get completed sessions this month
-  const completedSessions = await prisma.dailyCheck.count({
+  const completedSessions = await prisma.daily_checks.count({
     where: {
       userId,
       date: {
@@ -138,7 +138,7 @@ export async function generateMonthlyDigestData(userId: string): Promise<Monthly
   });
 
   // Get total practice minutes this month
-  const monthlyProgress = await prisma.videoProgress.findMany({
+  const monthlyProgress = await prisma.video_progress.findMany({
     where: {
       userId,
       lastWatchedAt: {
@@ -156,14 +156,14 @@ export async function generateMonthlyDigestData(userId: string): Promise<Monthly
   );
 
   // Get longest streak from engagement stats
-  const engagementStats = await prisma.userEngagementStats.findUnique({
+  const engagementStats = await prisma.user_engagement_stats.findUnique({
     where: { userId },
   });
 
   const longestStreak = engagementStats?.longestStreak || 0;
 
   // Get programs started this month
-  const programsStarted = await prisma.videoProgress.groupBy({
+  const programsStarted = await prisma.video_progress.groupBy({
     by: ['lessonId'],
     where: {
       userId,
@@ -176,7 +176,7 @@ export async function generateMonthlyDigestData(userId: string): Promise<Monthly
   });
 
   // Get yearly minutes
-  const yearlyProgress = await prisma.videoProgress.findMany({
+  const yearlyProgress = await prisma.video_progress.findMany({
     where: {
       userId,
       lastWatchedAt: {
@@ -194,7 +194,7 @@ export async function generateMonthlyDigestData(userId: string): Promise<Monthly
   );
 
   // Get achievements/badges (from completed challenges)
-  const completedChallenges = await prisma.challengeEnrollment.findMany({
+  const completedChallenges = await prisma.challenge_enrollments.findMany({
     where: {
       userId,
       joinedAt: {
@@ -203,7 +203,7 @@ export async function generateMonthlyDigestData(userId: string): Promise<Monthly
       },
     },
     include: {
-      challenge: {
+      challenges: {
         select: {
           title: true,
           targetDays: true,
@@ -215,15 +215,15 @@ export async function generateMonthlyDigestData(userId: string): Promise<Monthly
   // Check which challenges were actually completed
   const achievements: string[] = [];
   for (const enrollment of completedChallenges) {
-    const completedDays = await prisma.dailyCheck.count({
+    const completedDays = await prisma.daily_checks.count({
       where: {
         userId,
         challengeId: enrollment.challengeId,
       },
     });
 
-    if (completedDays >= enrollment.challenge.targetDays) {
-      achievements.push(enrollment.challenge.title);
+    if (completedDays >= enrollment.challenges.targetDays) {
+      achievements.push(enrollment.challenges.title);
     }
   }
 
@@ -232,7 +232,7 @@ export async function generateMonthlyDigestData(userId: string): Promise<Monthly
     : '';
 
   // Get top practice types
-  const practiceTypes = await prisma.videoProgress.groupBy({
+  const practiceTypes = await prisma.video_progress.groupBy({
     by: ['lessonType'],
     where: {
       userId,
@@ -271,7 +271,7 @@ export async function generateMonthlyDigestData(userId: string): Promise<Monthly
 
 async function generateRecommendations(userId: string): Promise<string> {
   // Get user's recent activity
-  const recentProgress = await prisma.videoProgress.findMany({
+  const recentProgress = await prisma.video_progress.findMany({
     where: {
       userId,
       lastWatchedAt: {
@@ -288,7 +288,7 @@ async function generateRecommendations(userId: string): Promise<string> {
   });
 
   // Get user's subscription tier
-  const user = await prisma.user.findUnique({
+  const user = await prisma.users.findUnique({
     where: { id: userId },
     select: { subscriptionTier: true },
   });
@@ -302,7 +302,7 @@ async function generateRecommendations(userId: string): Promise<string> {
   }
 
   // Check if user hasn't tried challenges
-  const challengeCount = await prisma.challengeEnrollment.count({
+  const challengeCount = await prisma.challenge_enrollments.count({
     where: { userId },
   });
 
@@ -335,12 +335,12 @@ export async function updateEngagementStats(userId: string): Promise<void> {
   const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
 
   // Calculate sessions
-  const totalSessions = await prisma.dailyCheck.count({
+  const totalSessions = await prisma.daily_checks.count({
     where: { userId },
   });
 
   // Calculate practice minutes
-  const allProgress = await prisma.videoProgress.findMany({
+  const allProgress = await prisma.video_progress.findMany({
     where: { userId },
     select: { currentTime: true },
   });
@@ -353,7 +353,7 @@ export async function updateEngagementStats(userId: string): Promise<void> {
   const currentStreak = await calculateCurrentStreak(userId);
 
   // Get longest streak
-  const existingStats = await prisma.userEngagementStats.findUnique({
+  const existingStats = await prisma.user_engagement_stats.findUnique({
     where: { userId },
   });
 
@@ -368,7 +368,7 @@ export async function updateEngagementStats(userId: string): Promise<void> {
   });
 
   // Upsert engagement stats
-  await prisma.userEngagementStats.upsert({
+  await prisma.user_engagement_stats.upsert({
     where: { userId },
     create: {
       userId,
@@ -398,7 +398,7 @@ export async function updateEngagementStats(userId: string): Promise<void> {
  * Calculate current streak
  */
 async function calculateCurrentStreak(userId: string): Promise<number> {
-  const checks = await prisma.dailyCheck.findMany({
+  const checks = await prisma.daily_checks.findMany({
     where: { userId },
     orderBy: { date: 'desc' },
     select: { date: true },
@@ -466,7 +466,7 @@ function calculateEngagementScore(data: {
  * Get users eligible for weekly digest
  */
 export async function getWeeklyDigestRecipients(): Promise<string[]> {
-  const users = await prisma.userMessagePreference.findMany({
+  const users = await prisma.user_message_preferences.findMany({
     where: {
       weeklyDigest: true,
     },
@@ -482,7 +482,7 @@ export async function getWeeklyDigestRecipients(): Promise<string[]> {
  * Get users eligible for monthly digest
  */
 export async function getMonthlyDigestRecipients(): Promise<string[]> {
-  const users = await prisma.userMessagePreference.findMany({
+  const users = await prisma.user_message_preferences.findMany({
     where: {
       monthlyDigest: true,
     },
@@ -502,7 +502,7 @@ export async function getInactiveUsers(
 ): Promise<{ userId: string; lastActiveAt: Date | null }[]> {
   const cutoffDate = new Date(Date.now() - daysSinceActive * 24 * 60 * 60 * 1000);
 
-  const users = await prisma.userEngagementStats.findMany({
+  const users = await prisma.user_engagement_stats.findMany({
     where: {
       OR: [
         { lastActiveAt: { lt: cutoffDate } },
@@ -519,7 +519,7 @@ export async function getInactiveUsers(
   const result: { userId: string; lastActiveAt: Date | null }[] = [];
 
   for (const user of users) {
-    const preference = await prisma.userMessagePreference.findUnique({
+    const preference = await prisma.user_message_preferences.findUnique({
       where: { userId: user.userId },
     });
 
@@ -544,7 +544,7 @@ export async function getUsersWithExpiringTrials(
   const nextDay = new Date(targetDate);
   nextDay.setDate(nextDay.getDate() + 1);
 
-  const subscriptions = await prisma.subscription.findMany({
+  const subscriptions = await prisma.subscriptions.findMany({
     where: {
       status: 'TRIALING',
       trialEnd: {
@@ -579,7 +579,7 @@ export async function getUsersWithUpcomingRenewals(
   const nextDay = new Date(targetDate);
   nextDay.setDate(nextDay.getDate() + 1);
 
-  const subscriptions = await prisma.subscription.findMany({
+  const subscriptions = await prisma.subscriptions.findMany({
     where: {
       status: 'ACTIVE',
       autoRenew: true,

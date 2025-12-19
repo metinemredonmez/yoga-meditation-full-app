@@ -37,7 +37,7 @@ export async function recordFailedAttempt(email: string, ip: string): Promise<Lo
     }
 
     // Fallback to database if Redis unavailable
-    const recentAttempts = await prisma.auditLog.count({
+    const recentAttempts = await prisma.audit_logs.count({
       where: {
         action: 'login.failed',
         metadata: {
@@ -51,7 +51,7 @@ export async function recordFailedAttempt(email: string, ip: string): Promise<Lo
     });
 
     // Record this attempt
-    await prisma.auditLog.create({
+    await prisma.audit_logs.create({
       data: {
         action: 'login.failed',
         metadata: { email: email.toLowerCase(), ip },
@@ -94,7 +94,7 @@ export async function isAccountLocked(email: string): Promise<{ locked: boolean;
     }
 
     // Fallback to database
-    const recentAttempts = await prisma.auditLog.count({
+    const recentAttempts = await prisma.audit_logs.count({
       where: {
         action: 'login.failed',
         metadata: {
@@ -131,7 +131,7 @@ export async function clearLoginAttempts(email: string): Promise<void> {
     }
 
     // Also record successful login for audit
-    await prisma.auditLog.create({
+    await prisma.audit_logs.create({
       data: {
         action: 'login.success',
         metadata: { email: email.toLowerCase() },
@@ -156,7 +156,7 @@ export async function getLockoutRemaining(email: string): Promise<number> {
     }
 
     // For database fallback, calculate from last attempt
-    const lastAttempt = await prisma.auditLog.findFirst({
+    const lastAttempt = await prisma.audit_logs.findFirst({
       where: {
         action: 'login.failed',
         metadata: {

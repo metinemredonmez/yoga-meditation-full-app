@@ -75,7 +75,7 @@ export interface PaginationOptions {
 export async function createStream(instructorId: string, data: CreateStreamInput) {
   const channelName = agoraService.createChannelName(`${instructorId}_${Date.now()}`);
 
-  const stream = await prisma.liveStream.create({
+  const stream = await prisma.live_streams.create({
     data: {
       title: data.title,
       description: data.description,
@@ -97,9 +97,9 @@ export async function createStream(instructorId: string, data: CreateStreamInput
       agoraChannelName: channelName,
     },
     include: {
-      instructor: {
+      instructor_profiles: {
         include: {
-          user: {
+          users: {
             select: { firstName: true, lastName: true, email: true },
           },
         },
@@ -116,7 +116,7 @@ export async function updateStream(
   instructorId: string,
   data: UpdateStreamInput,
 ) {
-  const stream = await prisma.liveStream.findFirst({
+  const stream = await prisma.live_streams.findFirst({
     where: { id: streamId, instructorId },
   });
 
@@ -128,7 +128,7 @@ export async function updateStream(
     throw new Error('Cannot update a live stream');
   }
 
-  const updated = await prisma.liveStream.update({
+  const updated = await prisma.live_streams.update({
     where: { id: streamId },
     data: {
       ...(data.title && { title: data.title }),
@@ -149,9 +149,9 @@ export async function updateStream(
       ...(data.handRaiseEnabled !== undefined && { handRaiseEnabled: data.handRaiseEnabled }),
     },
     include: {
-      instructor: {
+      instructor_profiles: {
         include: {
-          user: {
+          users: {
             select: { firstName: true, lastName: true },
           },
         },
@@ -164,7 +164,7 @@ export async function updateStream(
 }
 
 export async function deleteStream(streamId: string, instructorId: string) {
-  const stream = await prisma.liveStream.findFirst({
+  const stream = await prisma.live_streams.findFirst({
     where: { id: streamId, instructorId },
   });
 
@@ -176,17 +176,17 @@ export async function deleteStream(streamId: string, instructorId: string) {
     throw new Error('Cannot delete a live stream');
   }
 
-  await prisma.liveStream.delete({ where: { id: streamId } });
+  await prisma.live_streams.delete({ where: { id: streamId } });
   logger.info({ streamId, instructorId }, 'Deleted live stream');
 }
 
 export async function getStreamById(streamId: string) {
-  return prisma.liveStream.findUnique({
+  return prisma.live_streams.findUnique({
     where: { id: streamId },
     include: {
-      instructor: {
+      instructor_profiles: {
         include: {
-          user: {
+          users: {
             select: {
               id: true,
               firstName: true,
@@ -198,9 +198,9 @@ export async function getStreamById(streamId: string) {
       },
       _count: {
         select: {
-          participants: { where: { isActive: true } },
-          registrations: true,
-          chatMessages: true,
+          live_stream_participants: { where: { isActive: true } },
+          live_stream_registrations: true,
+          live_stream_chats: true,
         },
       },
     },
@@ -211,7 +211,7 @@ export async function getUpcomingStreams(
   filters: StreamFilters = {},
   pagination: PaginationOptions = { page: 1, limit: 20 },
 ) {
-  const where: Prisma.LiveStreamWhereInput = {
+  const where: Prisma.live_streamsWhereInput = {
     status: { in: [LiveStreamStatus.SCHEDULED, LiveStreamStatus.LIVE] },
     scheduledStartAt: { gte: filters.fromDate ?? new Date() },
     ...(filters.toDate && { scheduledStartAt: { lte: filters.toDate } }),
@@ -224,25 +224,25 @@ export async function getUpcomingStreams(
   };
 
   const [items, total] = await Promise.all([
-    prisma.liveStream.findMany({
+    prisma.live_streams.findMany({
       where,
       include: {
-        instructor: {
+        instructor_profiles: {
           include: {
-            user: {
+            users: {
               select: { firstName: true, lastName: true },
             },
           },
         },
         _count: {
-          select: { registrations: true },
+          select: { live_stream_registrations: true },
         },
       },
       orderBy: { scheduledStartAt: 'asc' },
       skip: (pagination.page - 1) * pagination.limit,
       take: pagination.limit,
     }),
-    prisma.liveStream.count({ where }),
+    prisma.live_streams.count({ where }),
   ]);
 
   return {
@@ -255,19 +255,19 @@ export async function getUpcomingStreams(
 }
 
 export async function getLiveStreams() {
-  return prisma.liveStream.findMany({
+  return prisma.live_streams.findMany({
     where: { status: LiveStreamStatus.LIVE },
     include: {
-      instructor: {
+      instructor_profiles: {
         include: {
-          user: {
+          users: {
             select: { firstName: true, lastName: true },
           },
         },
       },
       _count: {
         select: {
-          participants: { where: { isActive: true } },
+          live_stream_participants: { where: { isActive: true } },
         },
       },
     },
@@ -279,16 +279,16 @@ export async function getStreamsByInstructor(
   instructorId: string,
   pagination: PaginationOptions = { page: 1, limit: 20 },
 ) {
-  const where: Prisma.LiveStreamWhereInput = { instructorId };
+  const where: Prisma.live_streamsWhereInput = { instructorId };
 
   const [items, total] = await Promise.all([
-    prisma.liveStream.findMany({
+    prisma.live_streams.findMany({
       where,
       include: {
         _count: {
           select: {
-            participants: true,
-            registrations: true,
+            live_stream_participants: true,
+            live_stream_registrations: true,
           },
         },
       },
@@ -296,7 +296,7 @@ export async function getStreamsByInstructor(
       skip: (pagination.page - 1) * pagination.limit,
       take: pagination.limit,
     }),
-    prisma.liveStream.count({ where }),
+    prisma.live_streams.count({ where }),
   ]);
 
   return {
@@ -313,7 +313,7 @@ export async function searchStreams(
   filters: StreamFilters = {},
   pagination: PaginationOptions = { page: 1, limit: 20 },
 ) {
-  const where: Prisma.LiveStreamWhereInput = {
+  const where: Prisma.live_streamsWhereInput = {
     OR: [
       { title: { contains: query, mode: 'insensitive' } },
       { description: { contains: query, mode: 'insensitive' } },
@@ -325,12 +325,12 @@ export async function searchStreams(
   };
 
   const [items, total] = await Promise.all([
-    prisma.liveStream.findMany({
+    prisma.live_streams.findMany({
       where,
       include: {
-        instructor: {
+        instructor_profiles: {
           include: {
-            user: {
+            users: {
               select: { firstName: true, lastName: true },
             },
           },
@@ -340,7 +340,7 @@ export async function searchStreams(
       skip: (pagination.page - 1) * pagination.limit,
       take: pagination.limit,
     }),
-    prisma.liveStream.count({ where }),
+    prisma.live_streams.count({ where }),
   ]);
 
   return {
@@ -357,7 +357,7 @@ export async function searchStreams(
 // ============================================
 
 export async function startStream(streamId: string, instructorId: string) {
-  const stream = await prisma.liveStream.findFirst({
+  const stream = await prisma.live_streams.findFirst({
     where: { id: streamId, instructorId },
   });
 
@@ -385,7 +385,7 @@ export async function startStream(streamId: string, instructorId: string) {
     }
   }
 
-  const updated = await prisma.liveStream.update({
+  const updated = await prisma.live_streams.update({
     where: { id: streamId },
     data: {
       status: LiveStreamStatus.LIVE,
@@ -393,9 +393,9 @@ export async function startStream(streamId: string, instructorId: string) {
       ...(resourceId && { agoraResourceId: resourceId }),
     },
     include: {
-      instructor: {
+      instructor_profiles: {
         include: {
-          user: {
+          users: {
             select: { firstName: true, lastName: true },
           },
         },
@@ -408,7 +408,7 @@ export async function startStream(streamId: string, instructorId: string) {
 }
 
 export async function endStream(streamId: string, instructorId: string) {
-  const stream = await prisma.liveStream.findFirst({
+  const stream = await prisma.live_streams.findFirst({
     where: { id: streamId, instructorId },
   });
 
@@ -429,7 +429,7 @@ export async function endStream(streamId: string, instructorId: string) {
 
   // Mark all active participants as left
   const now = new Date();
-  await prisma.liveStreamParticipant.updateMany({
+  await prisma.live_stream_participants.updateMany({
     where: { streamId, isActive: true },
     data: {
       isActive: false,
@@ -442,7 +442,7 @@ export async function endStream(streamId: string, instructorId: string) {
     ? Math.round((now.getTime() - stream.actualStartAt.getTime()) / 60000) // minutes
     : 0;
 
-  const updated = await prisma.liveStream.update({
+  const updated = await prisma.live_streams.update({
     where: { id: streamId },
     data: {
       status: LiveStreamStatus.ENDED,
@@ -457,7 +457,7 @@ export async function endStream(streamId: string, instructorId: string) {
 }
 
 export async function cancelStream(streamId: string, instructorId: string, reason?: string) {
-  const stream = await prisma.liveStream.findFirst({
+  const stream = await prisma.live_streams.findFirst({
     where: { id: streamId, instructorId },
   });
 
@@ -469,7 +469,7 @@ export async function cancelStream(streamId: string, instructorId: string, reaso
     throw new Error('Stream has already ended');
   }
 
-  const updated = await prisma.liveStream.update({
+  const updated = await prisma.live_streams.update({
     where: { id: streamId },
     data: {
       status: LiveStreamStatus.CANCELLED,
@@ -484,10 +484,10 @@ export async function cancelStream(streamId: string, instructorId: string, reaso
 }
 
 export async function getStreamToken(streamId: string, userId: string) {
-  const stream = await prisma.liveStream.findUnique({
+  const stream = await prisma.live_streams.findUnique({
     where: { id: streamId },
     include: {
-      instructor: true,
+      instructor_profiles: true,
     },
   });
 
@@ -502,7 +502,7 @@ export async function getStreamToken(streamId: string, userId: string) {
   }
 
   // Determine role
-  const isHost = stream.instructor.userId === userId;
+  const isHost = stream.instructor_profiles.userId === userId;
   const isCoHost = stream.coHostIds.includes(userId);
   const role = isHost || isCoHost ? agoraService.RtcRole.PUBLISHER : agoraService.RtcRole.SUBSCRIBER;
 
@@ -533,7 +533,7 @@ export async function getStreamToken(streamId: string, userId: string) {
 // ============================================
 
 export async function registerForStream(streamId: string, userId: string, paymentId?: string) {
-  const stream = await prisma.liveStream.findUnique({
+  const stream = await prisma.live_streams.findUnique({
     where: { id: streamId },
   });
 
@@ -550,7 +550,7 @@ export async function registerForStream(streamId: string, userId: string, paymen
     throw new Error('Payment required for this stream');
   }
 
-  const registration = await prisma.liveStreamRegistration.upsert({
+  const registration = await prisma.live_stream_registrations.upsert({
     where: {
       streamId_userId: { streamId, userId },
     },
@@ -563,7 +563,7 @@ export async function registerForStream(streamId: string, userId: string, paymen
       paymentId,
     },
     include: {
-      stream: {
+      live_streams: {
         select: { title: true, scheduledStartAt: true },
       },
     },
@@ -574,7 +574,7 @@ export async function registerForStream(streamId: string, userId: string, paymen
 }
 
 export async function unregisterFromStream(streamId: string, userId: string) {
-  const registration = await prisma.liveStreamRegistration.findUnique({
+  const registration = await prisma.live_stream_registrations.findUnique({
     where: {
       streamId_userId: { streamId, userId },
     },
@@ -584,7 +584,7 @@ export async function unregisterFromStream(streamId: string, userId: string) {
     throw new Error('Registration not found');
   }
 
-  await prisma.liveStreamRegistration.delete({
+  await prisma.live_stream_registrations.delete({
     where: { id: registration.id },
   });
 
@@ -598,10 +598,10 @@ export async function getRegistrations(
   const where = { streamId };
 
   const [items, total] = await Promise.all([
-    prisma.liveStreamRegistration.findMany({
+    prisma.live_stream_registrations.findMany({
       where,
       include: {
-        user: {
+        users: {
           select: { id: true, firstName: true, lastName: true, email: true },
         },
       },
@@ -609,7 +609,7 @@ export async function getRegistrations(
       skip: (pagination.page - 1) * pagination.limit,
       take: pagination.limit,
     }),
-    prisma.liveStreamRegistration.count({ where }),
+    prisma.live_stream_registrations.count({ where }),
   ]);
 
   return {
@@ -621,7 +621,7 @@ export async function getRegistrations(
 }
 
 export async function checkRegistration(streamId: string, userId: string) {
-  const registration = await prisma.liveStreamRegistration.findUnique({
+  const registration = await prisma.live_stream_registrations.findUnique({
     where: {
       streamId_userId: { streamId, userId },
     },
@@ -631,16 +631,16 @@ export async function checkRegistration(streamId: string, userId: string) {
 }
 
 export async function sendReminders(streamId: string) {
-  const registrations = await prisma.liveStreamRegistration.findMany({
+  const registrations = await prisma.live_stream_registrations.findMany({
     where: {
       streamId,
       reminderSent: false,
     },
     include: {
-      user: {
+      users: {
         select: { id: true, email: true, firstName: true },
       },
-      stream: {
+      live_streams: {
         select: { title: true, scheduledStartAt: true },
       },
     },
@@ -649,7 +649,7 @@ export async function sendReminders(streamId: string) {
   // TODO: Send actual notifications
   const remindersSent = registrations.length;
 
-  await prisma.liveStreamRegistration.updateMany({
+  await prisma.live_stream_registrations.updateMany({
     where: {
       streamId,
       reminderSent: false,
@@ -666,9 +666,9 @@ export async function sendReminders(streamId: string) {
 // ============================================
 
 export async function joinStream(streamId: string, userId: string, agoraUid: number) {
-  const stream = await prisma.liveStream.findUnique({
+  const stream = await prisma.live_streams.findUnique({
     where: { id: streamId },
-    include: { instructor: true },
+    include: { instructor_profiles: true },
   });
 
   if (!stream) {
@@ -684,7 +684,7 @@ export async function joinStream(streamId: string, userId: string, agoraUid: num
   }
 
   // Determine role
-  const isHost = stream.instructor.userId === userId;
+  const isHost = stream.instructor_profiles.userId === userId;
   const isCoHost = stream.coHostIds.includes(userId);
   const role = isHost
     ? ParticipantRole.HOST
@@ -692,7 +692,7 @@ export async function joinStream(streamId: string, userId: string, agoraUid: num
       ? ParticipantRole.CO_HOST
       : ParticipantRole.PARTICIPANT;
 
-  const participant = await prisma.liveStreamParticipant.upsert({
+  const participant = await prisma.live_stream_participants.upsert({
     where: {
       streamId_userId: { streamId, userId },
     },
@@ -710,20 +710,20 @@ export async function joinStream(streamId: string, userId: string, agoraUid: num
       agoraUid,
     },
     include: {
-      user: {
+      users: {
         select: { id: true, firstName: true, lastName: true },
       },
     },
   });
 
   // Increment participant count
-  await prisma.liveStream.update({
+  await prisma.live_streams.update({
     where: { id: streamId },
     data: { currentParticipants: { increment: 1 } },
   });
 
   // Mark registration as attended
-  await prisma.liveStreamRegistration.updateMany({
+  await prisma.live_stream_registrations.updateMany({
     where: { streamId, userId },
     data: { attended: true },
   });
@@ -733,7 +733,7 @@ export async function joinStream(streamId: string, userId: string, agoraUid: num
 }
 
 export async function leaveStream(streamId: string, userId: string) {
-  const participant = await prisma.liveStreamParticipant.findUnique({
+  const participant = await prisma.live_stream_participants.findUnique({
     where: {
       streamId_userId: { streamId, userId },
     },
@@ -748,7 +748,7 @@ export async function leaveStream(streamId: string, userId: string) {
     (now.getTime() - participant.joinedAt.getTime()) / 1000,
   );
 
-  await prisma.liveStreamParticipant.update({
+  await prisma.live_stream_participants.update({
     where: { id: participant.id },
     data: {
       isActive: false,
@@ -760,7 +760,7 @@ export async function leaveStream(streamId: string, userId: string) {
   });
 
   // Decrement participant count
-  await prisma.liveStream.update({
+  await prisma.live_streams.update({
     where: { id: streamId },
     data: {
       currentParticipants: { decrement: 1 },
@@ -772,10 +772,10 @@ export async function leaveStream(streamId: string, userId: string) {
 }
 
 export async function getParticipants(streamId: string) {
-  return prisma.liveStreamParticipant.findMany({
+  return prisma.live_stream_participants.findMany({
     where: { streamId, isActive: true },
     include: {
-      user: {
+      users: {
         select: {
           id: true,
           firstName: true,
@@ -791,13 +791,13 @@ export async function getParticipants(streamId: string) {
 }
 
 export async function getParticipantCount(streamId: string) {
-  return prisma.liveStreamParticipant.count({
+  return prisma.live_stream_participants.count({
     where: { streamId, isActive: true },
   });
 }
 
 export async function raiseHand(streamId: string, userId: string) {
-  const participant = await prisma.liveStreamParticipant.findUnique({
+  const participant = await prisma.live_stream_participants.findUnique({
     where: {
       streamId_userId: { streamId, userId },
     },
@@ -808,7 +808,7 @@ export async function raiseHand(streamId: string, userId: string) {
   }
 
   // Check if stream allows hand raising
-  const stream = await prisma.liveStream.findUnique({
+  const stream = await prisma.live_streams.findUnique({
     where: { id: streamId },
     select: { handRaiseEnabled: true },
   });
@@ -817,7 +817,7 @@ export async function raiseHand(streamId: string, userId: string) {
     throw new Error('Hand raising is disabled for this stream');
   }
 
-  await prisma.liveStreamParticipant.update({
+  await prisma.live_stream_participants.update({
     where: { id: participant.id },
     data: {
       handRaised: true,
@@ -829,7 +829,7 @@ export async function raiseHand(streamId: string, userId: string) {
 }
 
 export async function lowerHand(streamId: string, userId: string) {
-  const participant = await prisma.liveStreamParticipant.findUnique({
+  const participant = await prisma.live_stream_participants.findUnique({
     where: {
       streamId_userId: { streamId, userId },
     },
@@ -839,7 +839,7 @@ export async function lowerHand(streamId: string, userId: string) {
     throw new Error('Participant not found');
   }
 
-  await prisma.liveStreamParticipant.update({
+  await prisma.live_stream_participants.update({
     where: { id: participant.id },
     data: {
       handRaised: false,
@@ -855,12 +855,12 @@ export async function promoteToCoHost(
   userId: string,
   hostId: string,
 ) {
-  const stream = await prisma.liveStream.findUnique({
+  const stream = await prisma.live_streams.findUnique({
     where: { id: streamId },
-    include: { instructor: true },
+    include: { instructor_profiles: true },
   });
 
-  if (!stream || stream.instructor.userId !== hostId) {
+  if (!stream || stream.instructor_profiles.userId !== hostId) {
     throw new Error('Only the host can promote users');
   }
 
@@ -869,13 +869,13 @@ export async function promoteToCoHost(
   }
 
   await prisma.$transaction([
-    prisma.liveStream.update({
+    prisma.live_streams.update({
       where: { id: streamId },
       data: {
         coHostIds: { push: userId },
       },
     }),
-    prisma.liveStreamParticipant.updateMany({
+    prisma.live_stream_participants.updateMany({
       where: { streamId, userId },
       data: { role: ParticipantRole.CO_HOST },
     }),
@@ -889,23 +889,23 @@ export async function demoteFromCoHost(
   userId: string,
   hostId: string,
 ) {
-  const stream = await prisma.liveStream.findUnique({
+  const stream = await prisma.live_streams.findUnique({
     where: { id: streamId },
-    include: { instructor: true },
+    include: { instructor_profiles: true },
   });
 
-  if (!stream || stream.instructor.userId !== hostId) {
+  if (!stream || stream.instructor_profiles.userId !== hostId) {
     throw new Error('Only the host can demote users');
   }
 
   const newCoHostIds = stream.coHostIds.filter(id => id !== userId);
 
   await prisma.$transaction([
-    prisma.liveStream.update({
+    prisma.live_streams.update({
       where: { id: streamId },
       data: { coHostIds: newCoHostIds },
     }),
-    prisma.liveStreamParticipant.updateMany({
+    prisma.live_stream_participants.updateMany({
       where: { streamId, userId },
       data: { role: ParticipantRole.PARTICIPANT },
     }),
@@ -919,21 +919,21 @@ export async function demoteFromCoHost(
 // ============================================
 
 export async function enableRecording(streamId: string) {
-  return prisma.liveStream.update({
+  return prisma.live_streams.update({
     where: { id: streamId },
     data: { isRecorded: true },
   });
 }
 
 export async function disableRecording(streamId: string) {
-  return prisma.liveStream.update({
+  return prisma.live_streams.update({
     where: { id: streamId },
     data: { isRecorded: false },
   });
 }
 
 export async function getRecording(streamId: string) {
-  return prisma.liveStreamRecording.findFirst({
+  return prisma.live_stream_recordings.findFirst({
     where: {
       streamId,
       status: 'READY',
@@ -951,7 +951,7 @@ export async function processRecordingComplete(
     format: string;
   },
 ) {
-  const recording = await prisma.liveStreamRecording.create({
+  const recording = await prisma.live_stream_recordings.create({
     data: {
       streamId,
       url: recordingData.url,
@@ -965,7 +965,7 @@ export async function processRecordingComplete(
   });
 
   // Update stream with recording URL
-  await prisma.liveStream.update({
+  await prisma.live_streams.update({
     where: { id: streamId },
     data: { recordingUrl: recordingData.url },
   });
@@ -983,7 +983,7 @@ export async function addReaction(
   userId: string,
   type: 'LIKE' | 'HEART' | 'CLAP' | 'NAMASTE' | 'FIRE',
 ) {
-  const reaction = await prisma.liveStreamReaction.create({
+  const reaction = await prisma.live_stream_reactions.create({
     data: {
       streamId,
       userId,
@@ -993,7 +993,7 @@ export async function addReaction(
 
   // Increment like count if it's a LIKE
   if (type === 'LIKE') {
-    await prisma.liveStream.update({
+    await prisma.live_streams.update({
       where: { id: streamId },
       data: { likeCount: { increment: 1 } },
     });
@@ -1003,7 +1003,7 @@ export async function addReaction(
 }
 
 export async function getReactionCounts(streamId: string) {
-  const reactions = await prisma.liveStreamReaction.groupBy({
+  const reactions = await prisma.live_stream_reactions.groupBy({
     by: ['type'],
     where: { streamId },
     _count: { type: true },
@@ -1020,9 +1020,9 @@ export async function getReactionCounts(streamId: string) {
 // ============================================
 
 export async function checkStreamAccess(streamId: string, userId: string): Promise<boolean> {
-  const stream = await prisma.liveStream.findUnique({
+  const stream = await prisma.live_streams.findUnique({
     where: { id: streamId },
-    include: { instructor: true },
+    include: { instructor_profiles: true },
   });
 
   if (!stream) {
@@ -1030,7 +1030,7 @@ export async function checkStreamAccess(streamId: string, userId: string): Promi
   }
 
   // Instructor always has access
-  if (stream.instructor.userId === userId) {
+  if (stream.instructor_profiles.userId === userId) {
     return true;
   }
 
@@ -1044,7 +1044,7 @@ export async function checkStreamAccess(streamId: string, userId: string): Promi
     return true;
   }
 
-  const user = await prisma.user.findUnique({
+  const user = await prisma.users.findUnique({
     where: { id: userId },
     select: { subscriptionTier: true },
   });
@@ -1055,7 +1055,7 @@ export async function checkStreamAccess(streamId: string, userId: string): Promi
 
   // Check paid stream
   if (stream.price) {
-    const registration = await prisma.liveStreamRegistration.findUnique({
+    const registration = await prisma.live_stream_registrations.findUnique({
       where: { streamId_userId: { streamId, userId } },
     });
     return !!registration?.paymentId;
@@ -1065,9 +1065,11 @@ export async function checkStreamAccess(streamId: string, userId: string): Promi
   if (stream.minimumTier) {
     const tierOrder: Record<SubscriptionTier, number> = {
       FREE: 0,
-      BASIC: 1,
-      PREMIUM: 2,
-      ENTERPRISE: 3,
+      MEDITATION: 1,
+      YOGA: 2,
+      PREMIUM: 3,
+      FAMILY: 4,
+      ENTERPRISE: 5,
     };
     return tierOrder[user.subscriptionTier] >= tierOrder[stream.minimumTier];
   }

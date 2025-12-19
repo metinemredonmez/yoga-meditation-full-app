@@ -31,7 +31,7 @@ export async function getUsers(filters: UserFilters) {
     sortOrder = 'desc',
   } = filters;
 
-  const where: Prisma.UserWhereInput = {};
+  const where: Prisma.usersWhereInput = {};
 
   if (search) {
     where.OR = [
@@ -89,7 +89,7 @@ export async function getUsers(filters: UserFilters) {
   }
 
   const [users, total] = await Promise.all([
-    prisma.user.findMany({
+    prisma.users.findMany({
       where,
       skip: (page - 1) * limit,
       take: limit,
@@ -128,7 +128,7 @@ export async function getUsers(filters: UserFilters) {
         },
       },
     }),
-    prisma.user.count({ where }),
+    prisma.users.count({ where }),
   ]);
 
   return {
@@ -149,7 +149,7 @@ export async function getUsers(filters: UserFilters) {
 
 // Get single user details
 export async function getUserDetails(userId: string) {
-  const user = await prisma.user.findUnique({
+  const user = await prisma.users.findUnique({
     where: { id: userId },
     include: {
       subscriptions: {
@@ -212,19 +212,19 @@ export async function updateUser(
     role?: UserRole;
   },
 ) {
-  const existing = await prisma.user.findUnique({ where: { id: userId } });
+  const existing = await prisma.users.findUnique({ where: { id: userId } });
   if (!existing) {
     throw new HttpError(404, 'User not found');
   }
 
   if (data.email && data.email !== existing.email) {
-    const emailExists = await prisma.user.findUnique({ where: { email: data.email } });
+    const emailExists = await prisma.users.findUnique({ where: { email: data.email } });
     if (emailExists) {
       throw new HttpError(400, 'Email already in use');
     }
   }
 
-  return prisma.user.update({
+  return prisma.users.update({
     where: { id: userId },
     data,
   });
@@ -232,13 +232,13 @@ export async function updateUser(
 
 // Reset user password
 export async function resetUserPassword(userId: string, newPassword: string) {
-  const user = await prisma.user.findUnique({ where: { id: userId } });
+  const user = await prisma.users.findUnique({ where: { id: userId } });
   if (!user) {
     throw new HttpError(404, 'User not found');
   }
 
   const hashedPassword = await hashPassword(newPassword);
-  await prisma.user.update({
+  await prisma.users.update({
     where: { id: userId },
     data: { passwordHash: hashedPassword },
   });
@@ -253,7 +253,7 @@ export async function banUser(
   reason: string,
   expiresAt?: Date,
 ) {
-  const user = await prisma.user.findUnique({ where: { id: userId } });
+  const user = await prisma.users.findUnique({ where: { id: userId } });
   if (!user) {
     throw new HttpError(404, 'User not found');
   }
@@ -263,7 +263,7 @@ export async function banUser(
   }
 
   // Check for existing active ban
-  const existingBan = await prisma.userBan.findFirst({
+  const existingBan = await prisma.user_bans.findFirst({
     where: {
       userId,
       isActive: true,
@@ -275,7 +275,7 @@ export async function banUser(
     throw new HttpError(400, 'User is already banned');
   }
 
-  return prisma.userBan.create({
+  return prisma.user_bans.create({
     data: {
       userId,
       bannedById: adminId,
@@ -292,7 +292,7 @@ export async function banUser(
 
 // Unban user
 export async function unbanUser(userId: string, adminId: string, reason?: string) {
-  const activeBan = await prisma.userBan.findFirst({
+  const activeBan = await prisma.user_bans.findFirst({
     where: {
       userId,
       isActive: true,
@@ -304,7 +304,7 @@ export async function unbanUser(userId: string, adminId: string, reason?: string
     throw new HttpError(400, 'User is not banned');
   }
 
-  return prisma.userBan.update({
+  return prisma.user_bans.update({
     where: { id: activeBan.id },
     data: {
       isActive: false,
@@ -326,7 +326,7 @@ export async function warnUser(
   reason: string,
   severity: 'LOW' | 'MEDIUM' | 'HIGH' = 'MEDIUM',
 ) {
-  const user = await prisma.user.findUnique({ where: { id: userId } });
+  const user = await prisma.users.findUnique({ where: { id: userId } });
   if (!user) {
     throw new HttpError(404, 'User not found');
   }
@@ -334,7 +334,7 @@ export async function warnUser(
   // Convert severity string to number
   const severityLevel = severity === 'LOW' ? 1 : severity === 'MEDIUM' ? 3 : 5;
 
-  return prisma.userWarning.create({
+  return prisma.user_warnings.create({
     data: {
       userId,
       warnedById: adminId,
@@ -350,12 +350,12 @@ export async function warnUser(
 
 // Acknowledge warning
 export async function acknowledgeWarning(warningId: string) {
-  const warning = await prisma.userWarning.findUnique({ where: { id: warningId } });
+  const warning = await prisma.user_warnings.findUnique({ where: { id: warningId } });
   if (!warning) {
     throw new HttpError(404, 'Warning not found');
   }
 
-  return prisma.userWarning.update({
+  return prisma.user_warnings.update({
     where: { id: warningId },
     data: { acknowledgedAt: new Date() },
   });
@@ -363,12 +363,12 @@ export async function acknowledgeWarning(warningId: string) {
 
 // Change user role
 export async function changeUserRole(userId: string, newRole: UserRole) {
-  const user = await prisma.user.findUnique({ where: { id: userId } });
+  const user = await prisma.users.findUnique({ where: { id: userId } });
   if (!user) {
     throw new HttpError(404, 'User not found');
   }
 
-  return prisma.user.update({
+  return prisma.users.update({
     where: { id: userId },
     data: { role: newRole },
   });
@@ -376,7 +376,7 @@ export async function changeUserRole(userId: string, newRole: UserRole) {
 
 // Delete user (soft delete or hard delete based on config)
 export async function deleteUser(userId: string, hardDelete = false) {
-  const user = await prisma.user.findUnique({ where: { id: userId } });
+  const user = await prisma.users.findUnique({ where: { id: userId } });
   if (!user) {
     throw new HttpError(404, 'User not found');
   }
@@ -386,12 +386,12 @@ export async function deleteUser(userId: string, hardDelete = false) {
   }
 
   if (hardDelete) {
-    await prisma.user.delete({ where: { id: userId } });
+    await prisma.users.delete({ where: { id: userId } });
     return { deleted: true, userId };
   }
 
   // Soft delete - anonymize user data
-  await prisma.user.update({
+  await prisma.users.update({
     where: { id: userId },
     data: {
       email: `deleted_${userId}@deleted.local`,
@@ -411,7 +411,7 @@ export async function getUserActivityLog(userId: string, page = 1, limit = 50) {
   const skip = (page - 1) * limit;
 
   const [payments, bookings] = await Promise.all([
-    prisma.payment.findMany({
+    prisma.payments.findMany({
       where: { userId },
       orderBy: { createdAt: 'desc' },
       take: limit,
@@ -422,13 +422,13 @@ export async function getUserActivityLog(userId: string, page = 1, limit = 50) {
         createdAt: true,
       },
     }),
-    prisma.booking.findMany({
+    prisma.bookings.findMany({
       where: { userId },
       orderBy: { createdAt: 'desc' },
       take: limit,
       skip,
       include: {
-        class: { select: { title: true } },
+        classes: { select: { title: true } },
       },
     }),
   ]);
@@ -441,7 +441,7 @@ export async function getUserActivityLog(userId: string, page = 1, limit = 50) {
     })),
     ...bookings.map((b) => ({
       type: 'booking' as const,
-      description: `Booked class: ${b.class.title}`,
+      description: `Booked class: ${b.classes.title}`,
       createdAt: b.createdAt,
     })),
   ].sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
@@ -459,7 +459,7 @@ export async function getUserActivityLog(userId: string, page = 1, limit = 50) {
 // Get banned users
 export async function getBannedUsers(page = 1, limit = 20) {
   const [bans, total] = await Promise.all([
-    prisma.userBan.findMany({
+    prisma.user_bans.findMany({
       where: {
         isActive: true,
         OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }],
@@ -472,7 +472,7 @@ export async function getBannedUsers(page = 1, limit = 20) {
         users_user_bans_bannedByIdTousers: { select: { firstName: true, lastName: true, email: true } },
       },
     }),
-    prisma.userBan.count({
+    prisma.user_bans.count({
       where: {
         isActive: true,
         OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }],
@@ -493,10 +493,10 @@ export async function getBannedUsers(page = 1, limit = 20) {
 
 // Get users with warnings
 export async function getWarnings(userId?: string, page = 1, limit = 20) {
-  const where: Prisma.UserWarningWhereInput = userId ? { userId } : {};
+  const where: Prisma.user_warningsWhereInput = userId ? { userId } : {};
 
   const [warnings, total] = await Promise.all([
-    prisma.userWarning.findMany({
+    prisma.user_warnings.findMany({
       where,
       skip: (page - 1) * limit,
       take: limit,
@@ -506,7 +506,7 @@ export async function getWarnings(userId?: string, page = 1, limit = 20) {
         users_user_warnings_warnedByIdTousers: { select: { firstName: true, lastName: true, email: true } },
       },
     }),
-    prisma.userWarning.count({ where }),
+    prisma.user_warnings.count({ where }),
   ]);
 
   return {

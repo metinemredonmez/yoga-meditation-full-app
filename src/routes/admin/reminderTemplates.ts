@@ -149,7 +149,11 @@ router.post('/', async (req: Request, res: Response) => {
 
     const template = await prisma.reminder_templates.create({
       data: {
-        ...validated,
+        type: validated.type,
+        title: validated.title,
+        message: validated.message,
+        time: validated.time || '09:00',
+        icon: validated.icon,
         sortOrder: validated.sortOrder ?? (maxOrder._max.sortOrder || 0) + 1,
         isActive: validated.isActive ?? true,
       },
@@ -158,7 +162,7 @@ router.post('/', async (req: Request, res: Response) => {
     res.status(201).json(template);
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return res.status(400).json({ error: 'Validation error', details: error.errors });
+      return res.status(400).json({ error: 'Validation error', details: error.issues });
     }
     console.error('Error creating reminder template:', error);
     res.status(500).json({ error: 'Internal server error' });
@@ -202,7 +206,7 @@ router.put('/:id', async (req: Request, res: Response) => {
     res.json(template);
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return res.status(400).json({ error: 'Validation error', details: error.errors });
+      return res.status(400).json({ error: 'Validation error', details: error.issues });
     }
     console.error('Error updating reminder template:', error);
     res.status(500).json({ error: 'Internal server error' });
@@ -281,7 +285,7 @@ router.put('/reorder', async (req: Request, res: Response) => {
     res.json({ message: 'Templates reordered successfully' });
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return res.status(400).json({ error: 'Validation error', details: error.errors });
+      return res.status(400).json({ error: 'Validation error', details: error.issues });
     }
     console.error('Error reordering reminder templates:', error);
     res.status(500).json({ error: 'Internal server error' });

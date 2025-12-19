@@ -243,7 +243,7 @@ export const createTranscriptionJob = async (data: {
   // Estimate cost (~$0.006 per minute)
   const estimatedCost = data.duration ? (data.duration / 60) * 0.006 : 0;
 
-  return prisma.transcriptionJob.create({
+  return prisma.transcription_jobs.create({
     data: {
       audioUrl: data.audioUrl,
       audioFormat: data.audioFormat,
@@ -262,7 +262,7 @@ export const createTranscriptionJob = async (data: {
 
 // Process transcription job
 export const processTranscriptionJob = async (jobId: string) => {
-  const job = await prisma.transcriptionJob.findUnique({
+  const job = await prisma.transcription_jobs.findUnique({
     where: { id: jobId },
   });
 
@@ -271,7 +271,7 @@ export const processTranscriptionJob = async (jobId: string) => {
   }
 
   // Update status to processing
-  await prisma.transcriptionJob.update({
+  await prisma.transcription_jobs.update({
     where: { id: jobId },
     data: {
       status: TranscriptionStatus.PROCESSING,
@@ -291,7 +291,7 @@ export const processTranscriptionJob = async (jobId: string) => {
     );
 
     // Update job with result
-    await prisma.transcriptionJob.update({
+    await prisma.transcription_jobs.update({
       where: { id: jobId },
       data: {
         status: TranscriptionStatus.COMPLETED,
@@ -306,7 +306,7 @@ export const processTranscriptionJob = async (jobId: string) => {
 
     return result;
   } catch (error) {
-    await prisma.transcriptionJob.update({
+    await prisma.transcription_jobs.update({
       where: { id: jobId },
       data: {
         status: TranscriptionStatus.FAILED,
@@ -321,7 +321,7 @@ export const processTranscriptionJob = async (jobId: string) => {
 
 // Get transcription job
 export const getTranscriptionJob = async (jobId: string) => {
-  return prisma.transcriptionJob.findUnique({
+  return prisma.transcription_jobs.findUnique({
     where: { id: jobId },
   });
 };
@@ -331,7 +331,7 @@ export const getUserTranscriptionJobs = async (
   userId: string,
   status?: TranscriptionStatus
 ) => {
-  return prisma.transcriptionJob.findMany({
+  return prisma.transcription_jobs.findMany({
     where: {
       createdById: userId,
       ...(status && { status }),
@@ -343,7 +343,7 @@ export const getUserTranscriptionJobs = async (
 
 // Process pending transcription jobs (cron job)
 export const processPendingTranscriptionJobs = async () => {
-  const pendingJobs = await prisma.transcriptionJob.findMany({
+  const pendingJobs = await prisma.transcription_jobs.findMany({
     where: { status: TranscriptionStatus.PENDING },
     take: 5, // Process 5 at a time
     orderBy: { createdAt: 'asc' },

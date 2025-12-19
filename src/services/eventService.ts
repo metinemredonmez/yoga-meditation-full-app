@@ -8,7 +8,7 @@ import { logger } from '../utils/logger';
 export async function getActiveEvents() {
   const now = new Date();
 
-  return prisma.seasonalEvent.findMany({
+  return prisma.seasonal_events.findMany({
     where: {
       isActive: true,
       startDate: { lte: now },
@@ -38,26 +38,26 @@ export async function getAllEvents(filters?: {
     where.endDate = { lt: now };
   }
 
-  return prisma.seasonalEvent.findMany({
+  return prisma.seasonal_events.findMany({
     where,
     orderBy: { startDate: 'desc' },
   });
 }
 
 export async function getEventById(id: string) {
-  return prisma.seasonalEvent.findUnique({
+  return prisma.seasonal_events.findUnique({
     where: { id },
     include: {
-      _count: { select: { participants: true } },
+      _count: { select: { seasonal_event_participants: true } },
     },
   });
 }
 
 export async function getEventBySlug(slug: string) {
-  return prisma.seasonalEvent.findUnique({
+  return prisma.seasonal_events.findUnique({
     where: { slug },
     include: {
-      _count: { select: { participants: true } },
+      _count: { select: { seasonal_event_participants: true } },
     },
   });
 }
@@ -67,7 +67,7 @@ export async function getEventBySlug(slug: string) {
 // ============================================
 
 export async function joinEvent(userId: string, eventId: string) {
-  const event = await prisma.seasonalEvent.findUnique({
+  const event = await prisma.seasonal_events.findUnique({
     where: { id: eventId },
   });
 
@@ -85,7 +85,7 @@ export async function joinEvent(userId: string, eventId: string) {
   }
 
   // Check if already participating
-  const existing = await prisma.seasonalEventParticipant.findUnique({
+  const existing = await prisma.seasonal_event_participants.findUnique({
     where: { eventId_userId: { eventId, userId } },
   });
 
@@ -93,7 +93,7 @@ export async function joinEvent(userId: string, eventId: string) {
     return { success: false, message: 'Already participating' };
   }
 
-  const participant = await prisma.seasonalEventParticipant.create({
+  const participant = await prisma.seasonal_event_participants.create({
     data: {
       eventId,
       userId,
@@ -106,7 +106,7 @@ export async function joinEvent(userId: string, eventId: string) {
 }
 
 export async function leaveEvent(userId: string, eventId: string) {
-  const participant = await prisma.seasonalEventParticipant.findUnique({
+  const participant = await prisma.seasonal_event_participants.findUnique({
     where: { eventId_userId: { eventId, userId } },
   });
 
@@ -114,7 +114,7 @@ export async function leaveEvent(userId: string, eventId: string) {
     return { success: false, message: 'Not participating' };
   }
 
-  await prisma.seasonalEventParticipant.delete({
+  await prisma.seasonal_event_participants.delete({
     where: { id: participant.id },
   });
 
@@ -126,16 +126,16 @@ export async function leaveEvent(userId: string, eventId: string) {
 // ============================================
 
 export async function getEventProgress(userId: string, eventId: string) {
-  const participant = await prisma.seasonalEventParticipant.findUnique({
+  const participant = await prisma.seasonal_event_participants.findUnique({
     where: { eventId_userId: { eventId, userId } },
-    include: { event: true },
+    include: { seasonal_events: true },
   });
 
   if (!participant) {
     return null;
   }
 
-  const rewards = participant.event.rewards as any[];
+  const rewards = participant.seasonal_events.rewards as any[];
   const currentTier = rewards.find(
     (r) => participant.points >= r.minPoints && participant.points < (r.maxPoints || Infinity),
   );
@@ -156,7 +156,7 @@ export async function updateEventProgress(
   points: number,
   taskId?: string,
 ) {
-  const participant = await prisma.seasonalEventParticipant.findUnique({
+  const participant = await prisma.seasonal_event_participants.findUnique({
     where: { eventId_userId: { eventId, userId } },
   });
 
@@ -170,7 +170,7 @@ export async function updateEventProgress(
     completedTasks.push(taskId);
   }
 
-  const updated = await prisma.seasonalEventParticipant.update({
+  const updated = await prisma.seasonal_event_participants.update({
     where: { id: participant.id },
     data: {
       points: { increment: points },
@@ -187,13 +187,13 @@ export async function updateEventProgress(
 }
 
 async function updateEventRanks(eventId: string) {
-  const participants = await prisma.seasonalEventParticipant.findMany({
+  const participants = await prisma.seasonal_event_participants.findMany({
     where: { eventId },
     orderBy: { points: 'desc' },
   });
 
   for (let i = 0; i < participants.length; i++) {
-    await prisma.seasonalEventParticipant.update({
+    await prisma.seasonal_event_participants.update({
       where: { id: participants[i]!.id },
       data: { rank: i + 1 },
     });
@@ -212,13 +212,13 @@ export async function getEventLeaderboard(
   const skip = (page - 1) * limit;
 
   const [participants, total] = await Promise.all([
-    prisma.seasonalEventParticipant.findMany({
+    prisma.seasonal_event_participants.findMany({
       where: { eventId },
       orderBy: { points: 'desc' },
       skip,
       take: limit,
       include: {
-        user: {
+        users: {
           select: {
             id: true,
             firstName: true,
@@ -227,14 +227,14 @@ export async function getEventLeaderboard(
         },
       },
     }),
-    prisma.seasonalEventParticipant.count({ where: { eventId } }),
+    prisma.seasonal_event_participants.count({ where: { eventId } }),
   ]);
 
   const leaderboard = participants.map((p, index) => ({
     rank: skip + index + 1,
     userId: p.userId,
     userName:
-      `${p.user.firstName || ''} ${p.user.lastName || ''}`.trim() || 'Yogi',
+      `${p.users.firstName || ''} ${p.users.lastName || ''}`.trim() || 'Yogi',
     points: p.points,
     tier: p.tier,
   }));
@@ -251,7 +251,7 @@ export async function getEventLeaderboard(
 }
 
 export async function getUserEventRank(userId: string, eventId: string) {
-  const participant = await prisma.seasonalEventParticipant.findUnique({
+  const participant = await prisma.seasonal_event_participants.findUnique({
     where: { eventId_userId: { eventId, userId } },
   });
 
@@ -259,7 +259,7 @@ export async function getUserEventRank(userId: string, eventId: string) {
     return null;
   }
 
-  const rank = await prisma.seasonalEventParticipant.count({
+  const rank = await prisma.seasonal_event_participants.count({
     where: {
       eventId,
       points: { gt: participant.points },
@@ -274,7 +274,7 @@ export async function getUserEventRank(userId: string, eventId: string) {
 // ============================================
 
 export async function claimEventRewards(userId: string, eventId: string) {
-  const event = await prisma.seasonalEvent.findUnique({
+  const event = await prisma.seasonal_events.findUnique({
     where: { id: eventId },
   });
 
@@ -287,7 +287,7 @@ export async function claimEventRewards(userId: string, eventId: string) {
     return { success: false, message: 'Event has not ended yet' };
   }
 
-  const participant = await prisma.seasonalEventParticipant.findUnique({
+  const participant = await prisma.seasonal_event_participants.findUnique({
     where: { eventId_userId: { eventId, userId } },
   });
 
@@ -309,7 +309,7 @@ export async function claimEventRewards(userId: string, eventId: string) {
     return { success: false, message: 'No rewards earned' };
   }
 
-  await prisma.seasonalEventParticipant.update({
+  await prisma.seasonal_event_participants.update({
     where: { id: participant.id },
     data: { tier: earnedTier.name },
   });
@@ -331,9 +331,9 @@ export async function claimEventRewards(userId: string, eventId: string) {
 // ============================================
 
 export async function getEventHistory(userId: string) {
-  return prisma.seasonalEventParticipant.findMany({
+  return prisma.seasonal_event_participants.findMany({
     where: { userId },
-    include: { event: true },
+    include: { seasonal_events: true },
     orderBy: { joinedAt: 'desc' },
   });
 }
@@ -352,7 +352,7 @@ export async function createEvent(data: {
   endDate: Date;
   rewards: any;
 }) {
-  return prisma.seasonalEvent.create({ data });
+  return prisma.seasonal_events.create({ data });
 }
 
 export async function updateEvent(
@@ -369,7 +369,7 @@ export async function updateEvent(
     isActive: boolean;
   }>,
 ) {
-  return prisma.seasonalEvent.update({
+  return prisma.seasonal_events.update({
     where: { id },
     data,
   });
@@ -377,11 +377,11 @@ export async function updateEvent(
 
 export async function deleteEvent(id: string) {
   // Delete participants first
-  await prisma.seasonalEventParticipant.deleteMany({
+  await prisma.seasonal_event_participants.deleteMany({
     where: { eventId: id },
   });
 
-  return prisma.seasonalEvent.delete({
+  return prisma.seasonal_events.delete({
     where: { id },
   });
 }
@@ -393,18 +393,18 @@ export async function deleteEvent(id: string) {
 export async function getEventStats(eventId: string) {
   const [event, participantCount, avgPoints, topParticipant] =
     await Promise.all([
-      prisma.seasonalEvent.findUnique({ where: { id: eventId } }),
-      prisma.seasonalEventParticipant.count({ where: { eventId } }),
-      prisma.seasonalEventParticipant.aggregate({
+      prisma.seasonal_events.findUnique({ where: { id: eventId } }),
+      prisma.seasonal_event_participants.count({ where: { eventId } }),
+      prisma.seasonal_event_participants.aggregate({
         where: { eventId },
         _avg: { points: true },
         _sum: { points: true },
       }),
-      prisma.seasonalEventParticipant.findFirst({
+      prisma.seasonal_event_participants.findFirst({
         where: { eventId },
         orderBy: { points: 'desc' },
         include: {
-          user: { select: { firstName: true, lastName: true } },
+          users: { select: { firstName: true, lastName: true } },
         },
       }),
     ]);
@@ -418,7 +418,7 @@ export async function getEventStats(eventId: string) {
       ? {
           userId: topParticipant.userId,
           name:
-            `${topParticipant.user.firstName || ''} ${topParticipant.user.lastName || ''}`.trim() ||
+            `${topParticipant.users.firstName || ''} ${topParticipant.users.lastName || ''}`.trim() ||
             'Yogi',
           points: topParticipant.points,
         }

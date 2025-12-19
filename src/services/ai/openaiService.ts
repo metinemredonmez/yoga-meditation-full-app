@@ -296,7 +296,7 @@ export const trackUsage = async (
     }
   );
 
-  await prisma.aIUsageLog.create({
+  await prisma.ai_usage_logs.create({
     data: {
       userId,
       provider: data.provider,
@@ -382,7 +382,7 @@ export const getAIConfiguration = async (
   provider: AIProvider,
   model: string
 ) => {
-  return prisma.aIConfiguration.findUnique({
+  return prisma.ai_configurations.findUnique({
     where: {
       provider_model: { provider, model },
     },
@@ -403,7 +403,7 @@ export const updateAIConfiguration = async (
     isDefault?: boolean;
   }
 ) => {
-  return prisma.aIConfiguration.update({
+  return prisma.ai_configurations.update({
     where: {
       provider_model: { provider, model },
     },
@@ -472,7 +472,7 @@ export const seedAIConfigurations = async () => {
   ];
 
   for (const config of configurations) {
-    await prisma.aIConfiguration.upsert({
+    await prisma.ai_configurations.upsert({
       where: {
         provider_model: { provider: config.provider, model: config.model },
       },

@@ -18,7 +18,7 @@ export async function getSubscriptionStats(req: Request, res: Response, next: Ne
       success: true,
       stats: {
         total: result.pagination.total,
-        active: result.subscriptions.filter(s => s.status === 'ACTIVE').length
+        active: result.subscriptions.filter((s: any) => s.status === 'ACTIVE').length
       }
     });
   } catch (error) { next(error); }
@@ -27,7 +27,7 @@ export async function getSubscriptionStats(req: Request, res: Response, next: Ne
 export async function getCouponStats(req: Request, res: Response, next: NextFunction) {
   try {
     const result = await financialService.getCoupons(1, 1000);
-    const active = result.coupons.filter(c => c.isActive).length;
+    const active = result.coupons.filter((c: any) => c.isActive).length;
     res.json({ success: true, stats: { total: result.pagination.total, active } });
   } catch (error) { next(error); }
 }

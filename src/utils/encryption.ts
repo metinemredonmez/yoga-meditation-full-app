@@ -21,7 +21,7 @@ if (ENCRYPTION_KEY.length < 32) {
  * Derives a key from the password using PBKDF2
  */
 function deriveKey(salt: Buffer): Buffer {
-  return crypto.pbkdf2Sync(ENCRYPTION_KEY, salt, 100000, KEY_LENGTH, 'sha512');
+  return crypto.pbkdf2Sync(ENCRYPTION_KEY!, salt, 100000, KEY_LENGTH, 'sha512');
 }
 
 /**
@@ -59,7 +59,7 @@ export function decrypt(encryptedData: string): string {
     throw new Error('Invalid encrypted data format');
   }
 
-  const [saltB64, ivB64, authTagB64, encrypted] = parts;
+  const [saltB64, ivB64, authTagB64, encrypted] = parts as [string, string, string, string];
 
   const salt = Buffer.from(saltB64, 'base64');
   const iv = Buffer.from(ivB64, 'base64');
@@ -81,7 +81,7 @@ export function decrypt(encryptedData: string): string {
 export function hash(text: string): string {
   return crypto
     .createHash('sha256')
-    .update(text + ENCRYPTION_KEY)
+    .update(text + ENCRYPTION_KEY!)
     .digest('hex');
 }
 

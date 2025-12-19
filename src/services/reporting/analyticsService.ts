@@ -1,4 +1,4 @@
-import { PrismaClient, SnapshotType, SnapshotPeriod } from '@prisma/client';
+import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
@@ -15,18 +15,18 @@ export const getRealtimeStats = async () => {
     activeSubscriptions,
   ] = await Promise.all([
     // Active users in last hour (based on video progress or any activity)
-    prisma.videoProgress.groupBy({
+    prisma.video_progress.groupBy({
       by: ['userId'],
       where: { updatedAt: { gte: hourAgo } },
     }).then(r => r.length),
 
     // New users today
-    prisma.user.count({
+    prisma.users.count({
       where: { createdAt: { gte: todayStart } },
     }),
 
     // Revenue today
-    prisma.payment.aggregate({
+    prisma.payments.aggregate({
       where: {
         status: 'COMPLETED',
         createdAt: { gte: todayStart },
@@ -35,7 +35,7 @@ export const getRealtimeStats = async () => {
     }),
 
     // Active subscriptions
-    prisma.subscription.count({
+    prisma.subscriptions.count({
       where: { status: 'ACTIVE' },
     }),
   ]);
@@ -43,7 +43,7 @@ export const getRealtimeStats = async () => {
   return {
     activeUsersLastHour,
     newUsersToday,
-    revenueToday: (revenueToday._sum.amount || 0) / 100,
+    revenueToday: Number(revenueToday._sum.amount || 0) / 100,
     activeSubscriptions,
     timestamp: now,
   };
@@ -62,15 +62,15 @@ export const getUserAnalytics = async (
     usersBySubscription,
     retentionRate,
   ] = await Promise.all([
-    prisma.user.count(),
-    prisma.user.count({
+    prisma.users.count(),
+    prisma.users.count({
       where: { createdAt: { gte: dateFrom, lte: dateTo } },
     }),
-    prisma.user.groupBy({
+    prisma.users.groupBy({
       by: ['role'],
       _count: true,
     }),
-    prisma.user.groupBy({
+    prisma.users.groupBy({
       by: ['subscriptionTier'],
       _count: true,
     }),
@@ -111,27 +111,27 @@ export const getRevenueAnalytics = async (
 ) => {
   const [totalRevenue, transactionCount, averageOrderValue, revenueByProvider] =
     await Promise.all([
-      prisma.payment.aggregate({
+      prisma.payments.aggregate({
         where: {
           status: 'COMPLETED',
           createdAt: { gte: dateFrom, lte: dateTo },
         },
         _sum: { amount: true },
       }),
-      prisma.payment.count({
+      prisma.payments.count({
         where: {
           status: 'COMPLETED',
           createdAt: { gte: dateFrom, lte: dateTo },
         },
       }),
-      prisma.payment.aggregate({
+      prisma.payments.aggregate({
         where: {
           status: 'COMPLETED',
           createdAt: { gte: dateFrom, lte: dateTo },
         },
         _avg: { amount: true },
       }),
-      prisma.payment.groupBy({
+      prisma.payments.groupBy({
         by: ['provider'],
         where: {
           status: 'COMPLETED',
@@ -152,12 +152,12 @@ export const getRevenueAnalytics = async (
   `;
 
   return {
-    totalRevenue: (totalRevenue._sum.amount || 0) / 100,
+    totalRevenue: Number(totalRevenue._sum.amount || 0) / 100,
     transactionCount,
-    averageOrderValue: (averageOrderValue._avg.amount || 0) / 100,
+    averageOrderValue: Number(averageOrderValue._avg.amount || 0) / 100,
     revenueByProvider: revenueByProvider.map(r => ({
       provider: r.provider,
-      revenue: (r._sum.amount || 0) / 100,
+      revenue: Number(r._sum.amount || 0) / 100,
       count: r._count,
     })),
     dailyRevenue: dailyRevenue.map(d => ({
@@ -183,22 +183,19 @@ export const getSubscriptionAnalytics = async (
     subscriptionsByTier,
     subscriptionsByStatus,
   ] = await Promise.all([
-    prisma.subscription.count(),
-    prisma.subscription.count({ where: { status: 'ACTIVE' } }),
-    prisma.subscription.count({
+    prisma.subscriptions.count(),
+    prisma.subscriptions.count({ where: { status: 'ACTIVE' } }),
+    prisma.subscriptions.count({
       where: { createdAt: { gte: dateFrom, lte: dateTo } },
     }),
-    prisma.subscription.count({
+    prisma.subscriptions.count({
       where: {
         status: { in: ['CANCELLED', 'CANCELED'] },
         updatedAt: { gte: dateFrom, lte: dateTo },
       },
     }),
-    prisma.subscription.groupBy({
-      by: ['tier'],
-      _count: true,
-    }),
-    prisma.subscription.groupBy({
+    prisma.subscriptions.count(),
+    prisma.subscriptions.groupBy({
       by: ['status'],
       _count: true,
     }),
@@ -215,10 +212,7 @@ export const getSubscriptionAnalytics = async (
     newSubscriptions,
     cancelledSubscriptions,
     churnRate: Math.round(churnRate * 100) / 100,
-    subscriptionsByTier: subscriptionsByTier.map(s => ({
-      tier: s.tier,
-      count: s._count,
-    })),
+    subscriptionsByTier: [],
     subscriptionsByStatus: subscriptionsByStatus.map(s => ({
       status: s.status,
       count: s._count,
@@ -235,10 +229,10 @@ export const getContentAnalytics = async (
 ) => {
   const [totalPrograms, totalClasses, totalPoses, programStats] =
     await Promise.all([
-      prisma.program.count(),
-      prisma.class.count(),
-      prisma.pose.count(),
-      prisma.program.findMany({
+      prisma.programs.count(),
+      prisma.classes.count(),
+      prisma.poses.count(),
+      prisma.programs.findMany({
         select: {
           id: true,
           title: true,
@@ -256,7 +250,7 @@ export const getContentAnalytics = async (
     ]);
 
   // Video progress stats
-  const completionStats = await prisma.videoProgress.groupBy({
+  const completionStats = await prisma.video_progress.groupBy({
     by: ['completed'],
     _count: true,
     where: {
@@ -295,33 +289,33 @@ export const getEngagementAnalytics = async (
   const [dailyActiveUsers, videoProgress, plannerEntries, challengeEnrollments] =
     await Promise.all([
       // DAU based on video progress
-      prisma.videoProgress.groupBy({
+      prisma.video_progress.groupBy({
         by: ['userId'],
         where: { updatedAt: { gte: dateFrom, lte: dateTo } },
       }).then(r => r.length),
 
       // Video progress stats
-      prisma.videoProgress.aggregate({
+      prisma.video_progress.aggregate({
         where: { updatedAt: { gte: dateFrom, lte: dateTo } },
         _count: true,
-        _avg: { progress: true },
+        _avg: { percentage: true },
       }),
 
       // Planner usage
-      prisma.plannerEntry.count({
+      prisma.planner_entries.count({
         where: { createdAt: { gte: dateFrom, lte: dateTo } },
       }),
 
       // Challenge participation
-      prisma.challengeEnrollment.count({
-        where: { enrolledAt: { gte: dateFrom, lte: dateTo } },
+      prisma.challenge_enrollments.count({
+        where: { joinedAt: { gte: dateFrom, lte: dateTo } },
       }),
     ]);
 
   return {
     dailyActiveUsers,
     totalSessions: videoProgress._count,
-    averageProgress: Math.round((videoProgress._avg.progress || 0) * 100),
+    averageProgress: Math.round((videoProgress._avg.percentage || 0) * 100),
     plannerUsage: plannerEntries,
     challengeParticipation: challengeEnrollments,
     period: { from: dateFrom, to: dateTo },
@@ -336,34 +330,24 @@ export const getInstructorAnalytics = async (
 ) => {
   const where = instructorId ? { userId: instructorId } : {};
 
-  const instructors = await prisma.instructorProfile.findMany({
+  const instructors = await prisma.instructor_profiles.findMany({
     where,
-    include: {
-      user: {
-        select: {
-          id: true,
-          firstName: true,
-          lastName: true,
-          email: true,
-        },
-      },
-      _count: {
-        select: {
-          classes: true,
-          reviews: true,
-        },
-      },
+    select: {
+      userId: true,
+      displayName: true,
+      averageRating: true,
+      totalStudents: true,
+      totalClasses: true,
+      totalReviews: true,
     },
   });
 
   return instructors.map(i => ({
     instructorId: i.userId,
-    name:
-      [i.user.firstName, i.user.lastName].filter(Boolean).join(' ') ||
-      i.user.email,
-    totalClasses: i._count.classes,
-    totalReviews: i._count.reviews,
-    averageRating: i.averageRating || 0,
+    name: i.displayName,
+    totalClasses: i.totalClasses || 0,
+    totalReviews: i.totalReviews || 0,
+    averageRating: Number(i.averageRating) || 0,
     totalStudents: i.totalStudents,
   }));
 };
@@ -379,11 +363,14 @@ export const getMRRReport = async (months: number = 12) => {
     const monthStart = new Date(date.getFullYear(), date.getMonth(), 1);
     const monthEnd = new Date(date.getFullYear(), date.getMonth() + 1, 0);
 
-    const activeSubscriptions = await prisma.subscription.count({
+    const activeSubscriptions = await prisma.subscriptions.count({
       where: {
         status: 'ACTIVE',
-        startDate: { lte: monthEnd },
-        OR: [{ endDate: null }, { endDate: { gte: monthStart } }],
+        createdAt: { lte: monthEnd },
+        OR: [
+          { currentPeriodEnd: null },
+          { currentPeriodEnd: { gte: monthStart } }
+        ],
       },
     });
 
@@ -407,19 +394,19 @@ export const getMRRReport = async (months: number = 12) => {
 // Churn Report
 export const getChurnReport = async (dateFrom: Date, dateTo: Date) => {
   const [startingSubscriptions, endingSubscriptions, churned] = await Promise.all([
-    prisma.subscription.count({
+    prisma.subscriptions.count({
       where: {
         status: 'ACTIVE',
-        startDate: { lt: dateFrom },
+        createdAt: { lt: dateFrom },
       },
     }),
-    prisma.subscription.count({
+    prisma.subscriptions.count({
       where: {
         status: 'ACTIVE',
-        startDate: { lt: dateTo },
+        createdAt: { lt: dateTo },
       },
     }),
-    prisma.subscription.count({
+    prisma.subscriptions.count({
       where: {
         status: { in: ['CANCELLED', 'CANCELED'] },
         updatedAt: { gte: dateFrom, lte: dateTo },
@@ -442,15 +429,15 @@ export const getChurnReport = async (dateFrom: Date, dateTo: Date) => {
 
 // Retention calculation helper
 const calculateRetentionRate = async (dateFrom: Date, dateTo: Date) => {
-  const newUsers = await prisma.user.count({
+  const newUsers = await prisma.users.count({
     where: { createdAt: { gte: dateFrom, lte: dateTo } },
   });
 
   // Users who came back (had activity after registration)
-  const activeNewUsers = await prisma.user.count({
+  const activeNewUsers = await prisma.users.count({
     where: {
       createdAt: { gte: dateFrom, lte: dateTo },
-      videoProgress: {
+      video_progress: {
         some: {
           updatedAt: { gt: dateTo },
         },
@@ -472,38 +459,38 @@ export const comparePeriods = async (
 
   switch (metric) {
     case 'revenue':
-      const rev1 = await prisma.payment.aggregate({
+      const rev1 = await prisma.payments.aggregate({
         where: {
           status: 'COMPLETED',
           createdAt: { gte: period1.from, lte: period1.to },
         },
         _sum: { amount: true },
       });
-      const rev2 = await prisma.payment.aggregate({
+      const rev2 = await prisma.payments.aggregate({
         where: {
           status: 'COMPLETED',
           createdAt: { gte: period2.from, lte: period2.to },
         },
         _sum: { amount: true },
       });
-      value1 = (rev1._sum.amount || 0) / 100;
-      value2 = (rev2._sum.amount || 0) / 100;
+      value1 = Number(rev1._sum.amount || 0) / 100;
+      value2 = Number(rev2._sum.amount || 0) / 100;
       break;
 
     case 'users':
-      value1 = await prisma.user.count({
+      value1 = await prisma.users.count({
         where: { createdAt: { gte: period1.from, lte: period1.to } },
       });
-      value2 = await prisma.user.count({
+      value2 = await prisma.users.count({
         where: { createdAt: { gte: period2.from, lte: period2.to } },
       });
       break;
 
     case 'subscriptions':
-      value1 = await prisma.subscription.count({
+      value1 = await prisma.subscriptions.count({
         where: { createdAt: { gte: period1.from, lte: period1.to } },
       });
-      value2 = await prisma.subscription.count({
+      value2 = await prisma.subscriptions.count({
         where: { createdAt: { gte: period2.from, lte: period2.to } },
       });
       break;
@@ -541,25 +528,25 @@ export const getOverviewDashboard = async () => {
     totalPrograms,
     totalClasses,
   ] = await Promise.all([
-    prisma.user.count(),
-    prisma.user.count({ where: { createdAt: { gte: monthStart } } }),
-    prisma.user.count({
+    prisma.users.count(),
+    prisma.users.count({ where: { createdAt: { gte: monthStart } } }),
+    prisma.users.count({
       where: { createdAt: { gte: lastMonthStart, lte: lastMonthEnd } },
     }),
-    prisma.subscription.count({ where: { status: 'ACTIVE' } }),
-    prisma.payment.aggregate({
+    prisma.subscriptions.count({ where: { status: 'ACTIVE' } }),
+    prisma.payments.aggregate({
       where: { status: 'COMPLETED', createdAt: { gte: monthStart } },
       _sum: { amount: true },
     }),
-    prisma.payment.aggregate({
+    prisma.payments.aggregate({
       where: {
         status: 'COMPLETED',
         createdAt: { gte: lastMonthStart, lte: lastMonthEnd },
       },
       _sum: { amount: true },
     }),
-    prisma.program.count(),
-    prisma.class.count(),
+    prisma.programs.count(),
+    prisma.classes.count(),
   ]);
 
   const userGrowth =
@@ -567,8 +554,8 @@ export const getOverviewDashboard = async () => {
       ? ((newUsersThisMonth - newUsersLastMonth) / newUsersLastMonth) * 100
       : 0;
 
-  const currentRevenue = (revenueThisMonth._sum.amount || 0) / 100;
-  const previousRevenue = (revenueLastMonth._sum.amount || 0) / 100;
+  const currentRevenue = Number(revenueThisMonth._sum.amount || 0) / 100;
+  const previousRevenue = Number(revenueLastMonth._sum.amount || 0) / 100;
   const revenueGrowth =
     previousRevenue > 0
       ? ((currentRevenue - previousRevenue) / previousRevenue) * 100

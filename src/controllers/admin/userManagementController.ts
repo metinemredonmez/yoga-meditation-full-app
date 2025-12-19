@@ -16,7 +16,7 @@ export async function getUsers(req: Request, res: Response, next: NextFunction) 
     });
 
     // Map to frontend expected format
-    const mappedUsers = result.users.map((u) => ({
+    const mappedUsers = result.users.map((u: any) => ({
       id: u.id,
       email: u.email,
       firstName: u.firstName,
@@ -41,7 +41,7 @@ export async function getUsers(req: Request, res: Response, next: NextFunction) 
 export async function getUserById(req: Request, res: Response, next: NextFunction) {
   try {
     const { id } = req.params;
-    const user = await userManagementService.getUserDetails(id);
+    const user = await userManagementService.getUserDetails(id!);
 
     // Calculate stats
     const totalClassesAttended = user._count?.bookings || 0;
@@ -60,14 +60,7 @@ export async function getUserById(req: Request, res: Response, next: NextFunctio
 
     // Map subscriptions for response
     const subscriptions = user.subscriptions?.map(
-      (sub: {
-        id: string;
-        status: string;
-        startDate: Date;
-        endDate: Date | null;
-        createdAt: Date;
-        plan: { name: string; price: number } | null;
-      }) => ({
+      (sub: any) => ({
         id: sub.id,
         status: sub.status,
         planName: sub.plan?.name || 'Unknown',
@@ -80,13 +73,7 @@ export async function getUserById(req: Request, res: Response, next: NextFunctio
 
     // Map payments for response
     const payments = user.payments?.map(
-      (p: {
-        id: string;
-        amount: number;
-        status: string;
-        paymentMethod: string | null;
-        createdAt: Date;
-      }) => ({
+      (p: any) => ({
         id: p.id,
         amount: p.amount,
         status: p.status,
@@ -125,28 +112,17 @@ export async function getUserById(req: Request, res: Response, next: NextFunctio
 
     // Map bookings for response
     const bookings = user.bookings?.map(
-      (b: {
-        id: string;
-        status: string;
-        createdAt: Date;
-        class: {
-          id: string;
-          title: string;
-          startTime: Date;
-          endTime: Date;
-          instructor: { firstName: string | null; lastName: string | null } | null;
-        };
-      }) => ({
+      (b: any) => ({
         id: b.id,
         status: b.status,
         createdAt: b.createdAt,
         class: {
-          id: b.class.id,
-          title: b.class.title,
-          startTime: b.class.startTime,
-          endTime: b.class.endTime,
-          instructor: b.class.instructor
-            ? `${b.class.instructor.firstName || ''} ${b.class.instructor.lastName || ''}`.trim()
+          id: b.classes.id,
+          title: b.classes.title,
+          startTime: b.classes.startTime,
+          endTime: b.classes.endTime,
+          instructor: b.classes.instructor
+            ? `${b.classes.instructor.firstName || ''} ${b.classes.instructor.lastName || ''}`.trim()
             : null,
         },
       })
@@ -189,7 +165,7 @@ export async function banUser(req: Request, res: Response, next: NextFunction) {
     const { reason } = req.body;
     const adminId = req.user!.id;
 
-    const ban = await userManagementService.banUser(id, adminId, reason || 'No reason provided');
+    const ban = await userManagementService.banUser(id!, adminId, reason || 'No reason provided');
 
     res.json({
       success: true,
@@ -207,7 +183,7 @@ export async function unbanUser(req: Request, res: Response, next: NextFunction)
     const { id } = req.params;
     const adminId = req.user!.id;
 
-    const result = await userManagementService.unbanUser(id, adminId);
+    const result = await userManagementService.unbanUser(id!, adminId);
 
     res.json({
       success: true,
@@ -227,7 +203,7 @@ export async function warnUser(req: Request, res: Response, next: NextFunction) 
     const adminId = req.user!.id;
 
     const warning = await userManagementService.warnUser(
-      id,
+      id!,
       adminId,
       reason || message || 'Warning issued by admin'
     );
@@ -253,12 +229,12 @@ export async function changeUserRole(req: Request, res: Response, next: NextFunc
       return;
     }
 
-    const user = await userManagementService.changeUserRole(id, role as UserRole);
+    const user = await userManagementService.changeUserRole(id!, role as UserRole);
 
     res.json({
       success: true,
       message: 'Role updated successfully',
-      user: {
+      users: {
         id: user.id,
         email: user.email,
         role: user.role,
@@ -277,7 +253,7 @@ export async function resetUserPassword(req: Request, res: Response, next: NextF
     // Generate a random password or send reset email
     // For now, we'll generate a temporary password
     const tempPassword = Math.random().toString(36).slice(-10);
-    await userManagementService.resetUserPassword(id, tempPassword);
+    await userManagementService.resetUserPassword(id!, tempPassword);
 
     // In a real scenario, you'd send an email with the reset link
     // For now, just return success
@@ -297,7 +273,7 @@ export async function getUserActivity(req: Request, res: Response, next: NextFun
     const { page, limit } = req.query;
 
     const result = await userManagementService.getUserActivityLog(
-      id,
+      id!,
       page ? parseInt(page as string) : 1,
       limit ? parseInt(limit as string) : 50
     );

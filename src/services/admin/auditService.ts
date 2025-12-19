@@ -20,7 +20,7 @@ export async function logAdminAction(
   entityId?: string,
   metadata?: Record<string, unknown>
 ): Promise<void> {
-  await prisma.adminAuditLog.create({
+  await prisma.admin_audit_logs.create({
     data: {
       adminId,
       action,
@@ -35,7 +35,7 @@ export async function logAdminAction(
 export async function getAuditLogs(filters: AuditLogFilters) {
   const { adminId, action, entityType, entityId, startDate, endDate, page = 1, limit = 50 } = filters;
 
-  const where: Prisma.AdminAuditLogWhereInput = {};
+  const where: Prisma.admin_audit_logsWhereInput = {};
   if (adminId) where.adminId = adminId;
   if (action) where.action = action;
   if (entityType) where.entityType = entityType;
@@ -47,16 +47,16 @@ export async function getAuditLogs(filters: AuditLogFilters) {
   }
 
   const [logs, total] = await Promise.all([
-    prisma.adminAuditLog.findMany({
+    prisma.admin_audit_logs.findMany({
       where,
       skip: (page - 1) * limit,
       take: limit,
       orderBy: { createdAt: 'desc' },
       include: {
-        admin: { select: { id: true, firstName: true, lastName: true, email: true } },
+        users: { select: { id: true, firstName: true, lastName: true, email: true } },
       },
     }),
-    prisma.adminAuditLog.count({ where }),
+    prisma.admin_audit_logs.count({ where }),
   ]);
 
   return {
@@ -67,28 +67,28 @@ export async function getAuditLogs(filters: AuditLogFilters) {
 
 // Get audit log details
 export async function getAuditLogDetails(logId: string) {
-  return prisma.adminAuditLog.findUnique({
+  return prisma.admin_audit_logs.findUnique({
     where: { id: logId },
     include: {
-      admin: { select: { id: true, firstName: true, lastName: true, email: true } },
+      users: { select: { id: true, firstName: true, lastName: true, email: true } },
     },
   });
 }
 
 // Get entity audit history
 export async function getEntityAuditHistory(entityType: string, entityId: string) {
-  return prisma.adminAuditLog.findMany({
+  return prisma.admin_audit_logs.findMany({
     where: { entityType, entityId },
     orderBy: { createdAt: 'desc' },
     include: {
-      admin: { select: { id: true, firstName: true, lastName: true, email: true } },
+      users: { select: { id: true, firstName: true, lastName: true, email: true } },
     },
   });
 }
 
 // Get admin activity summary
 export async function getAdminActivitySummary(adminId: string, startDate?: Date, endDate?: Date) {
-  const where: Prisma.AdminAuditLogWhereInput = { adminId };
+  const where: Prisma.admin_audit_logsWhereInput = { adminId };
   if (startDate || endDate) {
     where.createdAt = {};
     if (startDate) (where.createdAt as Prisma.DateTimeFilter).gte = startDate;
@@ -96,13 +96,13 @@ export async function getAdminActivitySummary(adminId: string, startDate?: Date,
   }
 
   const [totalActions, actionsByType, recentActions] = await Promise.all([
-    prisma.adminAuditLog.count({ where }),
-    prisma.adminAuditLog.groupBy({
+    prisma.admin_audit_logs.count({ where }),
+    prisma.admin_audit_logs.groupBy({
       by: ['action'],
       where,
       _count: true,
     }),
-    prisma.adminAuditLog.findMany({
+    prisma.admin_audit_logs.findMany({
       where,
       take: 10,
       orderBy: { createdAt: 'desc' },
@@ -122,13 +122,13 @@ export async function getAuditStats(days = 30) {
   startDate.setDate(startDate.getDate() - days);
 
   const [totalLogs, byAction, byEntityType] = await Promise.all([
-    prisma.adminAuditLog.count({ where: { createdAt: { gte: startDate } } }),
-    prisma.adminAuditLog.groupBy({
+    prisma.admin_audit_logs.count({ where: { createdAt: { gte: startDate } } }),
+    prisma.admin_audit_logs.groupBy({
       by: ['action'],
       where: { createdAt: { gte: startDate } },
       _count: true,
     }),
-    prisma.adminAuditLog.groupBy({
+    prisma.admin_audit_logs.groupBy({
       by: ['entityType'],
       where: { createdAt: { gte: startDate } },
       _count: true,
@@ -144,26 +144,26 @@ export async function getAuditStats(days = 30) {
 
 // Search audit logs
 export async function searchAuditLogs(query: string, page = 1, limit = 50) {
-  const where: Prisma.AdminAuditLogWhereInput = {
+  const where: Prisma.admin_audit_logsWhereInput = {
     OR: [
       { entityId: { contains: query } },
-      { admin: { firstName: { contains: query, mode: 'insensitive' } } },
-      { admin: { lastName: { contains: query, mode: 'insensitive' } } },
-      { admin: { email: { contains: query, mode: 'insensitive' } } },
+      { users: { firstName: { contains: query, mode: 'insensitive' } } },
+      { users: { lastName: { contains: query, mode: 'insensitive' } } },
+      { users: { email: { contains: query, mode: 'insensitive' } } },
     ],
   };
 
   const [logs, total] = await Promise.all([
-    prisma.adminAuditLog.findMany({
+    prisma.admin_audit_logs.findMany({
       where,
       skip: (page - 1) * limit,
       take: limit,
       orderBy: { createdAt: 'desc' },
       include: {
-        admin: { select: { id: true, firstName: true, lastName: true, email: true } },
+        users: { select: { id: true, firstName: true, lastName: true, email: true } },
       },
     }),
-    prisma.adminAuditLog.count({ where }),
+    prisma.admin_audit_logs.count({ where }),
   ]);
 
   return {
@@ -174,7 +174,7 @@ export async function searchAuditLogs(query: string, page = 1, limit = 50) {
 
 // Export audit logs
 export async function exportAuditLogs(filters: AuditLogFilters) {
-  const where: Prisma.AdminAuditLogWhereInput = {};
+  const where: Prisma.admin_audit_logsWhereInput = {};
   if (filters.adminId) where.adminId = filters.adminId;
   if (filters.action) where.action = filters.action;
   if (filters.entityType) where.entityType = filters.entityType;
@@ -184,11 +184,11 @@ export async function exportAuditLogs(filters: AuditLogFilters) {
     if (filters.endDate) (where.createdAt as Prisma.DateTimeFilter).lte = filters.endDate;
   }
 
-  return prisma.adminAuditLog.findMany({
+  return prisma.admin_audit_logs.findMany({
     where,
     orderBy: { createdAt: 'desc' },
     include: {
-      admin: { select: { firstName: true, lastName: true, email: true } },
+      users: { select: { firstName: true, lastName: true, email: true } },
     },
   });
 }

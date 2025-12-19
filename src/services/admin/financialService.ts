@@ -10,66 +10,66 @@ const toNumber = (val: Prisma.Decimal | number | null) => {
 
 export async function getPayments(options: { status?: PaymentStatus; search?: string; startDate?: Date; endDate?: Date; page?: number; limit?: number }) {
   const { status, search, startDate, endDate, page = 1, limit = 20 } = options;
-  const where: Prisma.PaymentWhereInput = {};
+  const where: Prisma.paymentsWhereInput = {};
   if (status) where.status = status;
   if (startDate || endDate) { where.createdAt = {}; if (startDate) (where.createdAt as any).gte = startDate; if (endDate) (where.createdAt as any).lte = endDate; }
-  if (search) where.OR = [{ user: { email: { contains: search, mode: 'insensitive' } } }];
+  if (search) where.OR = [{ users: { email: { contains: search, mode: 'insensitive' } } }];
   const [payments, total] = await Promise.all([
-    prisma.payment.findMany({ where, skip: (page - 1) * limit, take: limit, orderBy: { createdAt: 'desc' }, include: { user: { select: { id: true, email: true, firstName: true, lastName: true } } } }),
-    prisma.payment.count({ where }),
+    prisma.payments.findMany({ where, skip: (page - 1) * limit, take: limit, orderBy: { createdAt: 'desc' }, include: { users: { select: { id: true, email: true, firstName: true, lastName: true } } } }),
+    prisma.payments.count({ where }),
   ]);
   return { payments, pagination: { page, limit, total, totalPages: Math.ceil(total / limit) } };
 }
 
 export async function getPaymentDetails(paymentId: string) {
-  const payment = await prisma.payment.findUnique({ where: { id: paymentId }, include: { user: { select: { id: true, email: true, firstName: true, lastName: true } } } });
+  const payment = await prisma.payments.findUnique({ where: { id: paymentId }, include: { users: { select: { id: true, email: true, firstName: true, lastName: true } } } });
   if (!payment) throw new HttpError(404, 'Payment not found');
   return payment;
 }
 
 export async function processRefund(paymentId: string, _adminId: string, reason?: string) {
-  const payment = await prisma.payment.findUnique({ where: { id: paymentId } });
+  const payment = await prisma.payments.findUnique({ where: { id: paymentId } });
   if (!payment) throw new HttpError(404, 'Payment not found');
   if (payment.status === 'REFUNDED') throw new HttpError(400, 'Already refunded');
-  return prisma.payment.update({ where: { id: paymentId }, data: { status: 'REFUNDED' } });
+  return prisma.payments.update({ where: { id: paymentId }, data: { status: 'REFUNDED' } });
 }
 
 export async function getSubscriptions(options: { status?: string; search?: string; page?: number; limit?: number }) {
   const { status, search, page = 1, limit = 20 } = options;
-  const where: Prisma.SubscriptionWhereInput = {};
+  const where: Prisma.subscriptionsWhereInput = {};
   if (status) where.status = status as any;
-  if (search) where.OR = [{ user: { email: { contains: search, mode: 'insensitive' } } }];
+  if (search) where.OR = [{ users: { email: { contains: search, mode: 'insensitive' } } }];
   const [subscriptions, total] = await Promise.all([
-    prisma.subscription.findMany({ where, skip: (page - 1) * limit, take: limit, orderBy: { createdAt: 'desc' }, include: { user: { select: { id: true, email: true, firstName: true, lastName: true } }, plan: true } }),
-    prisma.subscription.count({ where }),
+    prisma.subscriptions.findMany({ where, skip: (page - 1) * limit, take: limit, orderBy: { createdAt: 'desc' }, include: { users: { select: { id: true, email: true, firstName: true, lastName: true } }, plan: true } }),
+    prisma.subscriptions.count({ where }),
   ]);
   return { subscriptions, pagination: { page, limit, total, totalPages: Math.ceil(total / limit) } };
 }
 
 export async function getSubscriptionDetails(subscriptionId: string) {
-  const subscription = await prisma.subscription.findUnique({ where: { id: subscriptionId }, include: { user: { select: { id: true, email: true, firstName: true, lastName: true } }, plan: true } });
+  const subscription = await prisma.subscriptions.findUnique({ where: { id: subscriptionId }, include: { users: { select: { id: true, email: true, firstName: true, lastName: true } }, plan: true } });
   if (!subscription) throw new HttpError(404, 'Subscription not found');
   return subscription;
 }
 
 export async function cancelSubscription(subscriptionId: string, reason?: string) {
-  return prisma.subscription.update({ where: { id: subscriptionId }, data: { status: 'CANCELLED', cancelledAt: new Date(), cancelReason: reason } });
+  return prisma.subscriptions.update({ where: { id: subscriptionId }, data: { status: 'CANCELLED', cancelledAt: new Date(), cancelReason: reason } });
 }
 
 export async function getRevenueStats(startDate?: Date, endDate?: Date) {
-  const where: Prisma.PaymentWhereInput = { status: 'COMPLETED' };
+  const where: Prisma.paymentsWhereInput = { status: 'COMPLETED' };
   if (startDate || endDate) { where.createdAt = {}; if (startDate) (where.createdAt as any).gte = startDate; if (endDate) (where.createdAt as any).lte = endDate; }
-  const aggregate = await prisma.payment.aggregate({ where, _sum: { amount: true }, _count: true, _avg: { amount: true } });
+  const aggregate = await prisma.payments.aggregate({ where, _sum: { amount: true }, _count: true, _avg: { amount: true } });
   return { totalRevenue: toNumber(aggregate._sum.amount), transactionCount: aggregate._count, averageTransaction: toNumber(aggregate._avg.amount) };
 }
 
 export async function getCoupons(page = 1, limit = 20) {
-  const [coupons, total] = await Promise.all([prisma.coupon.findMany({ skip: (page - 1) * limit, take: limit, orderBy: { createdAt: 'desc' } }), prisma.coupon.count()]);
+  const [coupons, total] = await Promise.all([prisma.coupons.findMany({ skip: (page - 1) * limit, take: limit, orderBy: { createdAt: 'desc' } }), prisma.coupons.count()]);
   return { coupons, pagination: { page, limit, total, totalPages: Math.ceil(total / limit) } };
 }
 
 export async function createCoupon(adminId: string, data: { code: string; discountType: 'PERCENTAGE' | 'FIXED'; discountValue: number; maxUses?: number; expiresAt?: Date }) {
-  return prisma.coupon.create({
+  return prisma.coupons.create({
     data: {
       code: data.code.toUpperCase(),
       type: data.discountType as CouponType,
@@ -83,16 +83,16 @@ export async function createCoupon(adminId: string, data: { code: string; discou
 }
 
 export async function updateCoupon(couponId: string, data: { code?: string; isActive?: boolean }) {
-  return prisma.coupon.update({ where: { id: couponId }, data: { ...data, code: data.code?.toUpperCase() } });
+  return prisma.coupons.update({ where: { id: couponId }, data: { ...data, code: data.code?.toUpperCase() } });
 }
 
 export async function deleteCoupon(couponId: string) {
-  await prisma.coupon.delete({ where: { id: couponId } });
+  await prisma.coupons.delete({ where: { id: couponId } });
   return { success: true };
 }
 
 export async function getCouponDetails(couponId: string) {
-  const coupon = await prisma.coupon.findUnique({ where: { id: couponId } });
+  const coupon = await prisma.coupons.findUnique({ where: { id: couponId } });
   if (!coupon) throw new HttpError(404, 'Coupon not found');
   return coupon;
 }

@@ -3,7 +3,7 @@ import { AchievementRequirementType, QuestRequirementType } from '@prisma/client
 import * as xpService from './xpService';
 import * as streakService from './streakService';
 import * as achievementService from './achievementService';
-import * as questService from './questService';
+// import * as questService from './questService';
 import * as milestoneService from './milestoneService';
 import * as referralService from './referralService';
 import * as titleService from './titleService';
@@ -23,11 +23,10 @@ export async function onClassCompleted(
   const results: Record<string, any> = {};
 
   // 1. Award XP
-  results.xp = await xpService.awardXP(
+  results.xp = await xpService.addXP(
     userId,
     xpService.getDefaultXPAmount('CLASS_COMPLETE'),
     'CLASS_COMPLETE',
-    classId,
     'Class completed',
   );
 
@@ -49,17 +48,17 @@ export async function onClassCompleted(
   );
 
   // 4. Update quest progress
-  results.quests = await questService.updateQuestProgress(
-    userId,
-    'COMPLETE_CLASSES',
-    1,
-  );
+  // results.quests = await questService.updateQuestProgress(
+  //   userId,
+  //   'COMPLETE_CLASSES',
+  //   1,
+  // );
 
-  await questService.updateQuestProgress(
-    userId,
-    'COMPLETE_MINUTES',
-    durationMinutes,
-  );
+  // await questService.updateQuestProgress(
+  //   userId,
+  //   'COMPLETE_MINUTES',
+  //   durationMinutes,
+  // );
 
   // 5. Check milestones
   results.milestones = await milestoneService.checkMilestones(userId);
@@ -80,11 +79,10 @@ export async function onProgramCompleted(userId: string, programId: string) {
   const results: Record<string, any> = {};
 
   // Award XP
-  results.xp = await xpService.awardXP(
+  results.xp = await xpService.addXP(
     userId,
     xpService.getDefaultXPAmount('PROGRAM_COMPLETE'),
     'PROGRAM_COMPLETE',
-    programId,
     'Program completed',
   );
 
@@ -111,11 +109,10 @@ export async function onChallengeCompleted(userId: string, challengeId: string) 
   const results: Record<string, any> = {};
 
   // Award XP
-  results.xp = await xpService.awardXP(
+  results.xp = await xpService.addXP(
     userId,
     xpService.getDefaultXPAmount('CHALLENGE_COMPLETE'),
     'CHALLENGE_COMPLETE',
-    challengeId,
     'Challenge completed',
   );
 
@@ -149,20 +146,19 @@ export async function onChallengeDayCompleted(
   const results: Record<string, any> = {};
 
   // Award milestone XP
-  results.xp = await xpService.awardXP(
+  results.xp = await xpService.addXP(
     userId,
     xpService.getDefaultXPAmount('CHALLENGE_MILESTONE'),
     'CHALLENGE_MILESTONE',
-    challengeId,
     `Challenge day ${day} completed`,
   );
 
   // Update quest progress
-  results.quests = await questService.updateQuestProgress(
-    userId,
-    'COMPLETE_CHALLENGE_DAY',
-    1,
-  );
+  // results.quests = await questService.updateQuestProgress(
+  //   userId,
+  //   'COMPLETE_CHALLENGE_DAY',
+  //   1,
+  // );
 
   return results;
 }
@@ -173,11 +169,10 @@ export async function onForumPostCreated(userId: string, postId: string) {
   const results: Record<string, any> = {};
 
   // Award XP
-  results.xp = await xpService.awardXP(
+  results.xp = await xpService.addXP(
     userId,
     xpService.getDefaultXPAmount('FORUM_POST'),
     'FORUM_POST',
-    postId,
     'Forum post created',
   );
 
@@ -189,11 +184,11 @@ export async function onForumPostCreated(userId: string, postId: string) {
   );
 
   // Update quest progress
-  results.quests = await questService.updateQuestProgress(
-    userId,
-    'POST_IN_FORUM',
-    1,
-  );
+  // results.quests = await questService.updateQuestProgress(
+  //   userId,
+  //   'POST_IN_FORUM',
+  //   1,
+  // );
 
   return results;
 }
@@ -204,11 +199,10 @@ export async function onForumReplyCreated(userId: string, replyId: string) {
   const results: Record<string, any> = {};
 
   // Award XP
-  results.xp = await xpService.awardXP(
+  results.xp = await xpService.addXP(
     userId,
     xpService.getDefaultXPAmount('FORUM_REPLY'),
     'FORUM_REPLY',
-    replyId,
     'Forum reply created',
   );
 
@@ -221,11 +215,10 @@ export async function onHelpfulAnswer(userId: string, postId: string) {
   const results: Record<string, any> = {};
 
   // Award XP
-  results.xp = await xpService.awardXP(
+  results.xp = await xpService.addXP(
     userId,
     xpService.getDefaultXPAmount('HELPFUL_ANSWER'),
     'HELPFUL_ANSWER',
-    postId,
     'Answer marked as helpful',
   );
 
@@ -249,11 +242,10 @@ export async function onLiveSessionAttended(
   const results: Record<string, any> = {};
 
   // Award XP
-  results.xp = await xpService.awardXP(
+  results.xp = await xpService.addXP(
     userId,
     xpService.getDefaultXPAmount('LIVE_SESSION_ATTEND'),
     'LIVE_SESSION_ATTEND',
-    sessionId,
     'Live session attended',
   );
 
@@ -268,11 +260,11 @@ export async function onLiveSessionAttended(
   );
 
   // Update quest progress
-  results.quests = await questService.updateQuestProgress(
-    userId,
-    'ATTEND_LIVE_SESSION',
-    1,
-  );
+  // results.quests = await questService.updateQuestProgress(
+  //   userId,
+  //   'ATTEND_LIVE_SESSION',
+  //   1,
+  // );
 
   return results;
 }
@@ -283,11 +275,10 @@ export async function onLiveSessionHosted(userId: string, sessionId: string) {
   const results: Record<string, any> = {};
 
   // Award XP
-  results.xp = await xpService.awardXP(
+  results.xp = await xpService.addXP(
     userId,
     xpService.getDefaultXPAmount('LIVE_SESSION_HOST'),
     'LIVE_SESSION_HOST',
-    sessionId,
     'Live session hosted',
   );
 
@@ -307,11 +298,10 @@ export async function onReviewSubmitted(userId: string, reviewId: string) {
   const results: Record<string, any> = {};
 
   // Award XP
-  results.xp = await xpService.awardXP(
+  results.xp = await xpService.addXP(
     userId,
     xpService.getDefaultXPAmount('REVIEW_SUBMIT'),
     'REVIEW_SUBMIT',
-    reviewId,
     'Review submitted',
   );
 
@@ -340,11 +330,10 @@ export async function onDailyLogin(userId: string) {
   const results: Record<string, any> = {};
 
   // Award daily login XP
-  results.xp = await xpService.awardXP(
+  results.xp = await xpService.addXP(
     userId,
     xpService.getDefaultXPAmount('DAILY_LOGIN'),
     'DAILY_LOGIN',
-    undefined,
     'Daily login bonus',
   );
 
@@ -365,20 +354,19 @@ export async function onSocialShare(
   const results: Record<string, any> = {};
 
   // Award XP
-  results.xp = await xpService.awardXP(
+  results.xp = await xpService.addXP(
     userId,
     xpService.getDefaultXPAmount('SOCIAL_SHARE'),
     'SOCIAL_SHARE',
-    targetId,
     `Shared ${shareType}`,
   );
 
   // Update quest progress
-  results.quests = await questService.updateQuestProgress(
-    userId,
-    'SHARE_PROGRESS',
-    1,
-  );
+  // results.quests = await questService.updateQuestProgress(
+  //   userId,
+  //   'SHARE_PROGRESS',
+  //   1,
+  // );
 
   return results;
 }
@@ -389,11 +377,10 @@ export async function onProfileCompleted(userId: string) {
   const results: Record<string, any> = {};
 
   // Award one-time XP
-  results.xp = await xpService.awardXP(
+  results.xp = await xpService.addXP(
     userId,
     xpService.getDefaultXPAmount('PROFILE_COMPLETE'),
     'PROFILE_COMPLETE',
-    userId,
     'Profile completed',
   );
 
@@ -406,13 +393,11 @@ export async function onFirstClass(userId: string, classId: string) {
   const results: Record<string, any> = {};
 
   // Award first class bonus
-  results.xp = await xpService.awardXP(
+  results.xp = await xpService.addXP(
     userId,
     xpService.getDefaultXPAmount('FIRST_CLASS'),
     'FIRST_CLASS',
-    classId,
     'First class bonus',
-    'BONUS',
   );
 
   // Process referral conversion
@@ -427,13 +412,11 @@ export async function onFirstProgram(userId: string, programId: string) {
   const results: Record<string, any> = {};
 
   // Award first program bonus
-  results.xp = await xpService.awardXP(
+  results.xp = await xpService.addXP(
     userId,
     xpService.getDefaultXPAmount('FIRST_PROGRAM'),
     'FIRST_PROGRAM',
-    programId,
     'First program bonus',
-    'BONUS',
   );
 
   return results;
@@ -445,11 +428,10 @@ export async function onBadgeEarned(userId: string, badgeId: string) {
   const results: Record<string, any> = {};
 
   // Award XP for earning badge
-  results.xp = await xpService.awardXP(
+  results.xp = await xpService.addXP(
     userId,
     xpService.getDefaultXPAmount('BADGE_EARN'),
     'BADGE_EARN',
-    badgeId,
     'Badge earned',
   );
 
@@ -494,11 +476,11 @@ export async function onNewCategoryTried(userId: string, category: string) {
   );
 
   // Update quest progress
-  results.quests = await questService.updateQuestProgress(
-    userId,
-    'TRY_NEW_CATEGORY',
-    1,
-  );
+  // results.quests = await questService.updateQuestProgress(
+  //   userId,
+  //   'TRY_NEW_CATEGORY',
+  //   1,
+  // );
 
   return results;
 }

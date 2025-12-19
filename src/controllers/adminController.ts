@@ -13,7 +13,7 @@ const updateRoleSchema = z.object({
 
 export async function listUsers(req: Request, res: Response) {
   try {
-    const users = await prisma.user.findMany({
+    const users = await prisma.users.findMany({
       orderBy: { createdAt: 'desc' },
       select: {
         id: true,
@@ -44,7 +44,7 @@ export async function updateUserRole(req: Request, res: Response) {
       return res.status(403).json({ error: 'Admin privileges required' });
     }
 
-    const updatedUser = await prisma.user.update({
+    const updatedUser = await prisma.users.update({
       where: { id },
       data: { role: payload.role },
       select: {
@@ -57,7 +57,7 @@ export async function updateUserRole(req: Request, res: Response) {
       },
     });
 
-    await prisma.auditLog.create({
+    await prisma.audit_logs.create({
       data: {
         userId: id,
         actorRole: req.user.role,
@@ -71,7 +71,7 @@ export async function updateUserRole(req: Request, res: Response) {
 
     return res.json({
       message: 'Role updated',
-      user: updatedUser,
+      users: updatedUser,
     });
   } catch (error) {
     if (error instanceof z.ZodError) {

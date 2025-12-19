@@ -16,23 +16,23 @@ export async function getNotes(filters: {
   limit?: number;
 }) {
   const { entityType, entityId, createdById, isPinned, page = 1, limit = 20 } = filters;
-  const where: Prisma.AdminNoteWhereInput = {};
+  const where: Prisma.admin_notesWhereInput = {};
   if (entityType) where.entityType = entityType;
   if (entityId) where.entityId = entityId;
   if (createdById) where.adminId = createdById;
   if (isPinned !== undefined) where.isPinned = isPinned;
 
   const [notes, total] = await Promise.all([
-    prisma.adminNote.findMany({
+    prisma.admin_notes.findMany({
       where,
       skip: (page - 1) * limit,
       take: limit,
       orderBy: { createdAt: 'desc' },
       include: {
-        admin: { select: { id: true, firstName: true, lastName: true, email: true } },
+        users: { select: { id: true, firstName: true, lastName: true, email: true } },
       },
     }),
-    prisma.adminNote.count({ where }),
+    prisma.admin_notes.count({ where }),
   ]);
 
   return {
@@ -43,21 +43,21 @@ export async function getNotes(filters: {
 
 // Get notes for a specific entity
 export async function getEntityNotes(entityType: string, entityId: string) {
-  return prisma.adminNote.findMany({
+  return prisma.admin_notes.findMany({
     where: { entityType, entityId },
     orderBy: { createdAt: 'desc' },
     include: {
-      admin: { select: { id: true, firstName: true, lastName: true, email: true } },
+      users: { select: { id: true, firstName: true, lastName: true, email: true } },
     },
   });
 }
 
 // Get note by ID
 export async function getNote(noteId: string) {
-  const note = await prisma.adminNote.findUnique({
+  const note = await prisma.admin_notes.findUnique({
     where: { id: noteId },
     include: {
-      admin: { select: { id: true, firstName: true, lastName: true, email: true } },
+      users: { select: { id: true, firstName: true, lastName: true, email: true } },
     },
   });
 
@@ -76,7 +76,7 @@ export async function createNote(
     isInternal?: boolean;
   }
 ) {
-  return prisma.adminNote.create({
+  return prisma.admin_notes.create({
     data: {
       adminId,
       entityType: data.entityType,
@@ -85,7 +85,7 @@ export async function createNote(
       isPinned: data.isPinned || false,
     },
     include: {
-      admin: { select: { id: true, firstName: true, lastName: true, email: true } },
+      users: { select: { id: true, firstName: true, lastName: true, email: true } },
     },
   });
 }
@@ -96,42 +96,42 @@ export async function updateNote(
   adminId: string,
   data: { content?: string; isPinned?: boolean; isInternal?: boolean }
 ) {
-  const note = await prisma.adminNote.findUnique({ where: { id: noteId } });
+  const note = await prisma.admin_notes.findUnique({ where: { id: noteId } });
   if (!note) throw new HttpError(404, 'Note not found');
   if (note.adminId !== adminId) throw new HttpError(403, 'Not authorized');
 
-  return prisma.adminNote.update({
+  return prisma.admin_notes.update({
     where: { id: noteId },
     data: {
       content: data.content,
       isPinned: data.isPinned,
     },
     include: {
-      admin: { select: { id: true, firstName: true, lastName: true, email: true } },
+      users: { select: { id: true, firstName: true, lastName: true, email: true } },
     },
   });
 }
 
 // Delete admin note
 export async function deleteNote(noteId: string, adminId: string) {
-  const note = await prisma.adminNote.findUnique({ where: { id: noteId } });
+  const note = await prisma.admin_notes.findUnique({ where: { id: noteId } });
   if (!note) throw new HttpError(404, 'Note not found');
   if (note.adminId !== adminId) throw new HttpError(403, 'Not authorized');
 
-  await prisma.adminNote.delete({ where: { id: noteId } });
+  await prisma.admin_notes.delete({ where: { id: noteId } });
   return { success: true };
 }
 
 // Pin/unpin note
 export async function pinNote(noteId: string, isPinned: boolean) {
-  const note = await prisma.adminNote.findUnique({ where: { id: noteId } });
+  const note = await prisma.admin_notes.findUnique({ where: { id: noteId } });
   if (!note) throw new HttpError(404, 'Note not found');
 
-  return prisma.adminNote.update({
+  return prisma.admin_notes.update({
     where: { id: noteId },
     data: { isPinned },
     include: {
-      admin: { select: { id: true, firstName: true, lastName: true, email: true } },
+      users: { select: { id: true, firstName: true, lastName: true, email: true } },
     },
   });
 }
@@ -141,16 +141,16 @@ export async function pinNote(noteId: string, isPinned: boolean) {
 // ============================================
 
 export async function getSavedReports(adminId?: string, page = 1, limit = 20) {
-  const where: Prisma.SavedReportWhereInput = adminId ? { adminId } : {};
+  const where: Prisma.saved_reportsWhereInput = adminId ? { adminId } : {};
 
   const [reports, total] = await Promise.all([
-    prisma.savedReport.findMany({
+    prisma.saved_reports.findMany({
       where,
       skip: (page - 1) * limit,
       take: limit,
       orderBy: { createdAt: 'desc' },
     }),
-    prisma.savedReport.count({ where }),
+    prisma.saved_reports.count({ where }),
   ]);
 
   return {
@@ -160,7 +160,7 @@ export async function getSavedReports(adminId?: string, page = 1, limit = 20) {
 }
 
 export async function getSavedReport(reportId: string) {
-  const report = await prisma.savedReport.findUnique({ where: { id: reportId } });
+  const report = await prisma.saved_reports.findUnique({ where: { id: reportId } });
   if (!report) throw new HttpError(404, 'Report not found');
   return report;
 }
@@ -178,7 +178,7 @@ export async function createSavedReport(
     isShared?: boolean;
   }
 ) {
-  return prisma.savedReport.create({
+  return prisma.saved_reports.create({
     data: {
       adminId,
       name: data.name,
@@ -206,11 +206,11 @@ export async function updateSavedReport(
     isShared?: boolean;
   }
 ) {
-  const report = await prisma.savedReport.findUnique({ where: { id: reportId } });
+  const report = await prisma.saved_reports.findUnique({ where: { id: reportId } });
   if (!report) throw new HttpError(404, 'Report not found');
   if (report.adminId !== adminId) throw new HttpError(403, 'Not authorized');
 
-  return prisma.savedReport.update({
+  return prisma.saved_reports.update({
     where: { id: reportId },
     data: {
       name: data.name,
@@ -225,19 +225,19 @@ export async function updateSavedReport(
 }
 
 export async function deleteSavedReport(reportId: string, adminId: string) {
-  const report = await prisma.savedReport.findUnique({ where: { id: reportId } });
+  const report = await prisma.saved_reports.findUnique({ where: { id: reportId } });
   if (!report) throw new HttpError(404, 'Report not found');
   if (report.adminId !== adminId) throw new HttpError(403, 'Not authorized');
 
-  await prisma.savedReport.delete({ where: { id: reportId } });
+  await prisma.saved_reports.delete({ where: { id: reportId } });
   return { success: true };
 }
 
 export async function duplicateSavedReport(reportId: string, adminId: string, newName?: string) {
-  const report = await prisma.savedReport.findUnique({ where: { id: reportId } });
+  const report = await prisma.saved_reports.findUnique({ where: { id: reportId } });
   if (!report) throw new HttpError(404, 'Report not found');
 
-  return prisma.savedReport.create({
+  return prisma.saved_reports.create({
     data: {
       adminId,
       name: newName || `${report.name} (Copy)`,

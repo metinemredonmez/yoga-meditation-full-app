@@ -7,32 +7,32 @@ import { LanguageDirection } from '@prisma/client';
 // ============================================
 
 export async function getLanguages(includeInactive = false) {
-  return prisma.language.findMany({
+  return prisma.languages.findMany({
     where: includeInactive ? {} : { isActive: true },
     orderBy: [{ isDefault: 'desc' }, { name: 'asc' }],
   });
 }
 
 export async function getLanguageByCode(code: string) {
-  return prisma.language.findUnique({
+  return prisma.languages.findUnique({
     where: { code },
   });
 }
 
 export async function getLanguageById(id: string) {
-  return prisma.language.findUnique({
+  return prisma.languages.findUnique({
     where: { id },
   });
 }
 
 export async function getDefaultLanguage() {
-  const defaultLang = await prisma.language.findFirst({
+  const defaultLang = await prisma.languages.findFirst({
     where: { isDefault: true, isActive: true },
   });
 
   if (!defaultLang) {
     // Return English as fallback or create it
-    let english = await prisma.language.findUnique({ where: { code: 'en' } });
+    let english = await prisma.languages.findUnique({ where: { code: 'en' } });
     if (!english) {
       english = await createLanguage({
         code: 'en',
@@ -61,13 +61,13 @@ export async function createLanguage(data: {
 }) {
   // If setting as default, unset other defaults
   if (data.isDefault) {
-    await prisma.language.updateMany({
+    await prisma.languages.updateMany({
       where: { isDefault: true },
       data: { isDefault: false },
     });
   }
 
-  const language = await prisma.language.create({
+  const language = await prisma.languages.create({
     data,
   });
 
@@ -90,20 +90,20 @@ export async function updateLanguage(
 ) {
   // If setting as default, unset other defaults
   if (data.isDefault) {
-    await prisma.language.updateMany({
+    await prisma.languages.updateMany({
       where: { isDefault: true, id: { not: id } },
       data: { isDefault: false },
     });
   }
 
-  return prisma.language.update({
+  return prisma.languages.update({
     where: { id },
     data,
   });
 }
 
 export async function deleteLanguage(id: string) {
-  const language = await prisma.language.findUnique({ where: { id } });
+  const language = await prisma.languages.findUnique({ where: { id } });
 
   if (!language) {
     throw new Error('Language not found');
@@ -114,10 +114,10 @@ export async function deleteLanguage(id: string) {
   }
 
   // Delete all translations for this language
-  await prisma.translation.deleteMany({ where: { languageId: id } });
-  await prisma.contentTranslation.deleteMany({ where: { languageId: id } });
+  await prisma.translations.deleteMany({ where: { languageId: id } });
+  await prisma.content_translations.deleteMany({ where: { languageId: id } });
 
-  return prisma.language.delete({ where: { id } });
+  return prisma.languages.delete({ where: { id } });
 }
 
 // ============================================
@@ -125,9 +125,9 @@ export async function deleteLanguage(id: string) {
 // ============================================
 
 export async function getUserLanguagePreference(userId: string) {
-  const pref = await prisma.userLanguagePreference.findUnique({
+  const pref = await prisma.user_language_preferences.findUnique({
     where: { userId },
-    include: { preferredLanguage: true },
+    include: { languages: true },
   });
 
   if (!pref) {
@@ -138,7 +138,10 @@ export async function getUserLanguagePreference(userId: string) {
     };
   }
 
-  return pref;
+  return {
+    ...pref,
+    preferredLanguage: pref.languages,
+  };
 }
 
 export async function setUserLanguagePreference(
@@ -152,7 +155,7 @@ export async function setUserLanguagePreference(
     throw new Error(`Language ${languageCode} not found`);
   }
 
-  return prisma.userLanguagePreference.upsert({
+  const result = await prisma.user_language_preferences.upsert({
     where: { userId },
     create: {
       userId,
@@ -165,8 +168,13 @@ export async function setUserLanguagePreference(
       autoDetect,
       detectedLocale,
     },
-    include: { preferredLanguage: true },
+    include: { languages: true },
   });
+
+  return {
+    ...result,
+    preferredLanguage: result.languages,
+  };
 }
 
 // ============================================
@@ -187,7 +195,7 @@ export async function resolveLanguage(
   // 2. User preference
   if (userId) {
     const pref = await getUserLanguagePreference(userId);
-    if (pref.preferredLanguage?.isActive) {
+    if (pref && 'preferredLanguage' in pref && pref.preferredLanguage?.isActive) {
       return pref.preferredLanguage.code;
     }
   }
@@ -243,7 +251,7 @@ export async function seedDefaultLanguages() {
   ];
 
   for (const lang of languages) {
-    await prisma.language.upsert({
+    await prisma.languages.upsert({
       where: { code: lang.code },
       create: lang,
       update: {},

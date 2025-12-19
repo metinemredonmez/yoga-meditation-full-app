@@ -1,268 +1,164 @@
 import { prisma } from '../utils/database';
 import { logger } from '../utils/logger';
-import { XPSource, XPTransactionType, SubscriptionTier } from '@prisma/client';
-
-// XP Configuration
-const XP_CONFIG: Record<XPSource, number> = {
-  CLASS_COMPLETE: 50,
-  PROGRAM_COMPLETE: 500,
-  CHALLENGE_COMPLETE: 300,
-  CHALLENGE_MILESTONE: 100,
-  DAILY_LOGIN: 10,
-  STREAK_MILESTONE: 100,
-  ACHIEVEMENT_UNLOCK: 50,
-  BADGE_EARN: 25,
-  FORUM_POST: 15,
-  FORUM_REPLY: 10,
-  HELPFUL_ANSWER: 25,
-  REFERRAL: 200,
-  PROFILE_COMPLETE: 50,
-  FIRST_CLASS: 100,
-  FIRST_PROGRAM: 200,
-  REVIEW_SUBMIT: 20,
-  SOCIAL_SHARE: 5,
-  LIVE_SESSION_ATTEND: 75,
-  LIVE_SESSION_HOST: 150,
-  ADMIN: 0,
-};
-
-// Level calculation: Level = floor(sqrt(totalXP / 100))
-// Inverse: XP needed for level = level^2 * 100
-export function calculateLevel(totalXP: number): number {
-  return Math.floor(Math.sqrt(totalXP / 100)) + 1;
-}
-
-export function getXPForLevel(level: number): number {
-  if (level <= 1) return 0;
-  return Math.pow(level - 1, 2) * 100;
-}
-
-export function getXPForNextLevel(level: number): number {
-  return Math.pow(level, 2) * 100;
-}
+import { XPSource } from '@prisma/client';
 
 // ============================================
 // User Level Management
 // ============================================
 
+/**
+ * Get default XP amount for different actions
+ */
+export function getDefaultXPAmount(actionType: string): number {
+  const xpAmounts: Record<string, number> = {
+    CLASS_COMPLETE: 50,
+    PROGRAM_COMPLETE: 200,
+    CHALLENGE_COMPLETE: 150,
+    CHALLENGE_MILESTONE: 25,
+    FORUM_POST: 10,
+    FORUM_REPLY: 5,
+    HELPFUL_ANSWER: 20,
+    LIVE_SESSION_ATTEND: 75,
+    LIVE_SESSION_HOST: 100,
+    REVIEW_SUBMIT: 15,
+    DAILY_LOGIN: 5,
+    SOCIAL_SHARE: 10,
+    PROFILE_COMPLETE: 50,
+    FIRST_CLASS: 100,
+    FIRST_PROGRAM: 250,
+    BADGE_EARN: 50,
+  };
+
+  return xpAmounts[actionType] || 10; // Default 10 XP if not specified
+}
+
 export async function getOrCreateUserLevel(userId: string) {
-  let userLevel = await prisma.userLevel.findUnique({
+  let userLevel = await prisma.user_levels.findUnique({
     where: { userId },
   });
 
   if (!userLevel) {
-    userLevel = await prisma.userLevel.create({
-      data: { userId },
+    userLevel = await prisma.user_levels.create({
+      data: {
+        userId,
+        currentXP: 0,
+        totalXP: 0,
+        level: 1,
+        currentStreak: 0,
+        longestStreak: 0,
+      },
     });
   }
 
   return userLevel;
 }
 
-export async function getUserStats(userId: string) {
-  const userLevel = await getOrCreateUserLevel(userId);
-  const currentLevelXP = getXPForLevel(userLevel.level);
-  const nextLevelXP = getXPForNextLevel(userLevel.level);
-  const xpInCurrentLevel = userLevel.totalXP - currentLevelXP;
-  const xpNeededForNext = nextLevelXP - currentLevelXP;
-  const progressPercent = (xpInCurrentLevel / xpNeededForNext) * 100;
-
-  return {
-    userId,
-    level: userLevel.level,
-    currentXP: userLevel.currentXP,
-    totalXP: userLevel.totalXP,
-    xpInCurrentLevel,
-    xpNeededForNextLevel: xpNeededForNext - xpInCurrentLevel,
-    progressPercent: Math.min(progressPercent, 100),
-    currentStreak: userLevel.currentStreak,
-    longestStreak: userLevel.longestStreak,
-    lastActivityDate: userLevel.lastActivityDate,
-  };
+export async function getUserLevel(userId: string) {
+  return prisma.user_levels.findUnique({
+    where: { userId },
+  });
 }
 
-export async function getLevelInfo(userId: string) {
-  const userLevel = await getOrCreateUserLevel(userId);
-  const level = userLevel.level;
-
-  return {
-    currentLevel: level,
-    totalXP: userLevel.totalXP,
-    xpForCurrentLevel: getXPForLevel(level),
-    xpForNextLevel: getXPForNextLevel(level),
-    levelUpAt: userLevel.levelUpAt,
-    previousLevel: userLevel.previousLevel,
-  };
-}
-
-// ============================================
-// XP Operations
-// ============================================
-
-export async function awardXP(
+export async function addXP(
   userId: string,
   amount: number,
   source: XPSource,
-  sourceId?: string,
-  description?: string,
-  type: XPTransactionType = 'EARN',
-  metadata?: Record<string, unknown>,
+  description: string
 ) {
   const userLevel = await getOrCreateUserLevel(userId);
 
-  // Apply multiplier
-  const multiplier = await getXPMultiplier(userId);
-  const finalAmount = Math.floor(amount * multiplier);
+  const newCurrentXP = userLevel.currentXP + amount;
+  const newTotalXP = userLevel.totalXP + amount;
 
-  const balanceBefore = userLevel.totalXP;
-  const balanceAfter = balanceBefore + finalAmount;
-  const newLevel = calculateLevel(balanceAfter);
-  const didLevelUp = newLevel > userLevel.level;
+  // Calculate new level (simple formula: every 1000 XP = 1 level)
+  const newLevel = Math.floor(newTotalXP / 1000) + 1;
+  const leveledUp = newLevel > userLevel.level;
 
-  // Create transaction and update user level
-  const [transaction] = await prisma.$transaction([
-    prisma.xPTransaction.create({
-      data: {
-        userId,
-        amount: finalAmount,
-        type,
-        source,
-        sourceId,
-        description,
-        balanceBefore,
-        balanceAfter,
-        metadata: metadata as any,
-      },
-    }),
-    prisma.userLevel.update({
-      where: { userId },
-      data: {
-        currentXP: { increment: finalAmount },
-        totalXP: balanceAfter,
-        level: newLevel,
-        ...(didLevelUp && {
-          levelUpAt: new Date(),
-          previousLevel: userLevel.level,
-        }),
-      },
-    }),
-  ]);
+  const updatedLevel = await prisma.user_levels.update({
+    where: { userId },
+    data: {
+      currentXP: newCurrentXP,
+      totalXP: newTotalXP,
+      level: newLevel,
+      ...(leveledUp && {
+        levelUpAt: new Date(),
+        previousLevel: userLevel.level,
+      }),
+    },
+  });
 
-  logger.info(
-    { userId, amount: finalAmount, source, newLevel, didLevelUp },
-    'XP awarded',
-  );
+  // Log the XP transaction
+  await prisma.xp_transactions.create({
+    data: {
+      userId,
+      amount,
+      type: 'EARN',
+      source,
+      description,
+      balanceBefore: userLevel.currentXP,
+      balanceAfter: newCurrentXP,
+    },
+  });
+
+  logger.info({ userId, amount, source, description, newLevel, leveledUp }, 'XP added');
 
   return {
-    transaction,
-    xpAwarded: finalAmount,
-    newTotalXP: balanceAfter,
+    userLevel: updatedLevel,
+    leveledUp,
     previousLevel: userLevel.level,
     newLevel,
-    didLevelUp,
-    multiplier,
   };
 }
 
-export async function deductXP(
-  userId: string,
-  amount: number,
-  description?: string,
-) {
+export async function deductXP(userId: string, amount: number, reason: string) {
   const userLevel = await getOrCreateUserLevel(userId);
 
-  const balanceBefore = userLevel.totalXP;
-  const balanceAfter = Math.max(0, balanceBefore - amount);
-  const actualDeduction = balanceBefore - balanceAfter;
-  const newLevel = calculateLevel(balanceAfter);
-
-  const [transaction] = await prisma.$transaction([
-    prisma.xPTransaction.create({
-      data: {
-        userId,
-        amount: -actualDeduction,
-        type: 'ADMIN_ADJUSTMENT',
-        source: 'ADMIN',
-        description,
-        balanceBefore,
-        balanceAfter,
-      },
-    }),
-    prisma.userLevel.update({
-      where: { userId },
-      data: {
-        currentXP: Math.max(0, userLevel.currentXP - actualDeduction),
-        totalXP: balanceAfter,
-        level: newLevel,
-      },
-    }),
-  ]);
-
-  return { transaction, deducted: actualDeduction, newTotalXP: balanceAfter };
-}
-
-// ============================================
-// XP Multiplier
-// ============================================
-
-export async function getXPMultiplier(userId: string): Promise<number> {
-  const user = await prisma.user.findUnique({
-    where: { id: userId },
-    select: { subscriptionTier: true },
-  });
-
-  const userLevel = await getOrCreateUserLevel(userId);
-
-  let multiplier = 1.0;
-
-  // Premium tier bonus
-  if (user?.subscriptionTier === 'PREMIUM') {
-    multiplier += 0.25; // 25% bonus for premium
-  } else if (user?.subscriptionTier === 'BASIC') {
-    multiplier += 0.1; // 10% bonus for basic
+  if (userLevel.currentXP < amount) {
+    throw new Error('Insufficient XP');
   }
 
-  // Streak bonus (up to 50% at 30+ day streak)
-  const streakBonus = Math.min(userLevel.currentStreak / 60, 0.5);
-  multiplier += streakBonus;
+  const newCurrentXP = userLevel.currentXP - amount;
 
-  return multiplier;
+  const updatedLevel = await prisma.user_levels.update({
+    where: { userId },
+    data: {
+      currentXP: newCurrentXP,
+    },
+  });
+
+  // Log the XP transaction
+  await prisma.xp_transactions.create({
+    data: {
+      userId,
+      amount: -amount,
+      type: 'ADMIN_ADJUSTMENT',
+      source: 'DAILY_LOGIN',
+      description: reason,
+      balanceBefore: userLevel.currentXP,
+      balanceAfter: newCurrentXP,
+    },
+  });
+
+  logger.info({ userId, amount, reason }, 'XP deducted');
+
+  return updatedLevel;
 }
 
-// ============================================
-// XP History
-// ============================================
-
-export async function getXPHistory(
+export async function getXPTransactions(
   userId: string,
-  pagination: { page?: number; limit?: number } = {},
-  filters: { source?: XPSource; type?: XPTransactionType; startDate?: Date; endDate?: Date } = {},
+  pagination: { page?: number; limit?: number } = {}
 ) {
   const { page = 1, limit = 20 } = pagination;
   const skip = (page - 1) * limit;
 
-  const where: any = { userId };
-
-  if (filters.source) {
-    where.source = filters.source;
-  }
-  if (filters.type) {
-    where.type = filters.type;
-  }
-  if (filters.startDate || filters.endDate) {
-    where.createdAt = {};
-    if (filters.startDate) where.createdAt.gte = filters.startDate;
-    if (filters.endDate) where.createdAt.lte = filters.endDate;
-  }
-
   const [transactions, total] = await Promise.all([
-    prisma.xPTransaction.findMany({
-      where,
+    prisma.xp_transactions.findMany({
+      where: { userId },
       orderBy: { createdAt: 'desc' },
       skip,
       take: limit,
     }),
-    prisma.xPTransaction.count({ where }),
+    prisma.xp_transactions.count({ where: { userId } }),
   ]);
 
   return {
@@ -276,47 +172,102 @@ export async function getXPHistory(
   };
 }
 
-// ============================================
-// XP Leaderboard
-// ============================================
-
-export async function getXPLeaderboard(
-  pagination: { page?: number; limit?: number } = {},
-) {
-  const { page = 1, limit = 50 } = pagination;
-  const skip = (page - 1) * limit;
-
-  const [entries, total] = await Promise.all([
-    prisma.userLevel.findMany({
-      orderBy: { totalXP: 'desc' },
-      skip,
-      take: limit,
-      include: {
-        user: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            equippedTitleId: true,
-            equippedFrameId: true,
-          },
+export async function getLeaderboard(limit: number = 50) {
+  return prisma.user_levels.findMany({
+    take: limit,
+    orderBy: [
+      { level: 'desc' },
+      { totalXP: 'desc' },
+    ],
+    include: {
+      users: {
+        select: {
+          id: true,
+          firstName: true,
+          lastName: true,
+          avatarUrl: true,
         },
       },
-    }),
-    prisma.userLevel.count(),
-  ]);
+    },
+  });
+}
 
-  const leaderboard = entries.map((entry, index) => ({
-    rank: skip + index + 1,
-    userId: entry.userId,
-    userName: `${entry.user.firstName || ''} ${entry.user.lastName || ''}`.trim() || 'Yogi',
-    level: entry.level,
-    totalXP: entry.totalXP,
-    currentStreak: entry.currentStreak,
-  }));
+// ============================================
+// Additional XP Functions
+// ============================================
+
+/**
+ * Get user stats including level, XP, and streaks
+ */
+export async function getUserStats(userId: string) {
+  const userLevel = await getUserLevel(userId);
+
+  if (!userLevel) {
+    return null;
+  }
+
+  // Calculate XP needed for next level (1000 XP per level)
+  const xpForNextLevel = userLevel.level * 1000;
+  const xpNeeded = xpForNextLevel - userLevel.totalXP;
 
   return {
-    leaderboard,
+    userId: userLevel.userId,
+    currentXP: userLevel.currentXP,
+    totalXP: userLevel.totalXP,
+    level: userLevel.level,
+    previousLevel: userLevel.previousLevel,
+    levelUpAt: userLevel.levelUpAt,
+    xpForNextLevel,
+    xpNeeded,
+    currentStreak: userLevel.currentStreak,
+    longestStreak: userLevel.longestStreak,
+    lastActivityDate: userLevel.lastActivityDate,
+  };
+}
+
+/**
+ * Get level information including thresholds
+ */
+export async function getLevelInfo(level: number) {
+  const xpRequired = (level - 1) * 1000;
+  const xpForNext = level * 1000;
+  const xpNeeded = xpForNext - xpRequired;
+
+  return {
+    level,
+    xpRequired,
+    xpForNext,
+    xpNeeded,
+    title: getLevelTitle(level),
+  };
+}
+
+/**
+ * Get XP transaction history for a user
+ */
+export async function getXPHistory(
+  userId: string,
+  options: { page?: number; limit?: number; type?: string; source?: string } = {}
+) {
+  const { page = 1, limit = 20, type, source } = options;
+  const skip = (page - 1) * limit;
+
+  const where: any = { userId };
+  if (type) where.type = type;
+  if (source) where.source = source;
+
+  const [transactions, total] = await Promise.all([
+    prisma.xp_transactions.findMany({
+      where,
+      orderBy: { createdAt: 'desc' },
+      skip,
+      take: limit,
+    }),
+    prisma.xp_transactions.count({ where }),
+  ]);
+
+  return {
+    transactions,
     pagination: {
       page,
       limit,
@@ -326,26 +277,92 @@ export async function getXPLeaderboard(
   };
 }
 
-// ============================================
-// Helper Functions
-// ============================================
+/**
+ * Get XP leaderboard with pagination
+ */
+export async function getXPLeaderboard(options: { page?: number; limit?: number } = {}) {
+  const { page = 1, limit = 50 } = options;
+  const skip = (page - 1) * limit;
 
-export function getDefaultXPAmount(source: XPSource): number {
-  return XP_CONFIG[source] || 0;
+  const [leaderboard, total] = await Promise.all([
+    prisma.user_levels.findMany({
+      skip,
+      take: limit,
+      orderBy: [
+        { level: 'desc' },
+        { totalXP: 'desc' },
+      ],
+      include: {
+        users: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            avatarUrl: true,
+          },
+        },
+      },
+    }),
+    prisma.user_levels.count(),
+  ]);
+
+  // Add rank to each entry
+  const rankedLeaderboard = leaderboard.map((entry, index) => ({
+    ...entry,
+    rank: skip + index + 1,
+  }));
+
+  return {
+    leaderboard: rankedLeaderboard,
+    pagination: {
+      page,
+      limit,
+      total,
+      totalPages: Math.ceil(total / limit),
+    },
+  };
 }
 
-export async function getUserRank(userId: string): Promise<number | null> {
-  const userLevel = await prisma.userLevel.findUnique({
-    where: { userId },
-  });
+/**
+ * Get user's rank on the leaderboard
+ */
+export async function getUserRank(userId: string) {
+  const userLevel = await getUserLevel(userId);
 
-  if (!userLevel) return null;
+  if (!userLevel) {
+    return null;
+  }
 
-  const rank = await prisma.userLevel.count({
+  // Count how many users have higher level or same level with more XP
+  const rank = await prisma.user_levels.count({
     where: {
-      totalXP: { gt: userLevel.totalXP },
+      OR: [
+        { level: { gt: userLevel.level } },
+        {
+          AND: [
+            { level: userLevel.level },
+            { totalXP: { gt: userLevel.totalXP } },
+          ],
+        },
+      ],
     },
   });
 
-  return rank + 1;
+  return {
+    userId,
+    rank: rank + 1, // +1 because count returns users above them
+    level: userLevel.level,
+    totalXP: userLevel.totalXP,
+  };
+}
+
+// Helper function to get level title
+function getLevelTitle(level: number): string {
+  if (level < 5) return 'Beginner';
+  if (level < 10) return 'Novice';
+  if (level < 20) return 'Intermediate';
+  if (level < 35) return 'Advanced';
+  if (level < 50) return 'Expert';
+  if (level < 75) return 'Master';
+  return 'Grand Master';
 }

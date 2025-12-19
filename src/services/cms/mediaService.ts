@@ -19,7 +19,7 @@ export interface MediaFilters {
 export async function getMediaFiles(filters: MediaFilters) {
   const { type, status, folderId, search, tags, page = 1, limit = 20 } = filters;
 
-  const where: Prisma.MediaFileWhereInput = {};
+  const where: Prisma.media_filesWhereInput = {};
   if (type) where.type = type;
   if (status) where.status = status;
   if (folderId !== undefined) where.folderId = folderId;
@@ -35,18 +35,18 @@ export async function getMediaFiles(filters: MediaFilters) {
   }
 
   const [files, total] = await Promise.all([
-    prisma.mediaFile.findMany({
+    prisma.media_files.findMany({
       where,
       skip: (page - 1) * limit,
       take: limit,
       orderBy: { createdAt: 'desc' },
       include: {
-        folder: { select: { id: true, name: true, slug: true } },
-        variants: true,
-        _count: { select: { usages: true } },
+        media_folders: { select: { id: true, name: true, slug: true } },
+        media_variants: true,
+        _count: { select: { media_usages: true } },
       },
     }),
-    prisma.mediaFile.count({ where }),
+    prisma.media_files.count({ where }),
   ]);
 
   return {
@@ -56,12 +56,12 @@ export async function getMediaFiles(filters: MediaFilters) {
 }
 
 export async function getMediaFile(fileId: string) {
-  const file = await prisma.mediaFile.findUnique({
+  const file = await prisma.media_files.findUnique({
     where: { id: fileId },
     include: {
-      folder: { select: { id: true, name: true, slug: true } },
-      variants: true,
-      usages: true,
+      media_folders: { select: { id: true, name: true, slug: true } },
+      media_variants: true,
+      media_usages: true,
     },
   });
 
@@ -89,7 +89,7 @@ export async function createMediaFile(
     metadata?: object;
   }
 ) {
-  return prisma.mediaFile.create({
+  return prisma.media_files.create({
     data: {
       filename: data.filename,
       originalName: data.originalName,
@@ -110,7 +110,7 @@ export async function createMediaFile(
       uploadedById,
     },
     include: {
-      folder: { select: { id: true, name: true, slug: true } },
+      media_folders: { select: { id: true, name: true, slug: true } },
     },
   });
 }
@@ -126,10 +126,10 @@ export async function updateMediaFile(
     metadata?: object;
   }
 ) {
-  const file = await prisma.mediaFile.findUnique({ where: { id: fileId } });
+  const file = await prisma.media_files.findUnique({ where: { id: fileId } });
   if (!file) throw new HttpError(404, 'Media file not found');
 
-  return prisma.mediaFile.update({
+  return prisma.media_files.update({
     where: { id: fileId },
     data: {
       filename: data.filename,
@@ -140,14 +140,14 @@ export async function updateMediaFile(
       metadata: data.metadata as Prisma.InputJsonValue,
     },
     include: {
-      folder: { select: { id: true, name: true, slug: true } },
-      variants: true,
+      media_folders: { select: { id: true, name: true, slug: true } },
+      media_variants: true,
     },
   });
 }
 
 export async function updateMediaStatus(fileId: string, status: MediaStatus, errorMessage?: string) {
-  return prisma.mediaFile.update({
+  return prisma.media_files.update({
     where: { id: fileId },
     data: {
       status,
@@ -158,25 +158,25 @@ export async function updateMediaStatus(fileId: string, status: MediaStatus, err
 }
 
 export async function deleteMediaFile(fileId: string) {
-  const file = await prisma.mediaFile.findUnique({
+  const file = await prisma.media_files.findUnique({
     where: { id: fileId },
-    include: { _count: { select: { usages: true } } },
+    include: { _count: { select: { media_usages: true } } },
   });
 
   if (!file) throw new HttpError(404, 'Media file not found');
-  if (file._count.usages > 0) {
+  if (file._count.media_usages > 0) {
     throw new HttpError(400, 'Cannot delete media file that is in use');
   }
 
-  await prisma.mediaFile.delete({ where: { id: fileId } });
+  await prisma.media_files.delete({ where: { id: fileId } });
   return { deleted: true, storageKey: file.storageKey };
 }
 
 export async function bulkDeleteMediaFiles(fileIds: string[]) {
-  const filesInUse = await prisma.mediaFile.findMany({
+  const filesInUse = await prisma.media_files.findMany({
     where: {
       id: { in: fileIds },
-      usages: { some: {} },
+      media_usages: { some: {} },
     },
     select: { id: true },
   });
@@ -188,12 +188,12 @@ export async function bulkDeleteMediaFiles(fileIds: string[]) {
     throw new HttpError(400, 'All selected files are in use');
   }
 
-  const files = await prisma.mediaFile.findMany({
+  const files = await prisma.media_files.findMany({
     where: { id: { in: deletableIds } },
     select: { id: true, storageKey: true },
   });
 
-  await prisma.mediaFile.deleteMany({ where: { id: { in: deletableIds } } });
+  await prisma.media_files.deleteMany({ where: { id: { in: deletableIds } } });
 
   return {
     deleted: deletableIds.length,
@@ -218,7 +218,7 @@ export async function createMediaVariant(
     format: string;
   }
 ) {
-  return prisma.mediaVariant.create({
+  return prisma.media_variants.create({
     data: {
       mediaId,
       variantType: data.variantType,
@@ -237,25 +237,25 @@ export async function createMediaVariant(
 // ============================================
 
 export async function getMediaFolders(parentId?: string | null) {
-  const where: Prisma.MediaFolderWhereInput = {};
+  const where: Prisma.media_foldersWhereInput = {};
   if (parentId !== undefined) where.parentId = parentId;
 
-  return prisma.mediaFolder.findMany({
+  return prisma.media_folders.findMany({
     where,
     orderBy: { name: 'asc' },
     include: {
-      _count: { select: { files: true, children: true } },
+      _count: { select: { media_files: true, other_media_folders: true } },
     },
   });
 }
 
 export async function getMediaFolder(folderId: string) {
-  const folder = await prisma.mediaFolder.findUnique({
+  const folder = await prisma.media_folders.findUnique({
     where: { id: folderId },
     include: {
-      parent: { select: { id: true, name: true, slug: true } },
-      children: { select: { id: true, name: true, slug: true } },
-      _count: { select: { files: true } },
+      media_folders: { select: { id: true, name: true, slug: true } },
+      other_media_folders: { select: { id: true, name: true, slug: true } },
+      _count: { select: { media_files: true } },
     },
   });
 
@@ -272,10 +272,10 @@ export async function createMediaFolder(
     parentId?: string;
   }
 ) {
-  const existing = await prisma.mediaFolder.findUnique({ where: { slug: data.slug } });
+  const existing = await prisma.media_folders.findUnique({ where: { slug: data.slug } });
   if (existing) throw new HttpError(400, 'Folder with this slug already exists');
 
-  return prisma.mediaFolder.create({
+  return prisma.media_folders.create({
     data: {
       name: data.name,
       slug: data.slug,
@@ -284,7 +284,7 @@ export async function createMediaFolder(
       createdById,
     },
     include: {
-      parent: { select: { id: true, name: true, slug: true } },
+      media_folders: { select: { id: true, name: true, slug: true } },
     },
   });
 }
@@ -297,7 +297,7 @@ export async function updateMediaFolder(
     parentId?: string | null;
   }
 ) {
-  const folder = await prisma.mediaFolder.findUnique({ where: { id: folderId } });
+  const folder = await prisma.media_folders.findUnique({ where: { id: folderId } });
   if (!folder) throw new HttpError(404, 'Folder not found');
 
   // Prevent circular references
@@ -305,7 +305,7 @@ export async function updateMediaFolder(
     throw new HttpError(400, 'Folder cannot be its own parent');
   }
 
-  return prisma.mediaFolder.update({
+  return prisma.media_folders.update({
     where: { id: folderId },
     data: {
       name: data.name,
@@ -313,23 +313,23 @@ export async function updateMediaFolder(
       parentId: data.parentId,
     },
     include: {
-      parent: { select: { id: true, name: true, slug: true } },
+      media_folders: { select: { id: true, name: true, slug: true } },
     },
   });
 }
 
 export async function deleteMediaFolder(folderId: string) {
-  const folder = await prisma.mediaFolder.findUnique({
+  const folder = await prisma.media_folders.findUnique({
     where: { id: folderId },
-    include: { _count: { select: { files: true, children: true } } },
+    include: { _count: { select: { media_files: true, other_media_folders: true } } },
   });
 
   if (!folder) throw new HttpError(404, 'Folder not found');
-  if (folder._count.files > 0 || folder._count.children > 0) {
+  if (folder._count.media_files > 0 || folder._count.other_media_folders > 0) {
     throw new HttpError(400, 'Folder must be empty before deletion');
   }
 
-  await prisma.mediaFolder.delete({ where: { id: folderId } });
+  await prisma.media_folders.delete({ where: { id: folderId } });
   return { deleted: true };
 }
 
@@ -343,7 +343,7 @@ export async function trackMediaUsage(
   entityId: string,
   fieldName: string
 ) {
-  return prisma.mediaUsage.upsert({
+  return prisma.media_usages.upsert({
     where: {
       mediaId_entityType_entityId_fieldName: {
         mediaId,
@@ -368,13 +368,13 @@ export async function removeMediaUsage(
   entityId: string,
   fieldName: string
 ) {
-  await prisma.mediaUsage.deleteMany({
+  await prisma.media_usages.deleteMany({
     where: { mediaId, entityType, entityId, fieldName },
   });
 }
 
 export async function getMediaUsages(mediaId: string) {
-  return prisma.mediaUsage.findMany({
+  return prisma.media_usages.findMany({
     where: { mediaId },
   });
 }

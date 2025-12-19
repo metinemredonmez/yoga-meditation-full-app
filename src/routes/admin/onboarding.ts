@@ -166,6 +166,8 @@ router.put('/config', async (req: Request, res: Response) => {
       create: {
         key: 'onboarding_config',
         value: JSON.stringify(config),
+        type: 'JSON',
+        category: 'FEATURES',
         description: 'Onboarding flow configuration',
       },
     });
@@ -173,7 +175,7 @@ router.put('/config', async (req: Request, res: Response) => {
     res.json(config);
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return res.status(400).json({ error: 'Validation error', details: error.errors });
+      return res.status(400).json({ error: 'Validation error', details: error.issues });
     }
     console.error('Error updating onboarding config:', error);
     res.status(500).json({ error: 'Internal server error' });
@@ -260,19 +262,22 @@ router.get('/stats', async (req: Request, res: Response) => {
     const stepCounts = [0, 0, 0, 0, 0, 0]; // 5 steps + completed
     onboardingData.forEach(o => {
       if (o.isCompleted) {
-        stepCounts[5]++;
+        stepCounts[5] = (stepCounts[5] ?? 0) + 1;
       } else if (o.currentStep) {
-        stepCounts[o.currentStep - 1]++;
+        const idx = o.currentStep - 1;
+        if (idx >= 0 && idx < 5) {
+          stepCounts[idx] = (stepCounts[idx] ?? 0) + 1;
+        }
       }
     });
 
     const stepDropoffs = [
       { step: 1, label: 'Deneyim', count: totalStarted, dropoffRate: 0 },
-      { step: 2, label: 'Hedefler', count: totalStarted - stepCounts[0], dropoffRate: Math.round((stepCounts[0] / totalStarted) * 100) || 0 },
-      { step: 3, label: 'İlgi Alanları', count: totalStarted - stepCounts[0] - stepCounts[1], dropoffRate: Math.round((stepCounts[1] / totalStarted) * 100) || 0 },
-      { step: 4, label: 'Süre', count: totalStarted - stepCounts[0] - stepCounts[1] - stepCounts[2], dropoffRate: Math.round((stepCounts[2] / totalStarted) * 100) || 0 },
-      { step: 5, label: 'Zaman', count: totalStarted - stepCounts[0] - stepCounts[1] - stepCounts[2] - stepCounts[3], dropoffRate: Math.round((stepCounts[3] / totalStarted) * 100) || 0 },
-      { step: 6, label: 'Tamamlama', count: completed, dropoffRate: Math.round((stepCounts[4] / totalStarted) * 100) || 0 },
+      { step: 2, label: 'Hedefler', count: totalStarted - (stepCounts[0] ?? 0), dropoffRate: Math.round(((stepCounts[0] ?? 0) / totalStarted) * 100) || 0 },
+      { step: 3, label: 'İlgi Alanları', count: totalStarted - (stepCounts[0] ?? 0) - (stepCounts[1] ?? 0), dropoffRate: Math.round(((stepCounts[1] ?? 0) / totalStarted) * 100) || 0 },
+      { step: 4, label: 'Süre', count: totalStarted - (stepCounts[0] ?? 0) - (stepCounts[1] ?? 0) - (stepCounts[2] ?? 0), dropoffRate: Math.round(((stepCounts[2] ?? 0) / totalStarted) * 100) || 0 },
+      { step: 5, label: 'Zaman', count: totalStarted - (stepCounts[0] ?? 0) - (stepCounts[1] ?? 0) - (stepCounts[2] ?? 0) - (stepCounts[3] ?? 0), dropoffRate: Math.round(((stepCounts[3] ?? 0) / totalStarted) * 100) || 0 },
+      { step: 6, label: 'Tamamlama', count: completed, dropoffRate: Math.round(((stepCounts[4] ?? 0) / totalStarted) * 100) || 0 },
     ];
 
     // Calculate popular answers

@@ -5,7 +5,7 @@ const prisma = new PrismaClient();
 
 // Get all widgets
 export const getWidgets = async () => {
-  return prisma.dashboardWidget.findMany({
+  return prisma.dashboard_widgets.findMany({
     where: { isActive: true },
     orderBy: { name: 'asc' },
   });
@@ -13,7 +13,7 @@ export const getWidgets = async () => {
 
 // Get single widget
 export const getWidget = async (id: string) => {
-  return prisma.dashboardWidget.findUnique({
+  return prisma.dashboard_widgets.findUnique({
     where: { id },
   });
 };
@@ -32,7 +32,7 @@ export const createWidget = async (data: {
   defaultHeight?: number;
   isDefault?: boolean;
 }) => {
-  return prisma.dashboardWidget.create({
+  return prisma.dashboard_widgets.create({
     data,
   });
 };
@@ -54,7 +54,7 @@ export const updateWidget = async (
     isDefault: boolean;
   }>
 ) => {
-  return prisma.dashboardWidget.update({
+  return prisma.dashboard_widgets.update({
     where: { id },
     data,
   });
@@ -63,11 +63,11 @@ export const updateWidget = async (
 // Delete widget
 export const deleteWidget = async (id: string) => {
   // First remove all user placements
-  await prisma.userDashboardWidget.deleteMany({
+  await prisma.user_dashboard_widgets.deleteMany({
     where: { widgetId: id },
   });
 
-  return prisma.dashboardWidget.delete({
+  return prisma.dashboard_widgets.delete({
     where: { id },
   });
 };
@@ -77,7 +77,7 @@ export const getWidgetData = async (
   widgetId: string,
   params?: Record<string, unknown>
 ) => {
-  const widget = await prisma.dashboardWidget.findUnique({
+  const widget = await prisma.dashboard_widgets.findUnique({
     where: { id: widgetId },
   });
 
@@ -125,7 +125,7 @@ const getRevenueTotalData = async () => {
   const now = new Date();
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
 
-  const result = await prisma.payment.aggregate({
+  const result = await prisma.payments.aggregate({
     where: {
       status: 'COMPLETED',
       createdAt: { gte: monthStart },
@@ -134,14 +134,14 @@ const getRevenueTotalData = async () => {
   });
 
   return {
-    value: (result._sum.amount || 0) / 100,
+    value: Number(result._sum.amount || 0) / 100,
     label: 'Revenue This Month',
     format: 'currency',
   };
 };
 
 const getActiveSubscribersData = async () => {
-  const count = await prisma.subscription.count({
+  const count = await prisma.subscriptions.count({
     where: { status: 'ACTIVE' },
   });
 
@@ -156,7 +156,7 @@ const getNewUsersTodayData = async () => {
   const now = new Date();
   const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 
-  const count = await prisma.user.count({
+  const count = await prisma.users.count({
     where: { createdAt: { gte: todayStart } },
   });
 
@@ -168,29 +168,12 @@ const getNewUsersTodayData = async () => {
 };
 
 const getCurrentMRRData = async () => {
-  const activeSubscriptions = await prisma.subscription.count({
+  const activeSubscriptions = await prisma.subscriptions.count({
     where: { status: 'ACTIVE' },
   });
 
-  // Calculate based on subscription tiers
-  const subscriptionsByTier = await prisma.subscription.groupBy({
-    by: ['tier'],
-    where: { status: 'ACTIVE' },
-    _count: true,
-  });
-
-  // Example pricing (should come from actual pricing config)
-  const pricing: Record<string, number> = {
-    FREE: 0,
-    BASIC: 9.99,
-    PREMIUM: 29.99,
-    ENTERPRISE: 99.99,
-  };
-
-  let mrr = 0;
-  subscriptionsByTier.forEach(s => {
-    mrr += (pricing[s.tier] || 0) * s._count;
-  });
+  // Calculate based on active subscriptions
+  const mrr = activeSubscriptions * 29.99; // Default average price
 
   return {
     value: Math.round(mrr * 100) / 100,
@@ -205,7 +188,7 @@ const getRevenueChartData = async (params?: Record<string, unknown>) => {
   const startDate = new Date();
   startDate.setDate(startDate.getDate() - days);
 
-  const payments = await prisma.payment.findMany({
+  const payments = await prisma.payments.findMany({
     where: {
       status: 'COMPLETED',
       createdAt: { gte: startDate },
@@ -220,8 +203,8 @@ const getRevenueChartData = async (params?: Record<string, unknown>) => {
   // Aggregate by date
   const dataMap = new Map<string, number>();
   payments.forEach(p => {
-    const dateKey = p.createdAt.toISOString().split('T')[0];
-    dataMap.set(dateKey, (dataMap.get(dateKey) || 0) + p.amount);
+    const dateKey = p.createdAt.toISOString().split('T')[0] || '';
+    dataMap.set(dateKey, (dataMap.get(dateKey) || 0) + Number(p.amount));
   });
 
   const labels: string[] = [];
@@ -251,7 +234,7 @@ const getUserGrowthChartData = async (params?: Record<string, unknown>) => {
   const startDate = new Date();
   startDate.setDate(startDate.getDate() - days);
 
-  const users = await prisma.user.findMany({
+  const users = await prisma.users.findMany({
     where: {
       createdAt: { gte: startDate },
     },
@@ -262,14 +245,14 @@ const getUserGrowthChartData = async (params?: Record<string, unknown>) => {
   });
 
   // Get initial count
-  const initialCount = await prisma.user.count({
+  const initialCount = await prisma.users.count({
     where: { createdAt: { lt: startDate } },
   });
 
   // Aggregate by date
   const dataMap = new Map<string, number>();
   users.forEach(u => {
-    const dateKey = u.createdAt.toISOString().split('T')[0];
+    const dateKey = u.createdAt.toISOString().split('T')[0] || '';
     dataMap.set(dateKey, (dataMap.get(dateKey) || 0) + 1);
   });
 
@@ -309,7 +292,7 @@ const getUserGrowthChartData = async (params?: Record<string, unknown>) => {
 
 // List widget data sources
 const getTopProgramsData = async () => {
-  const programs = await prisma.program.findMany({
+  const programs = await prisma.programs.findMany({
     select: {
       id: true,
       title: true,
@@ -337,7 +320,7 @@ const getTopProgramsData = async () => {
 
 // Table widget data sources
 const getRecentTransactionsData = async () => {
-  const transactions = await prisma.payment.findMany({
+  const transactions = await prisma.payments.findMany({
     where: { status: 'COMPLETED' },
     select: {
       id: true,
@@ -345,7 +328,7 @@ const getRecentTransactionsData = async () => {
       currency: true,
       provider: true,
       createdAt: true,
-      user: {
+      users: {
         select: {
           email: true,
           firstName: true,
@@ -360,9 +343,9 @@ const getRecentTransactionsData = async () => {
   return transactions.map(t => ({
     id: t.id,
     user:
-      [t.user.firstName, t.user.lastName].filter(Boolean).join(' ') ||
-      t.user.email,
-    amount: t.amount / 100,
+      [t.users.firstName, t.users.lastName].filter(Boolean).join(' ') ||
+      t.users.email,
+    amount: Number(t.amount) / 100,
     currency: t.currency,
     provider: t.provider,
     date: t.createdAt,
@@ -372,18 +355,18 @@ const getRecentTransactionsData = async () => {
 // User Dashboard Management
 export const getUserDashboard = async (userId: string) => {
   // Get user's widget placements
-  let placements = await prisma.userDashboardWidget.findMany({
+  let placements = await prisma.user_dashboard_widgets.findMany({
     where: { userId },
-    include: { widget: true },
+    include: { dashboard_widgets: true },
     orderBy: [{ positionY: 'asc' }, { positionX: 'asc' }],
   });
 
   // If no placements, create default dashboard
   if (placements.length === 0) {
     await initializeDefaultDashboard(userId);
-    placements = await prisma.userDashboardWidget.findMany({
+    placements = await prisma.user_dashboard_widgets.findMany({
       where: { userId },
-      include: { widget: true },
+      include: { dashboard_widgets: true },
       orderBy: [{ positionY: 'asc' }, { positionX: 'asc' }],
     });
   }
@@ -391,7 +374,7 @@ export const getUserDashboard = async (userId: string) => {
   return placements.map(p => ({
     id: p.id,
     widgetId: p.widgetId,
-    widget: p.widget,
+    widget: p.dashboard_widgets,
     position: {
       x: p.positionX,
       y: p.positionY,
@@ -405,7 +388,7 @@ export const getUserDashboard = async (userId: string) => {
 
 // Initialize default dashboard for user
 const initializeDefaultDashboard = async (userId: string) => {
-  const defaultWidgets = await prisma.dashboardWidget.findMany({
+  const defaultWidgets = await prisma.dashboard_widgets.findMany({
     where: { isDefault: true, isActive: true },
   });
 
@@ -431,7 +414,7 @@ const initializeDefaultDashboard = async (userId: string) => {
     isVisible: true,
   }));
 
-  await prisma.userDashboardWidget.createMany({
+  await prisma.user_dashboard_widgets.createMany({
     data: placements,
     skipDuplicates: true,
   });
@@ -443,7 +426,7 @@ export const updateWidgetPosition = async (
   widgetId: string,
   position: { x: number; y: number; width: number; height: number }
 ) => {
-  return prisma.userDashboardWidget.update({
+  return prisma.user_dashboard_widgets.update({
     where: {
       userId_widgetId: { userId, widgetId },
     },
@@ -462,7 +445,7 @@ export const addWidgetToDashboard = async (
   widgetId: string,
   position: { x: number; y: number; width: number; height: number }
 ) => {
-  const widget = await prisma.dashboardWidget.findUnique({
+  const widget = await prisma.dashboard_widgets.findUnique({
     where: { id: widgetId },
   });
 
@@ -470,7 +453,7 @@ export const addWidgetToDashboard = async (
     throw new Error('Widget not found');
   }
 
-  return prisma.userDashboardWidget.create({
+  return prisma.user_dashboard_widgets.create({
     data: {
       userId,
       widgetId,
@@ -480,7 +463,7 @@ export const addWidgetToDashboard = async (
       height: position.height || widget.defaultHeight,
       isVisible: true,
     },
-    include: { widget: true },
+    include: { dashboard_widgets: true },
   });
 };
 
@@ -489,7 +472,7 @@ export const removeWidgetFromDashboard = async (
   userId: string,
   widgetId: string
 ) => {
-  return prisma.userDashboardWidget.delete({
+  return prisma.user_dashboard_widgets.delete({
     where: {
       userId_widgetId: { userId, widgetId },
     },
@@ -498,7 +481,7 @@ export const removeWidgetFromDashboard = async (
 
 // Reset dashboard to defaults
 export const resetDashboard = async (userId: string) => {
-  await prisma.userDashboardWidget.deleteMany({
+  await prisma.user_dashboard_widgets.deleteMany({
     where: { userId },
   });
 
@@ -519,7 +502,7 @@ export const updateDashboardLayout = async (
   }>
 ) => {
   const updates = widgets.map(w =>
-    prisma.userDashboardWidget.update({
+    prisma.user_dashboard_widgets.update({
       where: {
         userId_widgetId: { userId, widgetId: w.widgetId },
       },
@@ -617,7 +600,7 @@ export const seedDefaultWidgets = async () => {
   ];
 
   for (const widget of widgets) {
-    await prisma.dashboardWidget.upsert({
+    await prisma.dashboard_widgets.upsert({
       where: {
         id: widget.name.toLowerCase().replace(/\s+/g, '-'),
       },

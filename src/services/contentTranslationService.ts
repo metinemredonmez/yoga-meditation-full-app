@@ -30,7 +30,7 @@ export async function setContentTranslation(
     originalLanguageId = origLang?.id;
   }
 
-  return prisma.contentTranslation.upsert({
+  return prisma.content_translations.upsert({
     where: {
       entityType_entityId_field_languageId: {
         entityType,
@@ -55,7 +55,7 @@ export async function setContentTranslation(
       isMachineTranslated: options?.isMachineTranslated,
       originalLanguageId,
     },
-    include: { language: true },
+    include: { languages: true },
   });
 }
 
@@ -68,7 +68,7 @@ export async function getContentTranslation(
   const language = await languageService.getLanguageByCode(languageCode);
   if (!language) return null;
 
-  return prisma.contentTranslation.findUnique({
+  return prisma.content_translations.findUnique({
     where: {
       entityType_entityId_field_languageId: {
         entityType,
@@ -77,7 +77,7 @@ export async function getContentTranslation(
         languageId: language.id,
       },
     },
-    include: { language: true },
+    include: { languages: true },
   });
 }
 
@@ -95,9 +95,9 @@ export async function getContentTranslations(
     }
   }
 
-  return prisma.contentTranslation.findMany({
+  return prisma.content_translations.findMany({
     where,
-    include: { language: true },
+    include: { languages: true },
     orderBy: { field: 'asc' },
   });
 }
@@ -113,7 +113,7 @@ export async function deleteContentTranslation(
     throw new Error(`Language ${languageCode} not found`);
   }
 
-  return prisma.contentTranslation.delete({
+  return prisma.content_translations.delete({
     where: {
       entityType_entityId_field_languageId: {
         entityType,
@@ -129,7 +129,7 @@ export async function deleteAllContentTranslations(
   entityType: ContentEntityType,
   entityId: string,
 ) {
-  return prisma.contentTranslation.deleteMany({
+  return prisma.content_translations.deleteMany({
     where: { entityType, entityId },
   });
 }
@@ -214,7 +214,7 @@ export async function updateContentTranslationStatus(
     throw new Error(`Language ${languageCode} not found`);
   }
 
-  return prisma.contentTranslation.update({
+  return prisma.content_translations.update({
     where: {
       entityType_entityId_field_languageId: {
         entityType,
@@ -238,7 +238,7 @@ export async function verifyContentTranslation(
     throw new Error(`Language ${languageCode} not found`);
   }
 
-  return prisma.contentTranslation.update({
+  return prisma.content_translations.update({
     where: {
       entityType_entityId_field_languageId: {
         entityType,
@@ -295,7 +295,7 @@ export async function copyTranslations(
   targetEntityType: ContentEntityType,
   targetEntityId: string,
 ) {
-  const sourceTranslations = await prisma.contentTranslation.findMany({
+  const sourceTranslations = await prisma.content_translations.findMany({
     where: { entityType: sourceEntityType, entityId: sourceEntityId },
   });
 
@@ -303,7 +303,7 @@ export async function copyTranslations(
 
   for (const t of sourceTranslations) {
     try {
-      const result = await prisma.contentTranslation.create({
+      const result = await prisma.content_translations.create({
         data: {
           entityType: targetEntityType,
           entityId: targetEntityId,
@@ -370,7 +370,7 @@ export async function getUntranslatedContent(
   const defaultLang = await languageService.getDefaultLanguage();
 
   // Find content that has default language translation but missing target language
-  const defaultTranslations = await prisma.contentTranslation.findMany({
+  const defaultTranslations = await prisma.content_translations.findMany({
     where: {
       entityType,
       languageId: defaultLang.id,
@@ -379,7 +379,7 @@ export async function getUntranslatedContent(
     take: limit * 10,
   });
 
-  const targetTranslations = await prisma.contentTranslation.findMany({
+  const targetTranslations = await prisma.content_translations.findMany({
     where: {
       entityType,
       languageId: language.id,
@@ -417,7 +417,7 @@ export async function addToTranslationMemory(
     throw new Error('Invalid language code');
   }
 
-  return prisma.translationMemory.upsert({
+  return prisma.translation_memory.upsert({
     where: {
       sourceLanguageId_targetLanguageId_sourceText: {
         sourceLanguageId: sourceLang.id,
@@ -452,7 +452,7 @@ export async function findInTranslationMemory(
     return null;
   }
 
-  return prisma.translationMemory.findUnique({
+  return prisma.translation_memory.findUnique({
     where: {
       sourceLanguageId_targetLanguageId_sourceText: {
         sourceLanguageId: sourceLang.id,
@@ -476,7 +476,7 @@ export async function searchTranslationMemory(
     return [];
   }
 
-  return prisma.translationMemory.findMany({
+  return prisma.translation_memory.findMany({
     where: {
       sourceLanguageId: sourceLang.id,
       targetLanguageId: targetLang.id,

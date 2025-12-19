@@ -40,7 +40,7 @@ export async function createReview(
   input: CreateReviewInput,
 ) {
   // Check if student already reviewed this instructor
-  const existingReview = await prisma.instructorReview.findFirst({
+  const existingReview = await prisma.instructor_reviews.findFirst({
     where: {
       instructorId: input.instructorId,
       studentId,
@@ -57,7 +57,7 @@ export async function createReview(
   }
 
   // Check if student has purchased/booked from this instructor
-  const instructor = await prisma.instructorProfile.findUnique({
+  const instructor = await prisma.instructor_profiles.findUnique({
     where: { id: input.instructorId },
   });
 
@@ -70,7 +70,7 @@ export async function createReview(
 
   if (input.programId) {
     // Check video progress or payment for program
-    const progress = await prisma.videoProgress.findFirst({
+    const progress = await prisma.video_progress.findFirst({
       where: {
         userId: studentId,
         lessonType: 'PROGRAM_SESSION',
@@ -81,7 +81,7 @@ export async function createReview(
 
   if (input.classId) {
     // Check booking for class
-    const booking = await prisma.booking.findFirst({
+    const booking = await prisma.bookings.findFirst({
       where: {
         userId: studentId,
         classId: input.classId,
@@ -91,7 +91,7 @@ export async function createReview(
     isVerifiedPurchase = !!booking;
   }
 
-  const review = await prisma.instructorReview.create({
+  const review = await prisma.instructor_reviews.create({
     data: {
       instructorId: input.instructorId,
       studentId,
@@ -104,7 +104,7 @@ export async function createReview(
       status: 'PENDING', // Reviews need moderation
     },
     include: {
-      student: {
+      users: {
         select: { id: true, firstName: true, lastName: true },
       },
     },
@@ -126,7 +126,7 @@ export async function updateReview(
   studentId: string,
   input: UpdateReviewInput,
 ) {
-  const review = await prisma.instructorReview.findUnique({
+  const review = await prisma.instructor_reviews.findUnique({
     where: { id: reviewId },
   });
 
@@ -142,7 +142,7 @@ export async function updateReview(
     throw new Error('Rating must be between 1 and 5');
   }
 
-  const updatedReview = await prisma.instructorReview.update({
+  const updatedReview = await prisma.instructor_reviews.update({
     where: { id: reviewId },
     data: {
       rating: input.rating,
@@ -151,7 +151,7 @@ export async function updateReview(
       status: 'PENDING', // Re-moderation after edit
     },
     include: {
-      student: {
+      users: {
         select: { id: true, firstName: true, lastName: true },
       },
     },
@@ -166,7 +166,7 @@ export async function updateReview(
  * Delete a review
  */
 export async function deleteReview(reviewId: string, studentId: string) {
-  const review = await prisma.instructorReview.findUnique({
+  const review = await prisma.instructor_reviews.findUnique({
     where: { id: reviewId },
   });
 
@@ -178,7 +178,7 @@ export async function deleteReview(reviewId: string, studentId: string) {
     throw new Error('You can only delete your own reviews');
   }
 
-  await prisma.instructorReview.delete({
+  await prisma.instructor_reviews.delete({
     where: { id: reviewId },
   });
 
@@ -196,7 +196,7 @@ export async function replyToReview(
   instructorId: string,
   reply: string,
 ) {
-  const review = await prisma.instructorReview.findUnique({
+  const review = await prisma.instructor_reviews.findUnique({
     where: { id: reviewId },
   });
 
@@ -208,7 +208,7 @@ export async function replyToReview(
     throw new Error('You can only reply to reviews on your profile');
   }
 
-  const updatedReview = await prisma.instructorReview.update({
+  const updatedReview = await prisma.instructor_reviews.update({
     where: { id: reviewId },
     data: {
       instructorReply: reply,
@@ -234,7 +234,7 @@ export async function moderateReview(
   status: ReviewStatus,
   reason?: string,
 ) {
-  const review = await prisma.instructorReview.findUnique({
+  const review = await prisma.instructor_reviews.findUnique({
     where: { id: reviewId },
   });
 
@@ -242,13 +242,13 @@ export async function moderateReview(
     throw new Error('Review not found');
   }
 
-  const updatedReview = await prisma.instructorReview.update({
+  const updatedReview = await prisma.instructor_reviews.update({
     where: { id: reviewId },
     data: { status },
   });
 
   // Create audit log
-  await prisma.auditLog.create({
+  await prisma.audit_logs.create({
     data: {
       userId: adminId,
       action: 'REVIEW_MODERATED',
@@ -273,7 +273,7 @@ export async function reportReview(
   reason: string,
 ) {
   // Check if already reported
-  const existing = await prisma.reviewReport.findUnique({
+  const existing = await prisma.review_reports.findUnique({
     where: {
       reviewId_userId: {
         reviewId,
@@ -286,7 +286,7 @@ export async function reportReview(
     throw new Error('You have already reported this review');
   }
 
-  await prisma.reviewReport.create({
+  await prisma.review_reports.create({
     data: {
       reviewId,
       userId,
@@ -295,7 +295,7 @@ export async function reportReview(
   });
 
   // Increment report count
-  const review = await prisma.instructorReview.update({
+  const review = await prisma.instructor_reviews.update({
     where: { id: reviewId },
     data: {
       reportCount: { increment: 1 },
@@ -304,7 +304,7 @@ export async function reportReview(
 
   // Auto-flag if too many reports
   if (review.reportCount >= 5 && review.status !== 'FLAGGED') {
-    await prisma.instructorReview.update({
+    await prisma.instructor_reviews.update({
       where: { id: reviewId },
       data: { status: 'FLAGGED' },
     });
@@ -318,7 +318,7 @@ export async function reportReview(
  */
 export async function markHelpful(reviewId: string, userId: string) {
   // Check if already marked
-  const existing = await prisma.reviewHelpful.findUnique({
+  const existing = await prisma.review_helpfuls.findUnique({
     where: {
       reviewId_userId: {
         reviewId,
@@ -329,7 +329,7 @@ export async function markHelpful(reviewId: string, userId: string) {
 
   if (existing) {
     // Remove helpful mark
-    await prisma.reviewHelpful.delete({
+    await prisma.review_helpfuls.delete({
       where: {
         reviewId_userId: {
           reviewId,
@@ -338,7 +338,7 @@ export async function markHelpful(reviewId: string, userId: string) {
       },
     });
 
-    await prisma.instructorReview.update({
+    await prisma.instructor_reviews.update({
       where: { id: reviewId },
       data: {
         helpfulCount: { decrement: 1 },
@@ -348,14 +348,14 @@ export async function markHelpful(reviewId: string, userId: string) {
     return { marked: false };
   }
 
-  await prisma.reviewHelpful.create({
+  await prisma.review_helpfuls.create({
     data: {
       reviewId,
       userId,
     },
   });
 
-  await prisma.instructorReview.update({
+  await prisma.instructor_reviews.update({
     where: { id: reviewId },
     data: {
       helpfulCount: { increment: 1 },
@@ -379,7 +379,7 @@ export async function getInstructorReviews(
 ) {
   const { page = 1, limit = 20 } = pagination;
 
-  const where: Prisma.InstructorReviewWhereInput = {
+  const where: Prisma.instructor_reviewsWhereInput = {
     instructorId,
     status: filters.status || 'APPROVED', // Default to approved reviews only
   };
@@ -401,13 +401,13 @@ export async function getInstructorReviews(
   }
 
   const [items, total] = await Promise.all([
-    prisma.instructorReview.findMany({
+    prisma.instructor_reviews.findMany({
       where,
       orderBy: { createdAt: 'desc' },
       skip: (page - 1) * limit,
       take: limit,
       include: {
-        student: {
+        users: {
           select: {
             id: true,
             firstName: true,
@@ -416,7 +416,7 @@ export async function getInstructorReviews(
         },
       },
     }),
-    prisma.instructorReview.count({ where }),
+    prisma.instructor_reviews.count({ where }),
   ]);
 
   return {
@@ -436,12 +436,12 @@ export async function getPendingReviews(
 ) {
   const { page = 1, limit = 20 } = pagination;
 
-  const where: Prisma.InstructorReviewWhereInput = {
+  const where: Prisma.instructor_reviewsWhereInput = {
     status: { in: ['PENDING', 'FLAGGED'] },
   };
 
   const [items, total] = await Promise.all([
-    prisma.instructorReview.findMany({
+    prisma.instructor_reviews.findMany({
       where,
       orderBy: [
         { status: 'asc' }, // FLAGGED first
@@ -450,15 +450,15 @@ export async function getPendingReviews(
       skip: (page - 1) * limit,
       take: limit,
       include: {
-        student: {
+        users: {
           select: { id: true, firstName: true, lastName: true, email: true },
         },
-        instructor: {
+        instructor_profiles: {
           select: { id: true, displayName: true, slug: true },
         },
       },
     }),
-    prisma.instructorReview.count({ where }),
+    prisma.instructor_reviews.count({ where }),
   ]);
 
   return {
@@ -474,13 +474,13 @@ export async function getPendingReviews(
  * Get review by ID
  */
 export async function getReviewById(reviewId: string) {
-  return prisma.instructorReview.findUnique({
+  return prisma.instructor_reviews.findUnique({
     where: { id: reviewId },
     include: {
-      student: {
+      users: {
         select: { id: true, firstName: true, lastName: true },
       },
-      instructor: {
+      instructor_profiles: {
         select: { id: true, displayName: true, slug: true },
       },
     },
@@ -495,7 +495,7 @@ export async function getReviewById(reviewId: string) {
  * Calculate and update average rating for instructor
  */
 export async function calculateAverageRating(instructorId: string) {
-  const stats = await prisma.instructorReview.aggregate({
+  const stats = await prisma.instructor_reviews.aggregate({
     where: {
       instructorId,
       status: 'APPROVED',
@@ -504,7 +504,7 @@ export async function calculateAverageRating(instructorId: string) {
     _count: true,
   });
 
-  await prisma.instructorProfile.update({
+  await prisma.instructor_profiles.update({
     where: { id: instructorId },
     data: {
       averageRating: stats._avg.rating || 0,
@@ -527,7 +527,7 @@ export async function calculateAverageRating(instructorId: string) {
  * Get rating distribution for instructor
  */
 export async function getRatingDistribution(instructorId: string) {
-  const distribution = await prisma.instructorReview.groupBy({
+  const distribution = await prisma.instructor_reviews.groupBy({
     by: ['rating'],
     where: {
       instructorId,
@@ -560,14 +560,14 @@ export async function getRatingDistribution(instructorId: string) {
  */
 export async function getReviewStats(instructorId: string) {
   const [total, approved, pending, avgRating, distribution] = await Promise.all([
-    prisma.instructorReview.count({ where: { instructorId } }),
-    prisma.instructorReview.count({
+    prisma.instructor_reviews.count({ where: { instructorId } }),
+    prisma.instructor_reviews.count({
       where: { instructorId, status: 'APPROVED' },
     }),
-    prisma.instructorReview.count({
+    prisma.instructor_reviews.count({
       where: { instructorId, status: 'PENDING' },
     }),
-    prisma.instructorReview.aggregate({
+    prisma.instructor_reviews.aggregate({
       where: { instructorId, status: 'APPROVED' },
       _avg: { rating: true },
     }),

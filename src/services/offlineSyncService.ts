@@ -135,7 +135,7 @@ async function checkDuplicateAction(userId: string, clientId: string): Promise<b
   }
 
   // Fallback to database check
-  const existing = await prisma.syncLog.findFirst({
+  const existing = await prisma.sync_logs.findFirst({
     where: { userId, clientActionId: clientId }
   });
   return !!existing;
@@ -148,7 +148,7 @@ async function markActionProcessed(userId: string, clientId: string): Promise<vo
     await redis.setex(key, 86400 * 7, '1'); // Keep for 7 days
   }
 
-  await prisma.syncLog.create({
+  await prisma.sync_logs.create({
     data: {
       userId,
       clientActionId: clientId,
@@ -171,22 +171,16 @@ async function detectConflict(
 
   switch (action.entityType) {
     case 'videoProgress':
-      serverEntity = await prisma.videoProgress.findFirst({
-        where: { userId, classId: action.entityId },
-        select: { updatedAt: true, watchedSeconds: true, isCompleted: true }
+      serverEntity = await prisma.video_progress.findFirst({
+        where: { userId, lessonId: action.entityId },
+        select: { updatedAt: true, currentTime: true, completed: true }
       }) as { updatedAt: Date } | null;
       break;
     case 'favorite':
-      serverEntity = await prisma.favorite.findFirst({
-        where: { userId, entityId: action.entityId },
+      serverEntity = await prisma.favorites.findFirst({
+        where: { userId, itemId: action.entityId },
         select: { createdAt: true }
       }) as unknown as { updatedAt: Date } | null;
-      break;
-    case 'bookmark':
-      serverEntity = await prisma.bookmark.findFirst({
-        where: { userId, entityId: action.entityId },
-        select: { updatedAt: true }
-      }) as { updatedAt: Date } | null;
       break;
   }
 
@@ -237,12 +231,6 @@ async function processAction(userId: string, action: OfflineAction): Promise<voi
     case 'favorite':
       await processFavoriteAction(userId, action);
       break;
-    case 'bookmark':
-      await processBookmarkAction(userId, action);
-      break;
-    case 'rating':
-      await processRatingAction(userId, action);
-      break;
     case 'note':
       await processNoteAction(userId, action);
       break;
@@ -253,30 +241,38 @@ async function processAction(userId: string, action: OfflineAction): Promise<voi
 
 async function processProgressAction(userId: string, action: OfflineAction): Promise<void> {
   const data = action.data as {
-    watchedSeconds?: number;
-    totalSeconds?: number;
-    isCompleted?: boolean;
-    lastPosition?: number;
+    currentTime?: number;
+    duration?: number;
+    completed?: boolean;
+    percentage?: number;
+    lessonType?: string;
   };
 
   if (action.action === 'create' || action.action === 'update') {
-    await prisma.videoProgress.upsert({
+    await prisma.video_progress.upsert({
       where: {
-        userId_classId: { userId, classId: action.entityId }
+        userId_lessonId_lessonType: {
+          userId,
+          lessonId: action.entityId,
+          lessonType: (data.lessonType as any) || 'CLASS'
+        }
       },
       create: {
         userId,
-        classId: action.entityId,
-        watchedSeconds: data.watchedSeconds || 0,
-        totalSeconds: data.totalSeconds || 0,
-        isCompleted: data.isCompleted || false,
-        lastPosition: data.lastPosition || 0
+        lessonId: action.entityId,
+        lessonType: (data.lessonType as any) || 'CLASS',
+        currentTime: data.currentTime || 0,
+        duration: data.duration || 0,
+        completed: data.completed || false,
+        percentage: data.percentage || 0,
+        lastWatchedAt: new Date()
       },
       update: {
-        watchedSeconds: data.watchedSeconds,
-        totalSeconds: data.totalSeconds,
-        isCompleted: data.isCompleted,
-        lastPosition: data.lastPosition,
+        currentTime: data.currentTime,
+        duration: data.duration,
+        completed: data.completed,
+        percentage: data.percentage,
+        lastWatchedAt: new Date(),
         updatedAt: new Date()
       }
     });
@@ -284,92 +280,34 @@ async function processProgressAction(userId: string, action: OfflineAction): Pro
 }
 
 async function processFavoriteAction(userId: string, action: OfflineAction): Promise<void> {
-  const data = action.data as { entityType?: string };
+  const data = action.data as { itemType?: string };
 
   if (action.action === 'create') {
-    await prisma.favorite.upsert({
+    await prisma.favorites.upsert({
       where: {
-        userId_entityId_entityType: {
+        userId_itemId_itemType: {
           userId,
-          entityId: action.entityId,
-          entityType: data.entityType || 'class'
+          itemId: action.entityId,
+          itemType: (data.itemType as any) || 'CLASS'
         }
       },
       create: {
         userId,
-        entityId: action.entityId,
-        entityType: data.entityType || 'class'
+        itemId: action.entityId,
+        itemType: (data.itemType as any) || 'CLASS'
       },
       update: {}
     });
   } else if (action.action === 'delete') {
-    await prisma.favorite.deleteMany({
+    await prisma.favorites.deleteMany({
       where: {
         userId,
-        entityId: action.entityId
+        itemId: action.entityId
       }
     });
   }
 }
 
-async function processBookmarkAction(userId: string, action: OfflineAction): Promise<void> {
-  const data = action.data as {
-    entityType?: string;
-    note?: string;
-    timestamp?: number;
-  };
-
-  if (action.action === 'create') {
-    await prisma.bookmark.create({
-      data: {
-        userId,
-        entityId: action.entityId,
-        entityType: data.entityType || 'class',
-        note: data.note,
-        timestamp: data.timestamp
-      }
-    });
-  } else if (action.action === 'delete') {
-    await prisma.bookmark.deleteMany({
-      where: {
-        userId,
-        entityId: action.entityId
-      }
-    });
-  }
-}
-
-async function processRatingAction(userId: string, action: OfflineAction): Promise<void> {
-  const data = action.data as {
-    rating: number;
-    review?: string;
-    entityType?: string;
-  };
-
-  if (action.action === 'create' || action.action === 'update') {
-    await prisma.rating.upsert({
-      where: {
-        userId_entityId_entityType: {
-          userId,
-          entityId: action.entityId,
-          entityType: data.entityType || 'class'
-        }
-      },
-      create: {
-        userId,
-        entityId: action.entityId,
-        entityType: data.entityType || 'class',
-        rating: data.rating,
-        review: data.review
-      },
-      update: {
-        rating: data.rating,
-        review: data.review,
-        updatedAt: new Date()
-      }
-    });
-  }
-}
 
 async function processNoteAction(userId: string, action: OfflineAction): Promise<void> {
   const data = action.data as {
@@ -378,7 +316,7 @@ async function processNoteAction(userId: string, action: OfflineAction): Promise
   };
 
   if (action.action === 'create') {
-    await prisma.userNote.create({
+    await prisma.user_notes.create({
       data: {
         userId,
         entityId: action.entityId,
@@ -388,12 +326,12 @@ async function processNoteAction(userId: string, action: OfflineAction): Promise
       }
     });
   } else if (action.action === 'update') {
-    await prisma.userNote.updateMany({
+    await prisma.user_notes.updateMany({
       where: { userId, entityId: action.entityId },
       data: { content: data.content, updatedAt: new Date() }
     });
   } else if (action.action === 'delete') {
-    await prisma.userNote.deleteMany({
+    await prisma.user_notes.deleteMany({
       where: { userId, entityId: action.entityId }
     });
   }
@@ -405,57 +343,42 @@ async function getServerChangesSince(
 ): Promise<SyncResponse['serverChanges']> {
   const since = lastSyncAt || new Date(0);
 
-  const [progress, favorites, bookmarks, user] = await Promise.all([
+  const [progress, favorites, user] = await Promise.all([
     // Video progress changes
-    prisma.videoProgress.findMany({
+    prisma.video_progress.findMany({
       where: {
         userId,
         updatedAt: { gt: since }
       },
       select: {
-        classId: true,
-        watchedSeconds: true,
-        totalSeconds: true,
-        isCompleted: true,
-        lastPosition: true,
+        lessonId: true,
+        lessonType: true,
+        currentTime: true,
+        duration: true,
+        completed: true,
+        percentage: true,
         updatedAt: true
       }
     }),
 
     // Favorites changes
-    prisma.favorite.findMany({
+    prisma.favorites.findMany({
       where: {
         userId,
         createdAt: { gt: since }
       },
       select: {
-        entityId: true,
-        entityType: true,
+        itemId: true,
+        itemType: true,
         createdAt: true
       }
     }),
 
-    // Bookmarks changes
-    prisma.bookmark.findMany({
-      where: {
-        userId,
-        updatedAt: { gt: since }
-      },
-      select: {
-        entityId: true,
-        entityType: true,
-        note: true,
-        timestamp: true,
-        updatedAt: true
-      }
-    }),
-
     // User settings
-    prisma.user.findUnique({
+    prisma.users.findUnique({
       where: { id: userId },
       select: {
-        notificationPreferences: true,
-        language: true,
+        notification_preferences: true,
         timezone: true,
         updatedAt: true
       }
@@ -465,8 +388,8 @@ async function getServerChangesSince(
   return {
     progress,
     favorites,
-    bookmarks,
-    settings: user?.updatedAt && user.updatedAt > since ? user : null
+    bookmarks: [],
+    settings: user && user.updatedAt && user.updatedAt > since ? user : null
   };
 }
 
@@ -475,9 +398,9 @@ async function updateLastSyncTimestamp(
   deviceId: string,
   syncedAt: Date
 ): Promise<void> {
-  await prisma.userDevice.updateMany({
-    where: { userId, deviceId },
-    data: { lastSyncAt: syncedAt }
+  await prisma.device_tokens.updateMany({
+    where: { userId, deviceName: deviceId },
+    data: { updatedAt: syncedAt }
   });
 }
 
@@ -494,21 +417,14 @@ export async function getOfflineContent(
   const expiresAt = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000); // 7 days
 
   // Fetch classes for offline viewing
-  const classes = await prisma.class.findMany({
+  const classes = await prisma.classes.findMany({
     where: {
       id: { in: contentIds },
-      isPublished: true
+      status: 'PUBLISHED'
     },
     include: {
-      instructor: {
+      users: {
         select: { id: true, firstName: true, lastName: true, avatarUrl: true }
-      },
-      poses: {
-        select: {
-          pose: {
-            select: { id: true, englishName: true, sanskritName: true, imageUrl: true }
-          }
-        }
       }
     }
   });
@@ -517,10 +433,7 @@ export async function getOfflineContent(
     contents.push({
       id: classItem.id,
       type: 'class',
-      data: {
-        ...classItem,
-        offlineAvailable: true
-      },
+      data: classItem,
       cachedAt: now,
       expiresAt
     });
@@ -536,7 +449,7 @@ export async function markContentForOffline(
 ): Promise<{ success: boolean; downloadUrl?: string }> {
   try {
     // Create offline content record
-    await prisma.offlineContent.upsert({
+    await prisma.offline_contents.upsert({
       where: {
         userId_contentId_contentType: {
           userId,
@@ -560,7 +473,7 @@ export async function markContentForOffline(
     let downloadUrl: string | undefined;
 
     if (contentType === 'class') {
-      const classItem = await prisma.class.findUnique({
+      const classItem = await prisma.classes.findUnique({
         where: { id: contentId },
         select: { videoUrl: true }
       });
@@ -579,7 +492,7 @@ export async function removeOfflineContent(
   contentId: string
 ): Promise<boolean> {
   try {
-    await prisma.offlineContent.deleteMany({
+    await prisma.offline_contents.deleteMany({
       where: { userId, contentId }
     });
     return true;
@@ -597,7 +510,7 @@ export async function getOfflineContentList(userId: string): Promise<{
   downloadedAt: Date;
   size?: number;
 }[]> {
-  const offlineContents = await prisma.offlineContent.findMany({
+  const offlineContents = await prisma.offline_contents.findMany({
     where: { userId, status: 'completed' },
     select: {
       contentId: true,
@@ -613,13 +526,13 @@ export async function getOfflineContentList(userId: string): Promise<{
     let details: { title: string; thumbnailUrl: string | null } | null = null;
 
     if (content.contentType === 'class') {
-      const classItem = await prisma.class.findUnique({
+      const classItem = await prisma.classes.findUnique({
         where: { id: content.contentId },
         select: { title: true, thumbnailUrl: true }
       });
       details = classItem;
     } else if (content.contentType === 'program') {
-      const program = await prisma.program.findUnique({
+      const program = await prisma.programs.findUnique({
         where: { id: content.contentId },
         select: { title: true, thumbnailUrl: true }
       });
@@ -633,7 +546,7 @@ export async function getOfflineContentList(userId: string): Promise<{
         title: details.title,
         thumbnailUrl: details.thumbnailUrl,
         downloadedAt: content.createdAt,
-        size: content.fileSize
+        size: content.fileSize ?? undefined
       });
     }
   }
@@ -669,7 +582,7 @@ export async function getDeltaUpdate(
   }
 
   // Get changes since last version
-  const changes = await prisma.syncChange.findMany({
+  const changes = await prisma.sync_changes.findMany({
     where: {
       version: { gt: lastSyncVersion },
       OR: [
@@ -701,7 +614,7 @@ async function getCurrentSyncVersion(): Promise<number> {
   }
 
   // Fallback: Get from database
-  const latest = await prisma.syncChange.findFirst({
+  const latest = await prisma.sync_changes.findFirst({
     orderBy: { version: 'desc' },
     select: { version: true }
   });

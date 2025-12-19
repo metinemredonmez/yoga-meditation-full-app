@@ -24,28 +24,28 @@ export async function handleAdminListEndpoints(req: Request, res: Response, next
     };
 
     const [endpoints, total] = await Promise.all([
-      prisma.webhookEndpoint.findMany({
+      prisma.webhook_endpoints.findMany({
         where,
         orderBy: { createdAt: 'desc' },
         skip: (Number(page) - 1) * Number(limit),
         take: Number(limit),
         include: {
-          user: {
+          users: {
             select: { id: true, email: true, firstName: true, lastName: true },
           },
           _count: {
-            select: { deliveries: true },
+            select: { webhook_deliveries: true },
           },
         },
       }),
-      prisma.webhookEndpoint.count({ where }),
+      prisma.webhook_endpoints.count({ where }),
     ]);
 
     const safeEndpoints = endpoints.map((endpoint) => {
       const { secret: _, ...rest } = endpoint;
       return {
         ...rest,
-        deliveryCount: endpoint._count.deliveries,
+        deliveryCount: endpoint._count.webhook_deliveries,
       };
     });
 
@@ -71,14 +71,14 @@ export async function handleAdminGetEndpoint(req: Request, res: Response, next: 
   try {
     const endpointId = req.params.endpointId as string;
 
-    const endpoint = await prisma.webhookEndpoint.findUnique({
+    const endpoint = await prisma.webhook_endpoints.findUnique({
       where: { id: endpointId },
       include: {
-        user: {
+        users: {
           select: { id: true, email: true, firstName: true, lastName: true },
         },
         _count: {
-          select: { deliveries: true },
+          select: { webhook_deliveries: true },
         },
       },
     });
@@ -97,7 +97,7 @@ export async function handleAdminGetEndpoint(req: Request, res: Response, next: 
       success: true,
       data: {
         ...safeEndpoint,
-        deliveryCount: endpoint._count.deliveries,
+        deliveryCount: endpoint._count.webhook_deliveries,
       },
     });
   } catch (error) {
@@ -112,7 +112,7 @@ export async function handleAdminDisableEndpoint(req: Request, res: Response, ne
   try {
     const endpointId = req.params.endpointId as string;
 
-    const endpoint = await prisma.webhookEndpoint.update({
+    const endpoint = await prisma.webhook_endpoints.update({
       where: { id: endpointId },
       data: { isActive: false },
     });
@@ -136,7 +136,7 @@ export async function handleAdminEnableEndpoint(req: Request, res: Response, nex
   try {
     const endpointId = req.params.endpointId as string;
 
-    const endpoint = await prisma.webhookEndpoint.update({
+    const endpoint = await prisma.webhook_endpoints.update({
       where: { id: endpointId },
       data: {
         isActive: true,
@@ -163,7 +163,7 @@ export async function handleAdminDeleteEndpoint(req: Request, res: Response, nex
   try {
     const endpointId = req.params.endpointId as string;
 
-    await prisma.webhookEndpoint.delete({
+    await prisma.webhook_endpoints.delete({
       where: { id: endpointId },
     });
 
@@ -195,18 +195,18 @@ export async function handleAdminListDeliveries(req: Request, res: Response, nex
     };
 
     const [deliveries, total] = await Promise.all([
-      prisma.webhookDelivery.findMany({
+      prisma.webhook_deliveries.findMany({
         where,
         orderBy: { createdAt: 'desc' },
         skip: (Number(page) - 1) * Number(limit),
         take: Number(limit),
         include: {
-          endpoint: {
+          webhook_endpoints: {
             select: { id: true, name: true, url: true, userId: true },
           },
         },
       }),
-      prisma.webhookDelivery.count({ where }),
+      prisma.webhook_deliveries.count({ where }),
     ]);
 
     res.json({
@@ -231,11 +231,11 @@ export async function handleAdminGetStats(req: Request, res: Response, next: Nex
   try {
     const [deliveryStats, endpointStats, recentFailures] = await Promise.all([
       getDeliveryStats(),
-      prisma.webhookEndpoint.groupBy({
+      prisma.webhook_endpoints.groupBy({
         by: ['isActive'],
         _count: true,
       }),
-      prisma.webhookEndpoint.findMany({
+      prisma.webhook_endpoints.findMany({
         where: {
           failureCount: { gt: 0 },
         },
@@ -248,7 +248,7 @@ export async function handleAdminGetStats(req: Request, res: Response, next: Nex
           failureCount: true,
           lastFailureAt: true,
           isActive: true,
-          user: {
+          users: {
             select: { id: true, email: true },
           },
         },

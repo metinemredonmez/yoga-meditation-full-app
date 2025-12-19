@@ -56,7 +56,7 @@ export async function generateUploadUrl(req: Request, res: Response) {
     });
 
     // Audit log
-    await prisma.auditLog.create({
+    await prisma.audit_logs.create({
       data: {
         userId: req.user.userId,
         actorRole: req.user.role,

@@ -22,9 +22,9 @@ async function runDailyReset() {
     yesterday.setHours(0, 0, 0, 0);
 
     // Mark uncompleted daily quests as expired
-    const expiredQuests = await prisma.userQuest.updateMany({
+    const expiredQuests = await prisma.user_quests.updateMany({
       where: {
-        quest: {
+        quests: {
           type: 'DAILY',
         },
         isCompleted: false,
@@ -40,7 +40,7 @@ async function runDailyReset() {
     logger.info({ count: expiredQuests.count }, 'Daily quests checked');
 
     // Check streak resets for users who didn't practice yesterday
-    const usersToCheck = await prisma.userLevel.findMany({
+    const usersToCheck = await prisma.user_levels.findMany({
       where: {
         currentStreak: {
           gt: 0,
@@ -56,7 +56,7 @@ async function runDailyReset() {
     for (const user of usersToCheck) {
       // Auto-apply streak freeze if available
       if (user.streakFreezeCount > 0) {
-        await prisma.userLevel.update({
+        await prisma.user_levels.update({
           where: { userId: user.userId },
           data: {
             streakFreezeCount: { decrement: 1 },
@@ -65,7 +65,7 @@ async function runDailyReset() {
         });
 
         // Record streak freeze usage
-        await prisma.streakFreeze.create({
+        await prisma.streak_freezes.create({
           data: {
             userId: user.userId,
             usedAt: new Date(),
@@ -74,7 +74,7 @@ async function runDailyReset() {
         });
       } else {
         // Reset streak
-        await prisma.userLevel.update({
+        await prisma.user_levels.update({
           where: { userId: user.userId },
           data: {
             currentStreak: 0,
@@ -105,9 +105,9 @@ async function runWeeklyReset() {
     const lastWeek = new Date();
     lastWeek.setDate(lastWeek.getDate() - 7);
 
-    const expiredQuests = await prisma.userQuest.updateMany({
+    const expiredQuests = await prisma.user_quests.updateMany({
       where: {
-        quest: {
+        quests: {
           type: 'WEEKLY',
         },
         isCompleted: false,
@@ -141,9 +141,9 @@ async function runMonthlyReset() {
     const lastMonth = new Date();
     lastMonth.setMonth(lastMonth.getMonth() - 1);
 
-    const expiredQuests = await prisma.userQuest.updateMany({
+    const expiredQuests = await prisma.user_quests.updateMany({
       where: {
-        quest: {
+        quests: {
           type: 'MONTHLY',
         },
         isCompleted: false,
@@ -162,7 +162,7 @@ async function runMonthlyReset() {
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-    const staleRewards = await prisma.userDailyReward.updateMany({
+    const staleRewards = await prisma.user_daily_rewards.updateMany({
       where: {
         lastClaimAt: {
           lt: thirtyDaysAgo,
@@ -196,7 +196,7 @@ async function runStreakCheck() {
     yesterday.setHours(0, 0, 0, 0);
 
     // Find users at risk of losing streak
-    const usersAtRisk = await prisma.userLevel.findMany({
+    const usersAtRisk = await prisma.user_levels.findMany({
       where: {
         currentStreak: {
           gt: 0,
@@ -228,7 +228,7 @@ async function runEventCheck() {
     const now = new Date();
 
     // Activate events that should start
-    const activatedEvents = await prisma.seasonalEvent.updateMany({
+    const activatedEvents = await prisma.seasonal_events.updateMany({
       where: {
         isActive: false,
         startDate: {
@@ -248,7 +248,7 @@ async function runEventCheck() {
     }
 
     // Deactivate events that have ended
-    const deactivatedEvents = await prisma.seasonalEvent.updateMany({
+    const deactivatedEvents = await prisma.seasonal_events.updateMany({
       where: {
         isActive: true,
         endDate: {

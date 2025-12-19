@@ -46,7 +46,7 @@ export const createSchedule = async (
     dayOfMonth: config.dayOfMonth,
   });
 
-  return prisma.reportSchedule.create({
+  return prisma.report_schedules.create({
     data: {
       definitionId,
       name: config.name,
@@ -69,7 +69,7 @@ export const createSchedule = async (
       createdById: userId,
     },
     include: {
-      definition: true,
+      report_definitions: true,
     },
   });
 };
@@ -97,7 +97,7 @@ export const updateSchedule = async (
     isActive: boolean;
   }>
 ) => {
-  const schedule = await prisma.reportSchedule.findUnique({
+  const schedule = await prisma.report_schedules.findUnique({
     where: { id },
   });
 
@@ -126,7 +126,7 @@ export const updateSchedule = async (
     });
   }
 
-  return prisma.reportSchedule.update({
+  return prisma.report_schedules.update({
     where: { id },
     data: {
       ...config,
@@ -134,25 +134,25 @@ export const updateSchedule = async (
       nextRunAt,
     },
     include: {
-      definition: true,
+      report_definitions: true,
     },
   });
 };
 
 // Delete schedule
 export const deleteSchedule = async (id: string) => {
-  return prisma.reportSchedule.delete({
+  return prisma.report_schedules.delete({
     where: { id },
   });
 };
 
 // Get schedule
 export const getSchedule = async (id: string) => {
-  return prisma.reportSchedule.findUnique({
+  return prisma.report_schedules.findUnique({
     where: { id },
     include: {
-      definition: true,
-      executions: {
+      report_definitions: true,
+      schedule_executions: {
         orderBy: { startedAt: 'desc' },
         take: 10,
       },
@@ -162,10 +162,10 @@ export const getSchedule = async (id: string) => {
 
 // Get user schedules
 export const getUserSchedules = async (userId: string) => {
-  return prisma.reportSchedule.findMany({
+  return prisma.report_schedules.findMany({
     where: { createdById: userId },
     include: {
-      definition: true,
+      report_definitions: true,
     },
     orderBy: { createdAt: 'desc' },
   });
@@ -173,22 +173,22 @@ export const getUserSchedules = async (userId: string) => {
 
 // Get active schedules due to run
 export const getActiveSchedules = async () => {
-  return prisma.reportSchedule.findMany({
+  return prisma.report_schedules.findMany({
     where: {
       isActive: true,
       nextRunAt: { lte: new Date() },
     },
     include: {
-      definition: true,
+      report_definitions: true,
     },
   });
 };
 
 // Execute schedule
 export const executeSchedule = async (scheduleId: string) => {
-  const schedule = await prisma.reportSchedule.findUnique({
+  const schedule = await prisma.report_schedules.findUnique({
     where: { id: scheduleId },
-    include: { definition: true },
+    include: { report_definitions: true },
   });
 
   if (!schedule) {
@@ -198,7 +198,7 @@ export const executeSchedule = async (scheduleId: string) => {
   const startedAt = new Date();
 
   // Create execution record
-  const execution = await prisma.scheduleExecution.create({
+  const execution = await prisma.schedule_executions.create({
     data: {
       scheduleId,
       status: 'RUNNING',
@@ -218,7 +218,7 @@ export const executeSchedule = async (scheduleId: string) => {
 
     // Create export
     const exportRecord = await createDirectExport(
-      schedule.definition.slug,
+      schedule.report_definitions.slug,
       schedule.filters as Record<string, unknown>,
       schedule.exportFormat,
       schedule.createdById
@@ -231,11 +231,11 @@ export const executeSchedule = async (scheduleId: string) => {
     const deliveryResult = await deliverReport(
       schedule,
       exportResult.fileUrl,
-      schedule.definition.name
+      schedule.report_definitions.name
     );
 
     // Update execution as completed
-    await prisma.scheduleExecution.update({
+    await prisma.schedule_executions.update({
       where: { id: execution.id },
       data: {
         status: 'COMPLETED',
@@ -260,7 +260,7 @@ export const executeSchedule = async (scheduleId: string) => {
       dayOfMonth: schedule.dayOfMonth ?? undefined,
     });
 
-    await prisma.reportSchedule.update({
+    await prisma.report_schedules.update({
       where: { id: scheduleId },
       data: {
         lastRunAt: startedAt,
@@ -273,7 +273,7 @@ export const executeSchedule = async (scheduleId: string) => {
     return { execution, success: true };
   } catch (error) {
     // Update execution as failed
-    await prisma.scheduleExecution.update({
+    await prisma.schedule_executions.update({
       where: { id: execution.id },
       data: {
         status: 'FAILED',
@@ -283,7 +283,7 @@ export const executeSchedule = async (scheduleId: string) => {
     });
 
     // Update schedule failure count
-    await prisma.reportSchedule.update({
+    await prisma.report_schedules.update({
       where: { id: scheduleId },
       data: {
         lastRunAt: startedAt,
@@ -535,7 +535,7 @@ const sendToSlack = async (
 
 // Pause schedule
 export const pauseSchedule = async (id: string) => {
-  return prisma.reportSchedule.update({
+  return prisma.report_schedules.update({
     where: { id },
     data: { isActive: false },
   });
@@ -543,7 +543,7 @@ export const pauseSchedule = async (id: string) => {
 
 // Resume schedule
 export const resumeSchedule = async (id: string) => {
-  const schedule = await prisma.reportSchedule.findUnique({
+  const schedule = await prisma.report_schedules.findUnique({
     where: { id },
   });
 
@@ -561,7 +561,7 @@ export const resumeSchedule = async (id: string) => {
     dayOfMonth: schedule.dayOfMonth ?? undefined,
   });
 
-  return prisma.reportSchedule.update({
+  return prisma.report_schedules.update({
     where: { id },
     data: {
       isActive: true,
@@ -575,7 +575,7 @@ export const getScheduleHistory = async (
   scheduleId: string,
   limit: number = 20
 ) => {
-  return prisma.scheduleExecution.findMany({
+  return prisma.schedule_executions.findMany({
     where: { scheduleId },
     orderBy: { startedAt: 'desc' },
     take: limit,

@@ -73,7 +73,7 @@ export async function addFavorite(
   itemType: FavoriteType,
 ): Promise<FavoriteItem> {
   // Use upsert to handle duplicate gracefully
-  const favorite = await prisma.favorite.upsert({
+  const favorite = await prisma.favorites.upsert({
     where: {
       userId_itemId_itemType: { userId, itemId, itemType },
     },
@@ -101,7 +101,7 @@ export async function removeFavorite(
   itemType: FavoriteType,
 ): Promise<boolean> {
   try {
-    await prisma.favorite.delete({
+    await prisma.favorites.delete({
       where: {
         userId_itemId_itemType: { userId, itemId, itemType },
       },
@@ -123,21 +123,21 @@ export async function toggleFavorite(
   itemId: string,
   itemType: FavoriteType,
 ): Promise<{ isFavorite: boolean; favorite?: FavoriteItem }> {
-  const existing = await prisma.favorite.findUnique({
+  const existing = await prisma.favorites.findUnique({
     where: {
       userId_itemId_itemType: { userId, itemId, itemType },
     },
   });
 
   if (existing) {
-    await prisma.favorite.delete({
+    await prisma.favorites.delete({
       where: { id: existing.id },
     });
     logger.info({ userId, itemId, itemType }, 'Favorite toggled off');
     return { isFavorite: false };
   }
 
-  const favorite = await prisma.favorite.create({
+  const favorite = await prisma.favorites.create({
     data: { userId, itemId, itemType },
   });
 
@@ -159,7 +159,7 @@ export async function isFavorite(
   itemId: string,
   itemType: FavoriteType,
 ): Promise<boolean> {
-  const count = await prisma.favorite.count({
+  const count = await prisma.favorites.count({
     where: { userId, itemId, itemType },
   });
   return count > 0;
@@ -174,19 +174,19 @@ export async function getUserFavorites(
   const limit = pagination.limit || 20;
   const skip = (page - 1) * limit;
 
-  const where: Prisma.FavoriteWhereInput = { userId };
+  const where: Prisma.favoritesWhereInput = { userId };
   if (itemType) {
     where.itemType = itemType;
   }
 
   const [favorites, total] = await Promise.all([
-    prisma.favorite.findMany({
+    prisma.favorites.findMany({
       where,
       orderBy: { createdAt: 'desc' },
       skip,
       take: limit,
     }),
-    prisma.favorite.count({ where }),
+    prisma.favorites.count({ where }),
   ]);
 
   // Fetch item details for each favorite
@@ -222,9 +222,9 @@ export async function getFavoritesByType(
 
 export async function getFavoriteCounts(userId: string): Promise<FavoriteCounts> {
   const [programs, poses, classes] = await Promise.all([
-    prisma.favorite.count({ where: { userId, itemType: 'PROGRAM' } }),
-    prisma.favorite.count({ where: { userId, itemType: 'POSE' } }),
-    prisma.favorite.count({ where: { userId, itemType: 'CLASS' } }),
+    prisma.favorites.count({ where: { userId, itemType: 'PROGRAM' } }),
+    prisma.favorites.count({ where: { userId, itemType: 'POSE' } }),
+    prisma.favorites.count({ where: { userId, itemType: 'CLASS' } }),
   ]);
 
   return {
@@ -244,12 +244,12 @@ export async function bulkCheckFavorites(
   }
 
   // Build OR conditions for all items
-  const orConditions: Prisma.FavoriteWhereInput[] = items.map((item) => ({
+  const orConditions: Prisma.favoritesWhereInput[] = items.map((item) => ({
     itemId: item.itemId,
     itemType: item.itemType,
   }));
 
-  const favorites = await prisma.favorite.findMany({
+  const favorites = await prisma.favorites.findMany({
     where: {
       userId,
       OR: orConditions,
@@ -281,7 +281,7 @@ async function getItemDetails(
 ): Promise<ProgramDetails | PoseDetails | ClassDetails | null> {
   switch (itemType) {
     case 'PROGRAM': {
-      const program = await prisma.program.findUnique({
+      const program = await prisma.programs.findUnique({
         where: { id: itemId },
         select: {
           id: true,
@@ -295,7 +295,7 @@ async function getItemDetails(
       return program;
     }
     case 'POSE': {
-      const pose = await prisma.pose.findUnique({
+      const pose = await prisma.poses.findUnique({
         where: { id: itemId },
         select: {
           id: true,
@@ -309,14 +309,14 @@ async function getItemDetails(
       return pose;
     }
     case 'CLASS': {
-      const classItem = await prisma.class.findUnique({
+      const classItem = await prisma.classes.findUnique({
         where: { id: itemId },
         select: {
           id: true,
           title: true,
           description: true,
           schedule: true,
-          instructor: {
+          users: {
             select: {
               id: true,
               firstName: true,
@@ -325,7 +325,11 @@ async function getItemDetails(
           },
         },
       });
-      return classItem;
+      if (!classItem) return null;
+      return {
+        ...classItem,
+        instructor: classItem.users,
+      } as any;
     }
     default:
       return null;
@@ -338,15 +342,15 @@ export async function checkItemExists(
 ): Promise<boolean> {
   switch (itemType) {
     case 'PROGRAM': {
-      const count = await prisma.program.count({ where: { id: itemId } });
+      const count = await prisma.programs.count({ where: { id: itemId } });
       return count > 0;
     }
     case 'POSE': {
-      const count = await prisma.pose.count({ where: { id: itemId } });
+      const count = await prisma.poses.count({ where: { id: itemId } });
       return count > 0;
     }
     case 'CLASS': {
-      const count = await prisma.class.count({ where: { id: itemId } });
+      const count = await prisma.classes.count({ where: { id: itemId } });
       return count > 0;
     }
     default:

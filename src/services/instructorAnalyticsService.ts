@@ -19,7 +19,7 @@ export async function recordView(
   today.setHours(0, 0, 0, 0);
 
   // Upsert daily analytics
-  const analytics = await prisma.instructorAnalytics.upsert({
+  const analytics = await prisma.instructor_analytics.upsert({
     where: {
       instructorId_date: {
         instructorId,
@@ -47,7 +47,7 @@ export async function recordView(
     // Check if this viewer was already counted today
     // For simplicity, we'll just increment unique viewers
     // In production, you'd use a more sophisticated approach
-    await prisma.instructorAnalytics.update({
+    await prisma.instructor_analytics.update({
       where: { id: analytics.id },
       data: { uniqueViewers: { increment: 1 } },
     });
@@ -64,7 +64,7 @@ async function incrementProgramView(
   date: Date,
   programId: string,
 ): Promise<Prisma.InputJsonValue> {
-  const existing = await prisma.instructorAnalytics.findUnique({
+  const existing = await prisma.instructor_analytics.findUnique({
     where: {
       instructorId_date: {
         instructorId,
@@ -93,7 +93,7 @@ export async function recordCompletion(
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
-  await prisma.instructorAnalytics.upsert({
+  await prisma.instructor_analytics.upsert({
     where: {
       instructorId_date: {
         instructorId,
@@ -127,7 +127,7 @@ export async function recordClassBooking(instructorId: string) {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
-  await prisma.instructorAnalytics.upsert({
+  await prisma.instructor_analytics.upsert({
     where: {
       instructorId_date: {
         instructorId,
@@ -158,7 +158,7 @@ export async function getDailyAnalytics(instructorId: string, date: Date) {
   const dayStart = new Date(date);
   dayStart.setHours(0, 0, 0, 0);
 
-  return prisma.instructorAnalytics.findUnique({
+  return prisma.instructor_analytics.findUnique({
     where: {
       instructorId_date: {
         instructorId,
@@ -176,7 +176,7 @@ export async function getAnalyticsRange(
   startDate: Date,
   endDate: Date,
 ) {
-  return prisma.instructorAnalytics.findMany({
+  return prisma.instructor_analytics.findMany({
     where: {
       instructorId,
       date: {
@@ -196,7 +196,7 @@ export async function getAggregatedAnalytics(
   startDate: Date,
   endDate: Date,
 ) {
-  const result = await prisma.instructorAnalytics.aggregate({
+  const result = await prisma.instructor_analytics.aggregate({
     where: {
       instructorId,
       date: {
@@ -241,7 +241,7 @@ export async function getTopContent(
   period: { start: Date; end: Date },
   limit: number = 10,
 ) {
-  const analytics = await prisma.instructorAnalytics.findMany({
+  const analytics = await prisma.instructor_analytics.findMany({
     where: {
       instructorId,
       date: {
@@ -271,7 +271,7 @@ export async function getTopContent(
 
   // Get program details
   const programIds = sorted.map(([id]) => id);
-  const programs = await prisma.program.findMany({
+  const programs = await prisma.programs.findMany({
     where: { id: { in: programIds } },
     select: { id: true, title: true, coverUrl: true },
   });
@@ -292,12 +292,12 @@ export async function getTopContent(
  * Get audience insights for instructor
  */
 export async function getAudienceInsights(instructorId: string) {
-  const instructor = await prisma.instructorProfile.findUnique({
+  const instructor = await prisma.instructor_profiles.findUnique({
     where: { id: instructorId },
     include: {
-      followers: {
+      instructor_followers: {
         include: {
-          user: {
+          users: {
             select: {
               createdAt: true,
               subscriptionTier: true,
@@ -329,13 +329,13 @@ export async function getAudienceInsights(instructorId: string) {
 
   const now = new Date();
 
-  for (const follower of instructor.followers) {
-    const tier = follower.user?.subscriptionTier;
+  for (const follower of instructor.instructor_followers) {
+    const tier = follower.users?.subscriptionTier;
     if (tier && tierDistribution[tier] !== undefined) {
       tierDistribution[tier]++;
     }
 
-    const createdAt = follower.user?.createdAt;
+    const createdAt = follower.users?.createdAt;
     if (createdAt) {
       const ageMs = now.getTime() - createdAt.getTime();
       const ageDays = ageMs / (24 * 60 * 60 * 1000);
@@ -351,7 +351,7 @@ export async function getAudienceInsights(instructorId: string) {
   }
 
   return {
-    totalFollowers: instructor.followers.length,
+    totalFollowers: instructor.instructor_followers.length,
     tierDistribution,
     ageDistribution,
   };
@@ -372,12 +372,12 @@ export async function generateDailySnapshot(instructorId: string) {
   yesterday.setDate(yesterday.getDate() - 1);
 
   // Get follower count
-  const totalFollowers = await prisma.instructorFollower.count({
+  const totalFollowers = await prisma.instructor_followers.count({
     where: { instructorId },
   });
 
   // Get new followers today
-  const newFollowers = await prisma.instructorFollower.count({
+  const newFollowers = await prisma.instructor_followers.count({
     where: {
       instructorId,
       followedAt: {
@@ -388,7 +388,7 @@ export async function generateDailySnapshot(instructorId: string) {
   });
 
   // Get earnings for yesterday
-  const earnings = await prisma.instructorEarning.aggregate({
+  const earnings = await prisma.instructor_earnings.aggregate({
     where: {
       instructorId,
       createdAt: {
@@ -401,7 +401,7 @@ export async function generateDailySnapshot(instructorId: string) {
   });
 
   // Get rating info
-  const ratingStats = await prisma.instructorReview.aggregate({
+  const ratingStats = await prisma.instructor_reviews.aggregate({
     where: {
       instructorId,
       status: 'APPROVED',
@@ -410,7 +410,7 @@ export async function generateDailySnapshot(instructorId: string) {
   });
 
   // Get new reviews
-  const newReviews = await prisma.instructorReview.count({
+  const newReviews = await prisma.instructor_reviews.count({
     where: {
       instructorId,
       createdAt: {
@@ -421,7 +421,7 @@ export async function generateDailySnapshot(instructorId: string) {
   });
 
   // Upsert analytics record
-  await prisma.instructorAnalytics.upsert({
+  await prisma.instructor_analytics.upsert({
     where: {
       instructorId_date: {
         instructorId,
@@ -453,7 +453,7 @@ export async function generateDailySnapshot(instructorId: string) {
  * Generate daily snapshots for all approved instructors
  */
 export async function generateAllDailySnapshots() {
-  const instructors = await prisma.instructorProfile.findMany({
+  const instructors = await prisma.instructor_profiles.findMany({
     where: { status: 'APPROVED' },
     select: { id: true },
   });

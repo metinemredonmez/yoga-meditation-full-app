@@ -67,9 +67,10 @@ const csrfSecret = process.env.CSRF_SECRET || config.JWT_ACCESS_SECRET;
 
 const {
   doubleCsrfProtection,
-  generateToken,
+  generateCsrfToken,
 } = doubleCsrf({
   getSecret: () => csrfSecret,
+  getSessionIdentifier: (req) => (req as any).session?.id || req.ip || 'anonymous',
   cookieName: config.CSRF_COOKIE_NAME,
   cookieOptions: {
     httpOnly: true,
@@ -77,19 +78,16 @@ const {
     secure: config.cookie.secure,
     path: '/',
   },
-  getTokenFromRequest: (req) => {
-    // Check header first, then body
-    return (req.headers[config.CSRF_HEADER_NAME.toLowerCase()] as string) ||
-           (req.body?._csrf as string);
-  },
+  size: 64,
+  ignoredMethods: ['GET', 'HEAD', 'OPTIONS'],
 });
 
 // Enable CSRF in all environments (was only production before)
 export const csrfProtection: RequestHandler = doubleCsrfProtection;
 
-export const attachCsrfToken: RequestHandler = (req, res, next) => {
+export const attachCsrfToken: RequestHandler = (req: Request, res: Response, next: NextFunction) => {
   try {
-    const token = generateToken(req, res);
+    const token = generateCsrfToken(req, res);
     res.setHeader(config.CSRF_HEADER_NAME, token);
   } catch {
     // Token generation may fail for some requests, that's ok

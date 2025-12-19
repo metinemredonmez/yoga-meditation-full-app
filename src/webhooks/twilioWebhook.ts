@@ -90,17 +90,12 @@ export async function handleSMSStatusCallback(req: Request, res: Response) {
     }, 'Twilio SMS status callback received');
 
     // Find and update SMS log
-    const smsLog = await prisma.smsLog.findFirst({
-      where: { providerMessageId: callback.MessageSid }
+    const smsLog = await prisma.sms_logs.findFirst({
+      where: { twilioSid: callback.MessageSid }
     });
 
     if (smsLog) {
-      const updateData: {
-        status: string;
-        deliveredAt?: Date;
-        errorCode?: string;
-        errorMessage?: string;
-      } = {
+      const updateData: any = {
         status: mapTwilioStatus(callback.MessageStatus)
       };
 
@@ -113,7 +108,7 @@ export async function handleSMSStatusCallback(req: Request, res: Response) {
         updateData.errorMessage = callback.ErrorMessage;
       }
 
-      await prisma.smsLog.update({
+      await prisma.sms_logs.update({
         where: { id: smsLog.id },
         data: updateData
       });
@@ -172,15 +167,15 @@ export async function handleIncomingSMS(req: Request, res: Response) {
     logger.info({ from: From, messageSid: MessageSid }, 'Incoming SMS received');
 
     // Store incoming message
-    await prisma.smsLog.create({
+    await prisma.sms_logs.create({
       data: {
-        direction: 'INBOUND',
-        to: config.TWILIO_PHONE_NUMBER || '',
-        from: From,
+        phoneNumber: From,
         message: Body,
-        status: 'RECEIVED',
-        provider: 'TWILIO',
-        providerMessageId: MessageSid
+        messageType: 'NOTIFICATION',
+        status: 'DELIVERED',
+        twilioSid: MessageSid,
+        sentAt: new Date(),
+        deliveredAt: new Date()
       }
     });
 

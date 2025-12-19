@@ -244,7 +244,7 @@ function appendUnsubscribeLink(html: string, unsubscribeUrl: string): string {
  * Get user's email for notifications
  */
 export async function getUserEmail(userId: string): Promise<string | null> {
-  const user = await prisma.user.findUnique({
+  const user = await prisma.users.findUnique({
     where: { id: userId },
     select: { email: true },
   });
@@ -255,7 +255,7 @@ export async function getUserEmail(userId: string): Promise<string | null> {
  * Get user's phone for notifications
  */
 export async function getUserPhone(userId: string): Promise<string | null> {
-  const user = await prisma.user.findUnique({
+  const user = await prisma.users.findUnique({
     where: { id: userId },
     select: { phoneNumber: true },
   });
@@ -275,7 +275,7 @@ export async function notifyUser(
     emailHtml?: string;
   },
 ): Promise<void> {
-  const user = await prisma.user.findUnique({
+  const user = await prisma.users.findUnique({
     where: { id: userId },
     select: { email: true, phoneNumber: true, firstName: true },
   });

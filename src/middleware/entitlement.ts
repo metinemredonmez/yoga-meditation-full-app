@@ -7,7 +7,7 @@ export async function requireActiveSubscription(req: Request, res: Response, nex
   }
 
   const now = new Date();
-  const subscription = await prisma.subscription.findFirst({
+  const subscription = await prisma.subscriptions.findFirst({
     where: {
       userId: req.user.userId,
       status: 'ACTIVE',

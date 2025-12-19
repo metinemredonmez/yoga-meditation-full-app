@@ -29,7 +29,7 @@ export const createAlertRule = async (
   },
   userId: string
 ) => {
-  return prisma.alertRule.create({
+  return prisma.alert_rules.create({
     data: {
       ...data,
       metricQuery: data.metricQuery as Prisma.InputJsonValue,
@@ -59,7 +59,7 @@ export const updateAlertRule = async (
     isActive: boolean;
   }>
 ) => {
-  return prisma.alertRule.update({
+  return prisma.alert_rules.update({
     where: { id },
     data: {
       ...data,
@@ -70,19 +70,19 @@ export const updateAlertRule = async (
 
 // Delete alert rule
 export const deleteAlertRule = async (id: string) => {
-  return prisma.alertRule.delete({
+  return prisma.alert_rules.delete({
     where: { id },
   });
 };
 
 // Get alert rules
 export const getAlertRules = async (userId?: string) => {
-  const where: Prisma.AlertRuleWhereInput = {};
+  const where: Prisma.alert_rulesWhereInput = {};
   if (userId) {
     where.createdById = userId;
   }
 
-  return prisma.alertRule.findMany({
+  return prisma.alert_rules.findMany({
     where,
     orderBy: { createdAt: 'desc' },
   });
@@ -90,7 +90,7 @@ export const getAlertRules = async (userId?: string) => {
 
 // Get single alert rule
 export const getAlertRule = async (id: string) => {
-  return prisma.alertRule.findUnique({
+  return prisma.alert_rules.findUnique({
     where: { id },
     include: {
       alerts: {
@@ -107,7 +107,7 @@ export const muteAlertRule = async (id: string, duration?: number) => {
     ? new Date(Date.now() + duration * 60 * 1000)
     : null;
 
-  return prisma.alertRule.update({
+  return prisma.alert_rules.update({
     where: { id },
     data: {
       isMuted: true,
@@ -118,7 +118,7 @@ export const muteAlertRule = async (id: string, duration?: number) => {
 
 // Unmute alert rule
 export const unmuteAlertRule = async (id: string) => {
-  return prisma.alertRule.update({
+  return prisma.alert_rules.update({
     where: { id },
     data: {
       isMuted: false,
@@ -129,7 +129,7 @@ export const unmuteAlertRule = async (id: string) => {
 
 // Check all alert rules (cron job)
 export const checkAlertRules = async () => {
-  const rules = await prisma.alertRule.findMany({
+  const rules = await prisma.alert_rules.findMany({
     where: {
       isActive: true,
       OR: [{ isMuted: false }, { mutedUntil: { lt: new Date() } }],
@@ -150,7 +150,7 @@ export const checkAlertRules = async () => {
       }
 
       // Update last checked time
-      await prisma.alertRule.update({
+      await prisma.alert_rules.update({
         where: { id: rule.id },
         data: { lastCheckedAt: new Date() },
       });
@@ -206,12 +206,12 @@ const getMetricValue = async (
 
   switch (metricType) {
     case 'new_users':
-      return prisma.user.count({
+      return prisma.users.count({
         where: { createdAt: { gte: windowStart } },
       });
 
     case 'revenue':
-      const revenueResult = await prisma.payment.aggregate({
+      const revenueResult = await prisma.payments.aggregate({
         where: {
           status: 'COMPLETED',
           createdAt: { gte: windowStart },
@@ -222,15 +222,15 @@ const getMetricValue = async (
       });
       return applyAggregation(
         {
-          sum: (revenueResult._sum.amount || 0) / 100,
-          avg: (revenueResult._avg.amount || 0) / 100,
+          sum: Number(revenueResult._sum.amount || 0) / 100,
+          avg: Number(revenueResult._avg.amount || 0) / 100,
           count: revenueResult._count,
         },
         aggregation
       );
 
     case 'failed_payments':
-      return prisma.payment.count({
+      return prisma.payments.count({
         where: {
           status: 'FAILED',
           createdAt: { gte: windowStart },
@@ -238,7 +238,7 @@ const getMetricValue = async (
       });
 
     case 'cancelled_subscriptions':
-      return prisma.subscription.count({
+      return prisma.subscriptions.count({
         where: {
           status: { in: ['CANCELLED', 'CANCELED'] },
           updatedAt: { gte: windowStart },
@@ -250,7 +250,7 @@ const getMetricValue = async (
       return 0;
 
     case 'active_users':
-      const activeUsers = await prisma.videoProgress.groupBy({
+      const activeUsers = await prisma.video_progress.groupBy({
         by: ['userId'],
         where: { updatedAt: { gte: windowStart } },
       });
@@ -324,14 +324,14 @@ export const triggerAlert = async (
   metricValue: number,
   threshold: number
 ) => {
-  const rule = await prisma.alertRule.findUnique({
+  const rule = await prisma.alert_rules.findUnique({
     where: { id: ruleId },
   });
 
   if (!rule) return;
 
   // Create alert
-  const alert = await prisma.alert.create({
+  const alert = await prisma.alerts.create({
     data: {
       ruleId,
       metricValue,
@@ -341,7 +341,7 @@ export const triggerAlert = async (
   });
 
   // Update rule
-  await prisma.alertRule.update({
+  await prisma.alert_rules.update({
     where: { id: ruleId },
     data: {
       lastTriggeredAt: new Date(),
@@ -400,7 +400,7 @@ const notifyAlert = async (
   }
 
   // Update alert with notification status
-  await prisma.alert.update({
+  await prisma.alerts.update({
     where: { id: alert.id },
     data: {
       notifiedAt: new Date(),
@@ -469,7 +469,7 @@ export const getAlerts = async (filters?: {
   from?: Date;
   to?: Date;
 }) => {
-  const where: Prisma.AlertWhereInput = {};
+  const where: Prisma.alertsWhereInput = {};
 
   if (filters?.status) {
     where.status = filters.status;
@@ -487,10 +487,10 @@ export const getAlerts = async (filters?: {
     }
   }
 
-  return prisma.alert.findMany({
+  return prisma.alerts.findMany({
     where,
     include: {
-      rule: {
+      alert_rules: {
         select: {
           name: true,
           severity: true,
@@ -503,11 +503,11 @@ export const getAlerts = async (filters?: {
 
 // Get single alert
 export const getAlert = async (id: string) => {
-  return prisma.alert.findUnique({
+  return prisma.alerts.findUnique({
     where: { id },
     include: {
-      rule: true,
-      acknowledgedBy: {
+      alert_rules: true,
+      users: {
         select: {
           id: true,
           email: true,
@@ -521,7 +521,7 @@ export const getAlert = async (id: string) => {
 
 // Acknowledge alert
 export const acknowledgeAlert = async (id: string, userId: string) => {
-  return prisma.alert.update({
+  return prisma.alerts.update({
     where: { id },
     data: {
       status: 'ACKNOWLEDGED',
@@ -533,7 +533,7 @@ export const acknowledgeAlert = async (id: string, userId: string) => {
 
 // Resolve alert
 export const resolveAlert = async (id: string, resolution: string) => {
-  return prisma.alert.update({
+  return prisma.alerts.update({
     where: { id },
     data: {
       status: 'RESOLVED',
@@ -553,15 +553,15 @@ export const getAlertStats = async () => {
     alertsBySeverity,
     recentAlerts,
   ] = await Promise.all([
-    prisma.alert.count(),
-    prisma.alert.count({ where: { status: 'TRIGGERED' } }),
-    prisma.alert.count({ where: { status: 'ACKNOWLEDGED' } }),
-    prisma.alert.count({ where: { status: 'RESOLVED' } }),
-    prisma.alert.groupBy({
+    prisma.alerts.count(),
+    prisma.alerts.count({ where: { status: 'TRIGGERED' } }),
+    prisma.alerts.count({ where: { status: 'ACKNOWLEDGED' } }),
+    prisma.alerts.count({ where: { status: 'RESOLVED' } }),
+    prisma.alerts.groupBy({
       by: ['status'],
       _count: true,
     }),
-    prisma.alert.count({
+    prisma.alerts.count({
       where: {
         triggeredAt: {
           gte: new Date(Date.now() - 24 * 60 * 60 * 1000),

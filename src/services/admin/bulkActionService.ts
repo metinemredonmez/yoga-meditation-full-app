@@ -13,16 +13,16 @@ export type BulkActionType =
 
 // Get bulk action jobs
 export async function getBulkActionJobs(adminId?: string, page = 1, limit = 20) {
-  const where: Prisma.BulkActionJobWhereInput = adminId ? { adminId } : {};
+  const where: Prisma.bulk_action_jobsWhereInput = adminId ? { adminId } : {};
 
   const [jobs, total] = await Promise.all([
-    prisma.bulkActionJob.findMany({
+    prisma.bulk_action_jobs.findMany({
       where,
       skip: (page - 1) * limit,
       take: limit,
       orderBy: { createdAt: 'desc' },
     }),
-    prisma.bulkActionJob.count({ where }),
+    prisma.bulk_action_jobs.count({ where }),
   ]);
 
   return {
@@ -33,7 +33,7 @@ export async function getBulkActionJobs(adminId?: string, page = 1, limit = 20) 
 
 // Get single bulk action job
 export async function getBulkActionJob(jobId: string) {
-  const job = await prisma.bulkActionJob.findUnique({
+  const job = await prisma.bulk_action_jobs.findUnique({
     where: { id: jobId },
   });
 
@@ -50,7 +50,7 @@ export async function createBulkActionJob(
     parameters?: object;
   }
 ) {
-  const job = await prisma.bulkActionJob.create({
+  const job = await prisma.bulk_action_jobs.create({
     data: {
       action: data.actionType,
       entityType: 'user',
@@ -72,14 +72,14 @@ export async function createBulkActionJob(
 
 // Cancel bulk action job
 export async function cancelBulkActionJob(jobId: string) {
-  const job = await prisma.bulkActionJob.findUnique({ where: { id: jobId } });
+  const job = await prisma.bulk_action_jobs.findUnique({ where: { id: jobId } });
   if (!job) throw new HttpError(404, 'Bulk action job not found');
 
   if (job.status !== 'PENDING' && job.status !== 'PROCESSING') {
     throw new HttpError(400, 'Cannot cancel job that is not pending or processing');
   }
 
-  return prisma.bulkActionJob.update({
+  return prisma.bulk_action_jobs.update({
     where: { id: jobId },
     data: { status: 'CANCELLED' },
   });
@@ -87,7 +87,7 @@ export async function cancelBulkActionJob(jobId: string) {
 
 // Process bulk action job in background
 async function processBulkActionJob(jobId: string) {
-  const job = await prisma.bulkActionJob.update({
+  const job = await prisma.bulk_action_jobs.update({
     where: { id: jobId },
     data: { status: 'PROCESSING', startedAt: new Date() },
   });
@@ -97,7 +97,7 @@ async function processBulkActionJob(jobId: string) {
 
   try {
     for (const entityId of job.entityIds) {
-      const currentJob = await prisma.bulkActionJob.findUnique({ where: { id: jobId } });
+      const currentJob = await prisma.bulk_action_jobs.findUnique({ where: { id: jobId } });
       if (currentJob?.status === 'CANCELLED') break;
 
       try {
@@ -107,7 +107,7 @@ async function processBulkActionJob(jobId: string) {
         failureCount++;
       }
 
-      await prisma.bulkActionJob.update({
+      await prisma.bulk_action_jobs.update({
         where: { id: jobId },
         data: { progress: successCount + failureCount },
       });
@@ -117,7 +117,7 @@ async function processBulkActionJob(jobId: string) {
     if (failureCount > 0 && successCount > 0) finalStatus = 'PARTIAL';
     else if (failureCount > 0 && successCount === 0) finalStatus = 'FAILED';
 
-    await prisma.bulkActionJob.update({
+    await prisma.bulk_action_jobs.update({
       where: { id: jobId },
       data: {
         status: finalStatus,
@@ -127,7 +127,7 @@ async function processBulkActionJob(jobId: string) {
       },
     });
   } catch (error) {
-    await prisma.bulkActionJob.update({
+    await prisma.bulk_action_jobs.update({
       where: { id: jobId },
       data: {
         status: 'FAILED',
@@ -141,21 +141,21 @@ async function processBulkActionJob(jobId: string) {
 async function processEntity(actionType: BulkActionType, entityId: string): Promise<void> {
   switch (actionType) {
     case 'delete_users':
-      await prisma.user.delete({ where: { id: entityId } });
+      await prisma.users.delete({ where: { id: entityId } });
       break;
     case 'ban_users':
-      await prisma.userBan.create({
+      await prisma.user_bans.create({
         data: { userId: entityId, bannedById: 'system', reason: 'Bulk ban', isActive: true },
       });
       break;
     case 'unban_users':
-      await prisma.userBan.updateMany({
+      await prisma.user_bans.updateMany({
         where: { userId: entityId, isActive: true },
         data: { isActive: false, unbannedAt: new Date() },
       });
       break;
     case 'cancel_subscriptions':
-      await prisma.subscription.update({
+      await prisma.subscriptions.update({
         where: { id: entityId },
         data: { status: 'CANCELLED', cancelledAt: new Date() },
       });
@@ -167,7 +167,7 @@ async function processEntity(actionType: BulkActionType, entityId: string): Prom
 
 // Quick Bulk Actions
 export async function bulkDeleteUsers(userIds: string[], _adminId: string) {
-  const result = await prisma.user.deleteMany({ where: { id: { in: userIds } } });
+  const result = await prisma.users.deleteMany({ where: { id: { in: userIds } } });
   return { deleted: result.count };
 }
 
@@ -175,7 +175,7 @@ export async function bulkBanUsers(userIds: string[], adminId: string, reason: s
   const results = [];
   for (const userId of userIds) {
     try {
-      await prisma.userBan.create({
+      await prisma.user_bans.create({
         data: { userId, bannedById: adminId, reason, expiresAt, isActive: true },
       });
       results.push({ userId, success: true });
@@ -187,7 +187,7 @@ export async function bulkBanUsers(userIds: string[], adminId: string, reason: s
 }
 
 export async function bulkUnbanUsers(userIds: string[], adminId: string) {
-  const result = await prisma.userBan.updateMany({
+  const result = await prisma.user_bans.updateMany({
     where: { userId: { in: userIds }, isActive: true },
     data: { isActive: false, unbannedById: adminId, unbannedAt: new Date() },
   });
@@ -202,7 +202,7 @@ export async function bulkSendNotification(userIds: string[], title: string, mes
     body: message,
     status: 'PENDING' as const,
   }));
-  const result = await prisma.notificationLog.createMany({ data: notifications });
+  const result = await prisma.notification_logs.createMany({ data: notifications });
   return { sent: result.count };
 }
 
@@ -212,7 +212,7 @@ export async function bulkUpdateSubscriptions(
   params?: { days?: number; reason?: string }
 ) {
   if (action === 'cancel') {
-    const result = await prisma.subscription.updateMany({
+    const result = await prisma.subscriptions.updateMany({
       where: { id: { in: subscriptionIds } },
       data: { status: 'CANCELLED', cancelledAt: new Date(), cancelReason: params?.reason },
     });

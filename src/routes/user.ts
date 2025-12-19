@@ -146,7 +146,7 @@ router.post('/refresh-token', strictRateLimiter, refreshToken);
  *             schema:
  *               type: object
  *               properties:
- *                 user:
+ *                 users:
  *                   $ref: '#/components/schemas/User'
  *       401:
  *         description: Authentication required.
@@ -310,7 +310,7 @@ router.post('/me/avatar-upload-url', authenticateToken, authenticatedRateLimiter
  *               properties:
  *                 message:
  *                   type: string
- *                 user:
+ *                 users:
  *                   $ref: '#/components/schemas/User'
  *       403:
  *         description: Insufficient permissions.

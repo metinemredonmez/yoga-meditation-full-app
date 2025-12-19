@@ -23,7 +23,7 @@ export const createConversation = async (
     title?: string;
   }
 ) => {
-  return prisma.aIConversation.create({
+  return prisma.ai_conversations.create({
     data: {
       userId,
       type,
@@ -36,10 +36,10 @@ export const createConversation = async (
 
 // Get conversation
 export const getConversation = async (conversationId: string) => {
-  return prisma.aIConversation.findUnique({
+  return prisma.ai_conversations.findUnique({
     where: { id: conversationId },
     include: {
-      messages: {
+      ai_messages: {
         orderBy: { createdAt: 'asc' },
         take: MAX_CONVERSATION_MESSAGES,
       },
@@ -52,14 +52,14 @@ export const getUserConversations = async (
   userId: string,
   type?: ConversationType
 ) => {
-  return prisma.aIConversation.findMany({
+  return prisma.ai_conversations.findMany({
     where: {
       userId,
       ...(type && { type }),
       isActive: true,
     },
     include: {
-      messages: {
+      ai_messages: {
         orderBy: { createdAt: 'desc' },
         take: 1,
       },
@@ -74,8 +74,8 @@ export const sendMessage = async (
   content: string,
   audioUrl?: string
 ): Promise<{
-  userMessage: Awaited<ReturnType<typeof prisma.aIMessage.create>>;
-  assistantMessage: Awaited<ReturnType<typeof prisma.aIMessage.create>>;
+  userMessage: Awaited<ReturnType<typeof prisma.ai_messages.create>>;
+  assistantMessage: Awaited<ReturnType<typeof prisma.ai_messages.create>>;
   audioResponse?: { audioUrl: string; duration: number };
 }> => {
   const conversation = await getConversation(conversationId);
@@ -85,7 +85,7 @@ export const sendMessage = async (
   }
 
   // Save user message
-  const userMessage = await prisma.aIMessage.create({
+  const userMessage = await prisma.ai_messages.create({
     data: {
       conversationId,
       role: MessageRole.USER,
@@ -105,7 +105,7 @@ export const sendMessage = async (
   }, conversation.userId);
 
   // Save assistant message
-  const assistantMessage = await prisma.aIMessage.create({
+  const assistantMessage = await prisma.ai_messages.create({
     data: {
       conversationId,
       role: MessageRole.ASSISTANT,
@@ -115,7 +115,7 @@ export const sendMessage = async (
   });
 
   // Update conversation
-  await prisma.aIConversation.update({
+  await prisma.ai_conversations.update({
     where: { id: conversationId },
     data: { updatedAt: new Date() },
   });
@@ -129,8 +129,8 @@ export const sendVoiceMessage = async (
   audioUrl: string
 ): Promise<{
   transcription: string;
-  userMessage: Awaited<ReturnType<typeof prisma.aIMessage.create>>;
-  assistantMessage: Awaited<ReturnType<typeof prisma.aIMessage.create>>;
+  userMessage: Awaited<ReturnType<typeof prisma.ai_messages.create>>;
+  assistantMessage: Awaited<ReturnType<typeof prisma.ai_messages.create>>;
   audioResponse: { audioUrl: string; duration: number };
 }> => {
   const conversation = await getConversation(conversationId);
@@ -150,7 +150,7 @@ export const sendVoiceMessage = async (
   );
 
   // Generate audio response
-  const userPreference = await prisma.userAIPreference.findUnique({
+  const userPreference = await prisma.user_ai_preferences.findUnique({
     where: { userId: conversation.userId },
   });
 
@@ -164,7 +164,7 @@ export const sendVoiceMessage = async (
   );
 
   // Update assistant message with audio
-  await prisma.aIMessage.update({
+  await prisma.ai_messages.update({
     where: { id: assistantMessage.id },
     data: {
       audioUrl: audioResponse.audioUrl,
@@ -186,7 +186,7 @@ const buildConversationMessages = (
     type: ConversationType;
     contextType?: string | null;
     contextId?: string | null;
-    messages: { role: MessageRole; content: string }[];
+    ai_messages: { role: MessageRole; content: string }[];
   }
 ): ChatMessage[] => {
   const systemPrompt = getSystemPrompt(conversation.type);
@@ -196,7 +196,7 @@ const buildConversationMessages = (
   ];
 
   // Add conversation history
-  for (const msg of conversation.messages) {
+  for (const msg of conversation.ai_messages) {
     messages.push({
       role: msg.role.toLowerCase() as 'user' | 'assistant',
       content: msg.content,
@@ -247,7 +247,7 @@ export const generateResponse = async (
 
 // Delete conversation
 export const deleteConversation = async (conversationId: string) => {
-  return prisma.aIConversation.update({
+  return prisma.ai_conversations.update({
     where: { id: conversationId },
     data: { isActive: false },
   });
@@ -259,7 +259,7 @@ export const getConversationMessages = async (
   page: number = 1,
   limit: number = 50
 ) => {
-  return prisma.aIMessage.findMany({
+  return prisma.ai_messages.findMany({
     where: { conversationId },
     orderBy: { createdAt: 'asc' },
     skip: (page - 1) * limit,
@@ -269,10 +269,10 @@ export const getConversationMessages = async (
 
 // Build user context for personalization
 export const buildUserContext = async (userId: string): Promise<string> => {
-  const user = await prisma.user.findUnique({
+  const user = await prisma.users.findUnique({
     where: { id: userId },
     include: {
-      videoProgress: {
+      video_progress: {
         orderBy: { updatedAt: 'desc' },
         take: 10,
       },
@@ -287,7 +287,7 @@ export const buildUserContext = async (userId: string): Promise<string> => {
     contextParts.push(`User's name: ${user.firstName}`);
   }
 
-  const completedClasses = user.videoProgress.filter((p) => p.completed).length;
+  const completedClasses = user.video_progress.filter((p) => p.completed).length;
   if (completedClasses > 0) {
     contextParts.push(`User has completed ${completedClasses} classes`);
   }
@@ -297,10 +297,10 @@ export const buildUserContext = async (userId: string): Promise<string> => {
 
 // Build class context for feedback
 export const buildClassContext = async (classId: string): Promise<string> => {
-  const classData = await prisma.class.findUnique({
+  const classData = await prisma.classes.findUnique({
     where: { id: classId },
     include: {
-      instructor: {
+      users: {
         select: {
           firstName: true,
           lastName: true,
@@ -311,5 +311,5 @@ export const buildClassContext = async (classId: string): Promise<string> => {
 
   if (!classData) return '';
 
-  return `Class: ${classData.title}. Instructor: ${classData.instructor.firstName} ${classData.instructor.lastName}.`;
+  return `Class: ${classData.title}. Instructor: ${classData.users.firstName} ${classData.users.lastName}.`;
 };

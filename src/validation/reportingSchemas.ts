@@ -224,6 +224,6 @@ export const customQuerySchema = z.object({
     description: z.string().optional(),
     queryType: z.enum(['SQL', 'PRISMA', 'AGGREGATION']),
     query: z.string().min(1),
-    parameters: z.record(z.any()).optional(),
+    parameters: z.record(z.string(), z.any()).optional(),
   }),
 });

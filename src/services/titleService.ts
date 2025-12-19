@@ -15,20 +15,20 @@ export async function getTitles(filters?: { rarity?: TitleRarity; isActive?: boo
     where.rarity = filters.rarity;
   }
 
-  return prisma.title.findMany({
+  return prisma.titles.findMany({
     where,
     orderBy: [{ rarity: 'desc' }, { name: 'asc' }],
   });
 }
 
 export async function getTitleById(id: string) {
-  return prisma.title.findUnique({
+  return prisma.titles.findUnique({
     where: { id },
   });
 }
 
 export async function getTitleBySlug(slug: string) {
-  return prisma.title.findUnique({
+  return prisma.titles.findUnique({
     where: { slug },
   });
 }
@@ -38,9 +38,9 @@ export async function getTitleBySlug(slug: string) {
 // ============================================
 
 export async function getUserTitles(userId: string) {
-  const userTitles = await prisma.userTitle.findMany({
+  const userTitles = await prisma.user_titles.findMany({
     where: { userId },
-    include: { title: true },
+    include: { titles: true },
     orderBy: { earnedAt: 'desc' },
   });
 
@@ -49,7 +49,7 @@ export async function getUserTitles(userId: string) {
 
 export async function unlockTitle(userId: string, titleId: string) {
   // Check if already owned
-  const existing = await prisma.userTitle.findUnique({
+  const existing = await prisma.user_titles.findUnique({
     where: { userId_titleId: { userId, titleId } },
   });
 
@@ -57,9 +57,9 @@ export async function unlockTitle(userId: string, titleId: string) {
     return { success: false, message: 'Title already owned', userTitle: existing };
   }
 
-  const userTitle = await prisma.userTitle.create({
+  const userTitle = await prisma.user_titles.create({
     data: { userId, titleId },
-    include: { title: true },
+    include: { titles: true },
   });
 
   logger.info({ userId, titleId }, 'Title unlocked');
@@ -69,7 +69,7 @@ export async function unlockTitle(userId: string, titleId: string) {
 
 export async function equipTitle(userId: string, titleId: string) {
   // Check if user owns the title
-  const userTitle = await prisma.userTitle.findUnique({
+  const userTitle = await prisma.user_titles.findUnique({
     where: { userId_titleId: { userId, titleId } },
   });
 
@@ -78,19 +78,19 @@ export async function equipTitle(userId: string, titleId: string) {
   }
 
   // Unequip current title
-  await prisma.userTitle.updateMany({
+  await prisma.user_titles.updateMany({
     where: { userId, isEquipped: true },
     data: { isEquipped: false },
   });
 
   // Equip new title
-  await prisma.userTitle.update({
+  await prisma.user_titles.update({
     where: { id: userTitle.id },
     data: { isEquipped: true },
   });
 
   // Update user's equipped title ID
-  await prisma.user.update({
+  await prisma.users.update({
     where: { id: userId },
     data: { equippedTitleId: titleId },
   });
@@ -101,12 +101,12 @@ export async function equipTitle(userId: string, titleId: string) {
 }
 
 export async function unequipTitle(userId: string) {
-  await prisma.userTitle.updateMany({
+  await prisma.user_titles.updateMany({
     where: { userId, isEquipped: true },
     data: { isEquipped: false },
   });
 
-  await prisma.user.update({
+  await prisma.users.update({
     where: { id: userId },
     data: { equippedTitleId: null },
   });
@@ -115,12 +115,12 @@ export async function unequipTitle(userId: string) {
 }
 
 export async function getEquippedTitle(userId: string) {
-  const equippedTitle = await prisma.userTitle.findFirst({
+  const equippedTitle = await prisma.user_titles.findFirst({
     where: { userId, isEquipped: true },
-    include: { title: true },
+    include: { titles: true },
   });
 
-  return equippedTitle?.title || null;
+  return equippedTitle?.titles || null;
 }
 
 // ============================================
@@ -131,12 +131,12 @@ export async function checkTitleUnlocks(userId: string) {
   const newTitles: any[] = [];
 
   // Get all titles with unlock conditions
-  const titles = await prisma.title.findMany({
+  const titles = await prisma.titles.findMany({
     where: { isActive: true },
   });
 
   // Get user's current titles
-  const userTitles = await prisma.userTitle.findMany({
+  const userTitles = await prisma.user_titles.findMany({
     where: { userId },
     select: { titleId: true },
   });
@@ -144,9 +144,9 @@ export async function checkTitleUnlocks(userId: string) {
 
   // Get user stats
   const [userLevel, badgeCount, achievements] = await Promise.all([
-    prisma.userLevel.findUnique({ where: { userId } }),
-    prisma.userBadge.count({ where: { userId } }),
-    prisma.userAchievement.findMany({
+    prisma.user_levels.findUnique({ where: { userId } }),
+    prisma.user_badges.count({ where: { userId } }),
+    prisma.user_achievements.findMany({
       where: { userId, isCompleted: true },
       select: { achievementId: true },
     }),
@@ -222,7 +222,7 @@ export async function createTitle(data: {
   rarity: TitleRarity;
   color?: string;
 }) {
-  return prisma.title.create({ data });
+  return prisma.titles.create({ data });
 }
 
 export async function updateTitle(
@@ -238,7 +238,7 @@ export async function updateTitle(
     isActive: boolean;
   }>,
 ) {
-  return prisma.title.update({
+  return prisma.titles.update({
     where: { id },
     data,
   });
@@ -246,8 +246,8 @@ export async function updateTitle(
 
 export async function deleteTitle(id: string) {
   // Remove from all users first
-  await prisma.userTitle.deleteMany({ where: { titleId: id } });
-  return prisma.title.delete({ where: { id } });
+  await prisma.user_titles.deleteMany({ where: { titleId: id } });
+  return prisma.titles.delete({ where: { id } });
 }
 
 export async function grantTitleToUser(userId: string, titleId: string) {
@@ -255,7 +255,7 @@ export async function grantTitleToUser(userId: string, titleId: string) {
 }
 
 export async function revokeTitleFromUser(userId: string, titleId: string) {
-  const userTitle = await prisma.userTitle.findUnique({
+  const userTitle = await prisma.user_titles.findUnique({
     where: { userId_titleId: { userId, titleId } },
   });
 
@@ -265,13 +265,13 @@ export async function revokeTitleFromUser(userId: string, titleId: string) {
 
   // Unequip if equipped
   if (userTitle.isEquipped) {
-    await prisma.user.update({
+    await prisma.users.update({
       where: { id: userId },
       data: { equippedTitleId: null },
     });
   }
 
-  await prisma.userTitle.delete({ where: { id: userTitle.id } });
+  await prisma.user_titles.delete({ where: { id: userTitle.id } });
 
   return { success: true };
 }

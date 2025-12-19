@@ -1,7 +1,7 @@
 import { prisma } from '../utils/database';
 import { getRedisClient } from '../utils/redis';
 import { logger } from '../utils/logger';
-import crypto from 'crypto';
+import * as crypto from 'crypto';
 
 // ============================================
 // Types
@@ -66,73 +66,88 @@ export async function createExperiment(data: {
   targetAudience?: TargetAudience;
   metrics: string[];
 }): Promise<Experiment> {
-  const experiment = await prisma.experiment.create({
-    data: {
-      name: data.name,
-      description: data.description,
-      status: 'draft',
-      variants: data.variants.map((v, i) => ({
-        id: `variant-${i + 1}`,
-        ...v
-      })),
-      targetAudience: data.targetAudience,
-      metrics: data.metrics
-    }
-  });
+  // TODO: Add experiment model to Prisma schema
+  throw new Error('Experiment model not yet implemented in database schema');
 
-  logger.info({ experimentId: experiment.id, name: experiment.name }, 'Experiment created');
+  // const experiment = await prisma.experiments.create({
+  //   data: {
+  //     name: data.name,
+  //     description: data.description,
+  //     status: 'draft',
+  //     variants: data.variants.map((v, i) => ({
+  //       id: `variant-${i + 1}`,
+  //       ...v
+  //     })),
+  //     targetAudience: data.targetAudience,
+  //     metrics: data.metrics
+  //   }
+  // });
 
-  return experiment as unknown as Experiment;
+  // logger.info({ experimentId: experiment.id, name: experiment.name }, 'Experiment created');
+
+  // return experiment as unknown as Experiment;
 }
 
 export async function startExperiment(experimentId: string): Promise<void> {
-  await prisma.experiment.update({
-    where: { id: experimentId },
-    data: {
-      status: 'running',
-      startDate: new Date()
-    }
-  });
+  // TODO: Add experiment model to Prisma schema
+  throw new Error('Experiment model not yet implemented in database schema');
 
-  // Clear any cached assignments
-  const redis = getRedisClient();
-  if (redis) {
-    const keys = await redis.keys(`ab:assignment:${experimentId}:*`);
-    if (keys.length > 0) {
-      await redis.del(...keys);
-    }
-  }
+  // await prisma.experiments.update({
+  //   where: { id: experimentId },
+  //   data: {
+  //     status: 'running',
+  //     startDate: new Date()
+  //   }
+  // });
 
-  logger.info({ experimentId }, 'Experiment started');
+  // // Clear any cached assignments
+  // const redis = getRedisClient();
+  // if (redis) {
+  //   const keys = await redis.keys(`ab:assignment:${experimentId}:*`);
+  //   if (keys.length > 0) {
+  //     await redis.del(...keys);
+  //   }
+  // }
+
+  // logger.info({ experimentId }, 'Experiment started');
 }
 
 export async function stopExperiment(experimentId: string): Promise<void> {
-  await prisma.experiment.update({
-    where: { id: experimentId },
-    data: {
-      status: 'completed',
-      endDate: new Date()
-    }
-  });
+  // TODO: Add experiment model to Prisma schema
+  throw new Error('Experiment model not yet implemented in database schema');
 
-  logger.info({ experimentId }, 'Experiment stopped');
+  // await prisma.experiments.update({
+  //   where: { id: experimentId },
+  //   data: {
+  //     status: 'completed',
+  //     endDate: new Date()
+  //   }
+  // });
+
+  // logger.info({ experimentId }, 'Experiment stopped');
 }
 
 export async function getExperiment(experimentId: string): Promise<Experiment | null> {
-  const experiment = await prisma.experiment.findUnique({
-    where: { id: experimentId }
-  });
+  // TODO: Add experiment model to Prisma schema
+  throw new Error('Experiment model not yet implemented in database schema');
 
-  return experiment as unknown as Experiment | null;
+  // const experiment = await prisma.experiments.findUnique({
+  //   where: { id: experimentId }
+  // });
+
+  // return experiment as unknown as Experiment | null;
 }
 
 export async function listExperiments(status?: string): Promise<Experiment[]> {
-  const experiments = await prisma.experiment.findMany({
-    where: status ? { status } : undefined,
-    orderBy: { createdAt: 'desc' }
-  });
+  // TODO: Add experiment model to Prisma schema
+  throw new Error('Experiment model not yet implemented in database schema');
 
-  return experiments as unknown as Experiment[];
+  // const experiments = await prisma.experiments.findMany({
+  //   where: status ? { status } : undefined,
+  //   orderBy: { createdAt: 'desc' }
+  // });
+
+  // return experiments as unknown as Experiment[];
 }
 
 // ============================================
@@ -156,92 +171,98 @@ export async function getVariantAssignment(
     }
   }
 
+  // TODO: Add experiment models to Prisma schema
+  return null;
+
   // Check database for existing assignment
-  const existing = await prisma.experimentAssignment.findUnique({
-    where: {
-      experimentId_userId: { experimentId, userId }
-    }
-  });
+  // const existing = await prisma.experiment_assignments.findUnique({
+  //   where: {
+  //     experimentId_userId: { experimentId, userId }
+  //   }
+  // });
 
-  if (existing) {
-    const experiment = await getExperiment(experimentId);
-    const variant = experiment?.variants.find(v => v.id === existing.variantId);
+  // if (existing) {
+  //   const experiment = await getExperiment(experimentId);
+  //   const variant = experiment?.variants.find(v => v.id === existing.variantId);
 
-    if (variant) {
-      const assignment: ExperimentAssignment = {
-        experimentId,
-        variantId: variant.id,
-        variantName: variant.name,
-        config: variant.config
-      };
+  //   if (variant) {
+  //     const assignment: ExperimentAssignment = {
+  //       experimentId,
+  //       variantId: variant.id,
+  //       variantName: variant.name,
+  //       config: variant.config
+  //     };
 
-      // Cache assignment
-      if (redis) {
-        await redis.setex(cacheKey, 86400, JSON.stringify(assignment));
-      }
+  //     // Cache assignment
+  //     if (redis) {
+  //       await redis.setex(cacheKey, 86400, JSON.stringify(assignment));
+  //     }
 
-      return assignment;
-    }
-  }
+  //     return assignment;
+  //   }
+  // }
 
-  // Get experiment and assign variant
-  const experiment = await getExperiment(experimentId);
+  // // Get experiment and assign variant
+  // const experiment = await getExperiment(experimentId);
 
-  if (!experiment || experiment.status !== 'running') {
-    return null;
-  }
+  // if (!experiment || experiment.status !== 'running') {
+  //   return null;
+  // }
 
-  // Check if user is in target audience
-  if (!isUserInTargetAudience(userId, experiment.targetAudience)) {
-    return null;
-  }
+  // // Check if user is in target audience
+  // if (!isUserInTargetAudience(userId, experiment.targetAudience)) {
+  //   return null;
+  // }
 
-  // Assign variant based on weights
-  const variant = assignVariant(userId, experimentId, experiment.variants);
+  // // Assign variant based on weights
+  // const variant = assignVariant(userId, experimentId, experiment.variants);
 
-  if (!variant) {
-    return null;
-  }
+  // if (!variant) {
+  //   return null;
+  // }
 
-  // Save assignment
-  await prisma.experimentAssignment.create({
-    data: {
-      experimentId,
-      userId,
-      variantId: variant.id,
-      assignedAt: new Date()
-    }
-  });
+  // // Save assignment
+  // await prisma.experiment_assignments.create({
+  //   data: {
+  //     experimentId,
+  //     userId,
+  //     variantId: variant.id,
+  //     assignedAt: new Date()
+  //   }
+  // });
 
-  const assignment: ExperimentAssignment = {
-    experimentId,
-    variantId: variant.id,
-    variantName: variant.name,
-    config: variant.config
-  };
+  // const assignment: ExperimentAssignment = {
+  //   experimentId,
+  //   variantId: variant.id,
+  //   variantName: variant.name,
+  //   config: variant.config
+  // };
 
-  // Cache assignment
-  if (redis) {
-    await redis.setex(cacheKey, 86400, JSON.stringify(assignment));
-  }
+  // // Cache assignment
+  // if (redis) {
+  //   await redis.setex(cacheKey, 86400, JSON.stringify(assignment));
+  // }
 
-  logger.debug({ userId, experimentId, variantId: variant.id }, 'User assigned to variant');
+  // logger.debug({ userId, experimentId, variantId: variant.id }, 'User assigned to variant');
 
-  return assignment;
+  // return assignment;
 }
 
 export async function getAllAssignments(userId: string): Promise<ExperimentAssignment[]> {
-  const runningExperiments = await listExperiments('running');
-  const assignments: ExperimentAssignment[] = [];
+  // TODO: Add experiment models to Prisma schema
+  return [];
 
-  for (const experiment of runningExperiments) {
-    const assignment = await getVariantAssignment(userId, experiment.id);
-    if (assignment) {
-      assignments.push(assignment);
-    }
-  }
+  // const runningExperiments = await listExperiments('running');
+  // const assignments: ExperimentAssignment[] = [];
 
-  return assignments;
+  // for (const experiment of runningExperiments) {
+  //   const assignment = await getVariantAssignment(userId, experiment.id);
+  //   if (assignment) {
+  //     assignments.push(assignment);
+  //   }
+  // }
+
+  // return assignments;
 }
 
 function assignVariant(userId: string, experimentId: string, variants: Variant[]): Variant | null {
@@ -284,7 +305,7 @@ async function isUserInTargetAudience(
 
   // Check filters
   if (targetAudience.filters) {
-    const user = await prisma.user.findUnique({
+    const user = await prisma.users.findUnique({
       where: { id: userId },
       select: {
         subscriptionTier: true,
@@ -318,34 +339,37 @@ export async function trackExperimentEvent(
   eventName: string,
   value: number = 1
 ): Promise<void> {
-  // Get user's assignment
-  const assignment = await getVariantAssignment(userId, experimentId);
+  // TODO: Add experiment models to Prisma schema
+  return;
 
-  if (!assignment) {
-    return;
-  }
+  // // Get user's assignment
+  // const assignment = await getVariantAssignment(userId, experimentId);
 
-  try {
-    await prisma.experimentEvent.create({
-      data: {
-        experimentId,
-        variantId: assignment.variantId,
-        userId,
-        eventName,
-        value,
-        createdAt: new Date()
-      }
-    });
+  // if (!assignment) {
+  //   return;
+  // }
 
-    // Increment counter in Redis for real-time stats
-    const redis = getRedisClient();
-    if (redis) {
-      const key = `ab:events:${experimentId}:${assignment.variantId}:${eventName}`;
-      await redis.incrbyfloat(key, value);
-    }
-  } catch (error) {
-    logger.error({ err: error, experimentId, eventName }, 'Failed to track experiment event');
-  }
+  // try {
+  //   await prisma.experiment_events.create({
+  //     data: {
+  //       experimentId,
+  //       variantId: assignment.variantId,
+  //       userId,
+  //       eventName,
+  //       value,
+  //       createdAt: new Date()
+  //     }
+  //   });
+
+  //   // Increment counter in Redis for real-time stats
+  //   const redis = getRedisClient();
+  //   if (redis) {
+  //     const key = `ab:events:${experimentId}:${assignment.variantId}:${eventName}`;
+  //     await redis.incrbyfloat(key, value);
+  //   }
+  // } catch (error) {
+  //   logger.error({ err: error, experimentId, eventName }, 'Failed to track experiment event');
+  // }
 }
 
 export async function getExperimentResults(experimentId: string): Promise<{
@@ -363,74 +387,77 @@ export async function getExperimentResults(experimentId: string): Promise<{
   winner?: string;
   confidence?: number;
 }> {
-  const experiment = await getExperiment(experimentId);
+  // TODO: Add experiment models to Prisma schema
+  throw new Error('Experiment model not yet implemented in database schema');
 
-  if (!experiment) {
-    throw new Error('Experiment not found');
-  }
+  // const experiment = await getExperiment(experimentId);
 
-  const results = [];
+  // if (!experiment) {
+  //   throw new Error('Experiment not found');
+  // }
 
-  for (const variant of experiment.variants) {
-    // Get assignment count
-    const sampleSize = await prisma.experimentAssignment.count({
-      where: { experimentId, variantId: variant.id }
-    });
+  // const results = [];
 
-    // Get metrics
-    const metricsData: Record<string, { total: number; count: number; average: number }> = {};
+  // for (const variant of experiment.variants) {
+  //   // Get assignment count
+  //   const sampleSize = await prisma.experiment_assignments.count({
+  //     where: { experimentId, variantId: variant.id }
+  //   });
 
-    for (const metric of experiment.metrics) {
-      const events = await prisma.experimentEvent.aggregate({
-        where: {
-          experimentId,
-          variantId: variant.id,
-          eventName: metric
-        },
-        _sum: { value: true },
-        _count: true
-      });
+  //   // Get metrics
+  //   const metricsData: Record<string, { total: number; count: number; average: number }> = {};
 
-      const total = events._sum.value || 0;
-      const count = events._count || 0;
+  //   for (const metric of experiment.metrics) {
+  //     const events = await prisma.experiment_events.aggregate({
+  //       where: {
+  //         experimentId,
+  //         variantId: variant.id,
+  //         eventName: metric
+  //       },
+  //       _sum: { value: true },
+  //       _count: true
+  //     });
 
-      metricsData[metric] = {
-        total,
-        count,
-        average: count > 0 ? total / count : 0
-      };
-    }
+  //     const total = events._sum.value || 0;
+  //     const count = events._count || 0;
 
-    results.push({
-      variantId: variant.id,
-      variantName: variant.name,
-      metrics: metricsData,
-      sampleSize
-    });
-  }
+  //     metricsData[metric] = {
+  //       total,
+  //       count,
+  //       average: count > 0 ? total / count : 0
+  //     };
+  //   }
 
-  // Simple winner detection (variant with highest conversion)
-  // In production, use statistical significance testing
-  let winner: string | undefined;
-  let highestConversion = 0;
+  //   results.push({
+  //     variantId: variant.id,
+  //     variantName: variant.name,
+  //     metrics: metricsData,
+  //     sampleSize
+  //   });
+  // }
 
-  const primaryMetric = experiment.metrics[0];
-  if (primaryMetric) {
-    for (const result of results) {
-      const conversion = result.metrics[primaryMetric]?.average || 0;
-      if (conversion > highestConversion) {
-        highestConversion = conversion;
-        winner = result.variantId;
-      }
-    }
-  }
+  // // Simple winner detection (variant with highest conversion)
+  // // In production, use statistical significance testing
+  // let winner: string | undefined;
+  // let highestConversion = 0;
 
-  return {
-    experiment,
-    results,
-    winner,
-    confidence: undefined // Would need proper statistical analysis
-  };
+  // const primaryMetric = experiment.metrics[0];
+  // if (primaryMetric) {
+  //   for (const result of results) {
+  //     const conversion = result.metrics[primaryMetric]?.average || 0;
+  //     if (conversion > highestConversion) {
+  //       highestConversion = conversion;
+  //       winner = result.variantId;
+  //     }
+  //   }
+  // }
+
+  // return {
+  //   experiment,
+  //   results,
+  //   winner,
+  //   confidence: undefined // Would need proper statistical analysis
+  // };
 }
 
 // ============================================
@@ -444,20 +471,21 @@ export async function getFeatureFlag(
 ): Promise<boolean> {
   const redis = getRedisClient();
 
-  // Check if there's an experiment for this feature
-  const experiment = await prisma.experiment.findFirst({
-    where: {
-      name: flagName,
-      status: 'running'
-    }
-  });
+  // TODO: Uncomment when experiment models are added
+  // // Check if there's an experiment for this feature
+  // const experiment = await prisma.experiments.findFirst({
+  //   where: {
+  //     name: flagName,
+  //     status: 'running'
+  //   }
+  // });
 
-  if (experiment && userId) {
-    const assignment = await getVariantAssignment(userId, experiment.id);
-    if (assignment) {
-      return (assignment.config.enabled as boolean) ?? defaultValue;
-    }
-  }
+  // if (experiment && userId) {
+  //   const assignment = await getVariantAssignment(userId, experiment.id);
+  //   if (assignment) {
+  //     return (assignment.config.enabled as boolean) ?? defaultValue;
+  //   }
+  // }
 
   // Check feature flag directly
   if (redis) {
@@ -468,18 +496,22 @@ export async function getFeatureFlag(
   }
 
   // Check database
-  const flag = await prisma.featureFlag.findUnique({
-    where: { name: flagName }
+  const flag = await prisma.feature_flags.findUnique({
+    where: { key: flagName }
   });
 
-  return flag?.enabled ?? defaultValue;
+  return flag?.isEnabled ?? defaultValue;
 }
 
 export async function setFeatureFlag(flagName: string, enabled: boolean): Promise<void> {
-  await prisma.featureFlag.upsert({
-    where: { name: flagName },
-    create: { name: flagName, enabled },
-    update: { enabled }
+  await prisma.feature_flags.upsert({
+    where: { key: flagName },
+    create: {
+      key: flagName,
+      name: flagName,
+      isEnabled: enabled
+    },
+    update: { isEnabled: enabled }
   });
 
   const redis = getRedisClient();

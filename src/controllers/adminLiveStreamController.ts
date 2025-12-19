@@ -22,20 +22,20 @@ export async function getAllStreams(req: AuthRequest, res: Response) {
     if (type) where.type = type;
 
     const [items, total] = await Promise.all([
-      prisma.liveStream.findMany({
+      prisma.live_streams.findMany({
         where,
         include: {
-          instructor: {
+          instructor_profiles: {
             include: {
-              user: {
+              users: {
                 select: { firstName: true, lastName: true, email: true },
               },
             },
           },
           _count: {
             select: {
-              participants: true,
-              registrations: true,
+              live_stream_participants: true,
+              live_stream_registrations: true,
             },
           },
         },
@@ -43,7 +43,7 @@ export async function getAllStreams(req: AuthRequest, res: Response) {
         skip: (page - 1) * limit,
         take: limit,
       }),
-      prisma.liveStream.count({ where }),
+      prisma.live_streams.count({ where }),
     ]);
 
     res.json({
@@ -66,35 +66,35 @@ export async function getStreamDetails(req: AuthRequest, res: Response) {
   try {
     const streamId = req.params.id!;
 
-    const stream = await prisma.liveStream.findUnique({
+    const stream = await prisma.live_streams.findUnique({
       where: { id: streamId },
       include: {
-        instructor: {
+        instructor_profiles: {
           include: {
-            user: {
+            users: {
               select: { firstName: true, lastName: true, email: true },
             },
           },
         },
-        participants: {
+        live_stream_participants: {
           include: {
-            user: {
+            users: {
               select: { firstName: true, lastName: true, email: true },
             },
           },
         },
-        registrations: {
+        live_stream_registrations: {
           include: {
-            user: {
+            users: {
               select: { firstName: true, lastName: true, email: true },
             },
           },
         },
-        recordings: true,
+        live_stream_recordings: true,
         _count: {
           select: {
-            chatMessages: true,
-            reactions: true,
+            live_stream_chats: true,
+            live_stream_reactions: true,
           },
         },
       },
@@ -117,7 +117,7 @@ export async function forceEndStream(req: AuthRequest, res: Response) {
     const streamId = req.params.id!;
     const { reason } = req.body;
 
-    const stream = await prisma.liveStream.findUnique({
+    const stream = await prisma.live_streams.findUnique({
       where: { id: streamId },
     });
 
@@ -131,7 +131,7 @@ export async function forceEndStream(req: AuthRequest, res: Response) {
 
     // End the stream
     const now = new Date();
-    await prisma.liveStreamParticipant.updateMany({
+    await prisma.live_stream_participants.updateMany({
       where: { streamId, isActive: true },
       data: { isActive: false, leftAt: now },
     });
@@ -140,7 +140,7 @@ export async function forceEndStream(req: AuthRequest, res: Response) {
       ? Math.round((now.getTime() - stream.actualStartAt.getTime()) / 60000)
       : 0;
 
-    const updated = await prisma.liveStream.update({
+    const updated = await prisma.live_streams.update({
       where: { id: streamId },
       data: {
         status: 'ENDED',
@@ -210,19 +210,19 @@ export async function getStreamAnalytics(req: AuthRequest, res: Response) {
       streamsByLevel,
     ] = await Promise.all([
       // Total streams in period
-      prisma.liveStream.count({
+      prisma.live_streams.count({
         where: {
           createdAt: { gte: startDate, lte: endDate },
         },
       }),
 
       // Currently live
-      prisma.liveStream.count({
+      prisma.live_streams.count({
         where: { status: 'LIVE' },
       }),
 
       // Total views
-      prisma.liveStream.aggregate({
+      prisma.live_streams.aggregate({
         where: {
           createdAt: { gte: startDate, lte: endDate },
         },
@@ -230,7 +230,7 @@ export async function getStreamAnalytics(req: AuthRequest, res: Response) {
       }),
 
       // Total unique participants
-      prisma.liveStreamParticipant.groupBy({
+      prisma.live_stream_participants.groupBy({
         by: ['userId'],
         where: {
           createdAt: { gte: startDate, lte: endDate },
@@ -238,7 +238,7 @@ export async function getStreamAnalytics(req: AuthRequest, res: Response) {
       }).then(r => r.length),
 
       // Average duration
-      prisma.liveStream.aggregate({
+      prisma.live_streams.aggregate({
         where: {
           status: 'ENDED',
           recordingDuration: { not: null },
@@ -248,7 +248,7 @@ export async function getStreamAnalytics(req: AuthRequest, res: Response) {
       }),
 
       // Top instructors
-      prisma.liveStream.groupBy({
+      prisma.live_streams.groupBy({
         by: ['instructorId'],
         where: {
           createdAt: { gte: startDate, lte: endDate },
@@ -260,7 +260,7 @@ export async function getStreamAnalytics(req: AuthRequest, res: Response) {
       }),
 
       // Streams by type
-      prisma.liveStream.groupBy({
+      prisma.live_streams.groupBy({
         by: ['type'],
         where: {
           createdAt: { gte: startDate, lte: endDate },
@@ -269,7 +269,7 @@ export async function getStreamAnalytics(req: AuthRequest, res: Response) {
       }),
 
       // Streams by level
-      prisma.liveStream.groupBy({
+      prisma.live_streams.groupBy({
         by: ['level'],
         where: {
           createdAt: { gte: startDate, lte: endDate },
@@ -280,10 +280,10 @@ export async function getStreamAnalytics(req: AuthRequest, res: Response) {
 
     // Get instructor details for top instructors
     const instructorIds = topInstructors.map(i => i.instructorId);
-    const instructors = await prisma.instructorProfile.findMany({
+    const instructors = await prisma.instructor_profiles.findMany({
       where: { id: { in: instructorIds } },
       include: {
-        user: {
+        users: {
           select: { firstName: true, lastName: true },
         },
       },
@@ -328,7 +328,7 @@ export async function getDailyStreamStats(req: AuthRequest, res: Response) {
     const days = parseInt(req.query.days as string) || 30;
     const startDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
 
-    const streams = await prisma.liveStream.findMany({
+    const streams = await prisma.live_streams.findMany({
       where: {
         createdAt: { gte: startDate },
       },
@@ -385,7 +385,7 @@ export async function updateStreamSettings(req: AuthRequest, res: Response) {
     const streamId = req.params.id!;
     const { chatEnabled, handRaiseEnabled, maxParticipants } = req.body;
 
-    const stream = await prisma.liveStream.update({
+    const stream = await prisma.live_streams.update({
       where: { id: streamId },
       data: {
         ...(chatEnabled !== undefined && { chatEnabled }),
@@ -409,11 +409,11 @@ export async function updateStreamSettings(req: AuthRequest, res: Response) {
 
 export async function getAllSchedules(req: AuthRequest, res: Response) {
   try {
-    const schedules = await prisma.liveStreamSchedule.findMany({
+    const schedules = await prisma.live_stream_schedules.findMany({
       include: {
-        instructor: {
+        instructor_profiles: {
           include: {
-            user: {
+            users: {
               select: { firstName: true, lastName: true, email: true },
             },
           },
@@ -434,7 +434,7 @@ export async function toggleScheduleStatus(req: AuthRequest, res: Response) {
     const adminId = req.user!.id;
     const scheduleId = req.params.scheduleId!;
 
-    const schedule = await prisma.liveStreamSchedule.findUnique({
+    const schedule = await prisma.live_stream_schedules.findUnique({
       where: { id: scheduleId },
     });
 
@@ -442,7 +442,7 @@ export async function toggleScheduleStatus(req: AuthRequest, res: Response) {
       return res.status(404).json({ success: false, error: 'Schedule not found' });
     }
 
-    const updated = await prisma.liveStreamSchedule.update({
+    const updated = await prisma.live_stream_schedules.update({
       where: { id: scheduleId },
       data: { isActive: !schedule.isActive },
     });

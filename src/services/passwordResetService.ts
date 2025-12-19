@@ -27,7 +27,7 @@ export interface ResetPasswordResult {
 }
 
 export async function requestPasswordReset(email: string): Promise<RequestResetResult> {
-  const user = await prisma.user.findUnique({
+  const user = await prisma.users.findUnique({
     where: { email: email.toLowerCase() },
     select: { id: true, email: true, firstName: true },
   });
@@ -42,7 +42,7 @@ export async function requestPasswordReset(email: string): Promise<RequestResetR
   }
 
   // Invalidate any existing tokens for this user
-  await prisma.passwordResetToken.updateMany({
+  await prisma.password_reset_tokens.updateMany({
     where: {
       userId: user.id,
       usedAt: null,
@@ -58,7 +58,7 @@ export async function requestPasswordReset(email: string): Promise<RequestResetR
   const hashedToken = hashToken(rawToken);
   const expiresAt = new Date(Date.now() + TOKEN_EXPIRY_HOURS * 60 * 60 * 1000);
 
-  await prisma.passwordResetToken.create({
+  await prisma.password_reset_tokens.create({
     data: {
       userId: user.id,
       token: hashedToken,
@@ -91,7 +91,7 @@ export async function requestPasswordReset(email: string): Promise<RequestResetR
 export async function validateResetToken(token: string): Promise<{ valid: boolean; userId?: string }> {
   const hashedToken = hashToken(token);
 
-  const resetToken = await prisma.passwordResetToken.findUnique({
+  const resetToken = await prisma.password_reset_tokens.findUnique({
     where: { token: hashedToken },
     select: {
       id: true,
@@ -136,7 +136,7 @@ export async function resetPassword(token: string, newPassword: string): Promise
   }
 
   // Get current password hash for history
-  const user = await prisma.user.findUnique({
+  const user = await prisma.users.findUnique({
     where: { id: validation.userId },
     select: { passwordHash: true },
   });
@@ -152,12 +152,12 @@ export async function resetPassword(token: string, newPassword: string): Promise
   // Use transaction to ensure atomicity
   await prisma.$transaction([
     // Update user password
-    prisma.user.update({
+    prisma.users.update({
       where: { id: validation.userId },
       data: { passwordHash: hashedPassword },
     }),
     // Mark token as used
-    prisma.passwordResetToken.update({
+    prisma.password_reset_tokens.update({
       where: { token: hashedToken },
       data: { usedAt: new Date() },
     }),
@@ -173,7 +173,7 @@ export async function resetPassword(token: string, newPassword: string): Promise
 
 // Cleanup expired tokens (can be run as a cron job)
 export async function cleanupExpiredTokens(): Promise<number> {
-  const result = await prisma.passwordResetToken.deleteMany({
+  const result = await prisma.password_reset_tokens.deleteMany({
     where: {
       OR: [
         { expiresAt: { lt: new Date() } },

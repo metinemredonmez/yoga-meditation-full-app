@@ -46,7 +46,7 @@ export async function listClasses(req: Request, res: Response) {
     const query = listQuerySchema.parse(req.query);
     const { status, level, category, instructorId, search, page, limit } = query;
 
-    const where: Prisma.ClassWhereInput = {};
+    const where: Prisma.classesWhereInput = {};
 
     if (status) where.status = status;
     if (level) where.level = level;
@@ -60,13 +60,13 @@ export async function listClasses(req: Request, res: Response) {
     }
 
     const [classes, total] = await Promise.all([
-      prisma.class.findMany({
+      prisma.classes.findMany({
         where,
         skip: (page - 1) * limit,
         take: limit,
         orderBy: { createdAt: 'desc' },
         include: {
-          instructor: {
+          users: {
             select: {
               id: true,
               firstName: true,
@@ -82,7 +82,7 @@ export async function listClasses(req: Request, res: Response) {
           },
         },
       }),
-      prisma.class.count({ where }),
+      prisma.classes.count({ where }),
     ]);
 
     // Calculate average rating for each class
@@ -113,7 +113,7 @@ export async function createClass(req: Request, res: Response) {
   try {
     const payload = createClassSchema.parse(req.body);
 
-    const instructor = await prisma.user.findUnique({
+    const instructor = await prisma.users.findUnique({
       where: { id: payload.instructorId },
       select: { id: true, role: true },
     });
@@ -122,7 +122,7 @@ export async function createClass(req: Request, res: Response) {
       return res.status(400).json({ error: 'Instructor must be a teacher or admin' });
     }
 
-    const yogaClass = await prisma.class.create({
+    const yogaClass = await prisma.classes.create({
       data: {
         title: payload.title,
         description: payload.description ?? null,
@@ -139,7 +139,7 @@ export async function createClass(req: Request, res: Response) {
         isLive: payload.isLive ?? false,
       },
       include: {
-        instructor: {
+        users: {
           select: {
             id: true,
             firstName: true,
@@ -151,7 +151,7 @@ export async function createClass(req: Request, res: Response) {
       },
     });
 
-    await prisma.auditLog.create({
+    await prisma.audit_logs.create({
       data: {
         userId: req.user?.userId ?? null,
         actorRole: req.user?.role ?? null,
@@ -180,10 +180,10 @@ export async function getClassById(req: Request, res: Response) {
   try {
     const { id } = idParamSchema.parse(req.params);
 
-    const yogaClass = await prisma.class.findUnique({
+    const yogaClass = await prisma.classes.findUnique({
       where: { id },
       include: {
-        instructor: {
+        users: {
           select: {
             id: true,
             firstName: true,
@@ -194,7 +194,7 @@ export async function getClassById(req: Request, res: Response) {
         },
         bookings: {
           include: {
-            user: {
+            users: {
               select: {
                 id: true,
                 firstName: true,
@@ -238,7 +238,7 @@ export async function updateClass(req: Request, res: Response) {
     const payload = updateClassSchema.parse(req.body);
 
     if (payload.instructorId) {
-      const instructor = await prisma.user.findUnique({
+      const instructor = await prisma.users.findUnique({
         where: { id: payload.instructorId },
         select: { role: true },
       });
@@ -248,7 +248,7 @@ export async function updateClass(req: Request, res: Response) {
       }
     }
 
-    const updateData: Prisma.ClassUpdateInput = {};
+    const updateData: Prisma.classesUpdateInput = {};
 
     if (payload.title !== undefined) updateData.title = payload.title;
     if (payload.description !== undefined) updateData.description = payload.description ?? null;
@@ -264,16 +264,16 @@ export async function updateClass(req: Request, res: Response) {
     if (payload.isLive !== undefined) updateData.isLive = payload.isLive;
 
     if (payload.instructorId !== undefined) {
-      updateData.instructor = {
+      updateData.users = {
         connect: { id: payload.instructorId },
       };
     }
 
-    const yogaClass = await prisma.class.update({
+    const yogaClass = await prisma.classes.update({
       where: { id },
       data: updateData,
       include: {
-        instructor: {
+        users: {
           select: {
             id: true,
             firstName: true,
@@ -285,7 +285,7 @@ export async function updateClass(req: Request, res: Response) {
       },
     });
 
-    await prisma.auditLog.create({
+    await prisma.audit_logs.create({
       data: {
         userId: req.user?.userId ?? null,
         actorRole: req.user?.role ?? null,
@@ -314,10 +314,10 @@ export async function deleteClass(req: Request, res: Response) {
   try {
     const { id } = idParamSchema.parse(req.params);
 
-    await prisma.booking.deleteMany({ where: { classId: id } });
-    await prisma.class.delete({ where: { id } });
+    await prisma.bookings.deleteMany({ where: { classId: id } });
+    await prisma.classes.delete({ where: { id } });
 
-    await prisma.auditLog.create({
+    await prisma.audit_logs.create({
       data: {
         userId: req.user?.userId ?? null,
         actorRole: req.user?.role ?? null,
@@ -343,17 +343,17 @@ export async function deleteClass(req: Request, res: Response) {
 export async function getClassStats(req: Request, res: Response) {
   try {
     const [total, published, draft, archived] = await Promise.all([
-      prisma.class.count(),
-      prisma.class.count({ where: { status: 'PUBLISHED' } }),
-      prisma.class.count({ where: { status: 'DRAFT' } }),
-      prisma.class.count({ where: { status: 'ARCHIVED' } }),
+      prisma.classes.count(),
+      prisma.classes.count({ where: { status: 'PUBLISHED' } }),
+      prisma.classes.count({ where: { status: 'DRAFT' } }),
+      prisma.classes.count({ where: { status: 'ARCHIVED' } }),
     ]);
 
-    const totalEnrollments = await prisma.class.aggregate({
+    const totalEnrollments = await prisma.classes.aggregate({
       _sum: { enrollments: true },
     });
 
-    const totalCompletions = await prisma.class.aggregate({
+    const totalCompletions = await prisma.classes.aggregate({
       _sum: { completions: true },
     });
 

@@ -21,7 +21,7 @@ export interface ContentFilters {
 export async function getContents(filters: ContentFilters) {
   const { type, status, categoryId, authorId, search, tags, isPublic, page = 1, limit = 20 } = filters;
 
-  const where: Prisma.ContentWhereInput = {};
+  const where: Prisma.contentsWhereInput = {};
   if (type) where.type = type;
   if (status) where.status = status;
   if (categoryId) where.categoryId = categoryId;
@@ -34,22 +34,26 @@ export async function getContents(filters: ContentFilters) {
     ];
   }
   if (tags && tags.length > 0) {
-    where.tags = { some: { slug: { in: tags } } };
+    where.ContentToContentTag = { some: { content_tags: { slug: { in: tags } } } };
   }
 
   const [contents, total] = await Promise.all([
-    prisma.content.findMany({
+    prisma.contents.findMany({
       where,
       skip: (page - 1) * limit,
       take: limit,
       orderBy: { createdAt: 'desc' },
       include: {
-        category: { select: { id: true, name: true, slug: true } },
-        tags: { select: { id: true, name: true, slug: true } },
-        _count: { select: { versions: true } },
+        content_categories: { select: { id: true, name: true, slug: true } },
+        ContentToContentTag: {
+          select: {
+            content_tags: { select: { id: true, name: true, slug: true } }
+          }
+        },
+        _count: { select: { content_versions: true } },
       },
     }),
-    prisma.content.count({ where }),
+    prisma.contents.count({ where }),
   ]);
 
   return {
@@ -59,12 +63,16 @@ export async function getContents(filters: ContentFilters) {
 }
 
 export async function getContent(contentId: string) {
-  const content = await prisma.content.findUnique({
+  const content = await prisma.contents.findUnique({
     where: { id: contentId },
     include: {
-      category: { select: { id: true, name: true, slug: true } },
-      tags: { select: { id: true, name: true, slug: true } },
-      versions: {
+      content_categories: { select: { id: true, name: true, slug: true } },
+      ContentToContentTag: {
+        select: {
+          content_tags: { select: { id: true, name: true, slug: true } }
+        }
+      },
+      content_versions: {
         orderBy: { version: 'desc' },
         take: 10,
         select: { id: true, version: true, createdAt: true, authorId: true },
@@ -77,11 +85,15 @@ export async function getContent(contentId: string) {
 }
 
 export async function getContentBySlug(slug: string) {
-  const content = await prisma.content.findUnique({
+  const content = await prisma.contents.findUnique({
     where: { slug },
     include: {
-      category: { select: { id: true, name: true, slug: true } },
-      tags: { select: { id: true, name: true, slug: true } },
+      content_categories: { select: { id: true, name: true, slug: true } },
+      ContentToContentTag: {
+        select: {
+          content_tags: { select: { id: true, name: true, slug: true } }
+        }
+      },
     },
   });
 
@@ -107,10 +119,10 @@ export async function createContent(
     metaKeywords?: string[];
   }
 ) {
-  const existing = await prisma.content.findUnique({ where: { slug: data.slug } });
+  const existing = await prisma.contents.findUnique({ where: { slug: data.slug } });
   if (existing) throw new HttpError(400, 'Content with this slug already exists');
 
-  return prisma.content.create({
+  return prisma.contents.create({
     data: {
       title: data.title,
       slug: data.slug,
@@ -126,11 +138,17 @@ export async function createContent(
       metaDescription: data.metaDescription,
       metaKeywords: data.metaKeywords || [],
       authorId,
-      tags: data.tagIds ? { connect: data.tagIds.map((id) => ({ id })) } : undefined,
+      ContentToContentTag: data.tagIds
+        ? { create: data.tagIds.map((id) => ({ content_tags: { connect: { id } } })) }
+        : undefined,
     },
     include: {
-      category: { select: { id: true, name: true, slug: true } },
-      tags: { select: { id: true, name: true, slug: true } },
+      content_categories: { select: { id: true, name: true, slug: true } },
+      ContentToContentTag: {
+        select: {
+          content_tags: { select: { id: true, name: true, slug: true } }
+        }
+      },
     },
   });
 }
@@ -152,15 +170,15 @@ export async function updateContent(
     metaKeywords?: string[];
   }
 ) {
-  const content = await prisma.content.findUnique({ where: { id: contentId } });
+  const content = await prisma.contents.findUnique({ where: { id: contentId } });
   if (!content) throw new HttpError(404, 'Content not found');
 
   if (data.slug && data.slug !== content.slug) {
-    const existing = await prisma.content.findUnique({ where: { slug: data.slug } });
+    const existing = await prisma.contents.findUnique({ where: { slug: data.slug } });
     if (existing) throw new HttpError(400, 'Content with this slug already exists');
   }
 
-  return prisma.content.update({
+  return prisma.contents.update({
     where: { id: contentId },
     data: {
       title: data.title,
@@ -174,36 +192,45 @@ export async function updateContent(
       metaTitle: data.metaTitle,
       metaDescription: data.metaDescription,
       metaKeywords: data.metaKeywords,
-      tags: data.tagIds ? { set: data.tagIds.map((id) => ({ id })) } : undefined,
+      ContentToContentTag: data.tagIds
+        ? {
+            deleteMany: {},
+            create: data.tagIds.map((id) => ({ content_tags: { connect: { id } } }))
+          }
+        : undefined,
     },
     include: {
-      category: { select: { id: true, name: true, slug: true } },
-      tags: { select: { id: true, name: true, slug: true } },
+      content_categories: { select: { id: true, name: true, slug: true } },
+      ContentToContentTag: {
+        select: {
+          content_tags: { select: { id: true, name: true, slug: true } }
+        }
+      },
     },
   });
 }
 
 export async function updateContentStatus(contentId: string, status: ContentStatus) {
-  const content = await prisma.content.findUnique({ where: { id: contentId } });
+  const content = await prisma.contents.findUnique({ where: { id: contentId } });
   if (!content) throw new HttpError(404, 'Content not found');
 
-  const updateData: Prisma.ContentUpdateInput = { status };
+  const updateData: Prisma.contentsUpdateInput = { status };
 
   if (status === 'PUBLISHED' && !content.publishedAt) {
     updateData.publishedAt = new Date();
   }
 
-  return prisma.content.update({
+  return prisma.contents.update({
     where: { id: contentId },
     data: updateData,
   });
 }
 
 export async function deleteContent(contentId: string) {
-  const content = await prisma.content.findUnique({ where: { id: contentId } });
+  const content = await prisma.contents.findUnique({ where: { id: contentId } });
   if (!content) throw new HttpError(404, 'Content not found');
 
-  await prisma.content.delete({ where: { id: contentId } });
+  await prisma.contents.delete({ where: { id: contentId } });
   return { deleted: true };
 }
 
@@ -212,17 +239,17 @@ export async function deleteContent(contentId: string) {
 // ============================================
 
 export async function createContentVersion(contentId: string, authorId: string, changeNote?: string) {
-  const content = await prisma.content.findUnique({ where: { id: contentId } });
+  const content = await prisma.contents.findUnique({ where: { id: contentId } });
   if (!content) throw new HttpError(404, 'Content not found');
 
-  const lastVersion = await prisma.contentVersion.findFirst({
+  const lastVersion = await prisma.content_versions.findFirst({
     where: { contentId },
     orderBy: { version: 'desc' },
   });
 
   const newVersion = (lastVersion?.version || 0) + 1;
 
-  return prisma.contentVersion.create({
+  return prisma.content_versions.create({
     data: {
       contentId,
       version: newVersion,
@@ -236,17 +263,17 @@ export async function createContentVersion(contentId: string, authorId: string, 
 }
 
 export async function getContentVersions(contentId: string) {
-  return prisma.contentVersion.findMany({
+  return prisma.content_versions.findMany({
     where: { contentId },
     orderBy: { version: 'desc' },
   });
 }
 
 export async function getContentVersion(versionId: string) {
-  const version = await prisma.contentVersion.findUnique({
+  const version = await prisma.content_versions.findUnique({
     where: { id: versionId },
     include: {
-      content: { select: { id: true, title: true, slug: true } },
+      contents: { select: { id: true, title: true, slug: true } },
     },
   });
 
@@ -255,14 +282,14 @@ export async function getContentVersion(versionId: string) {
 }
 
 export async function restoreContentVersion(versionId: string) {
-  const version = await prisma.contentVersion.findUnique({
+  const version = await prisma.content_versions.findUnique({
     where: { id: versionId },
-    include: { content: true },
+    include: { contents: true },
   });
 
   if (!version) throw new HttpError(404, 'Content version not found');
 
-  return prisma.content.update({
+  return prisma.contents.update({
     where: { id: version.contentId },
     data: {
       title: version.title,
@@ -277,25 +304,25 @@ export async function restoreContentVersion(versionId: string) {
 // ============================================
 
 export async function getCategories(parentId?: string | null) {
-  const where: Prisma.ContentCategoryWhereInput = {};
+  const where: Prisma.content_categoriesWhereInput = {};
   if (parentId !== undefined) where.parentId = parentId;
 
-  return prisma.contentCategory.findMany({
+  return prisma.content_categories.findMany({
     where,
     orderBy: { sortOrder: 'asc' },
     include: {
-      parent: { select: { id: true, name: true, slug: true } },
-      _count: { select: { contents: true, children: true } },
+      content_categories: { select: { id: true, name: true, slug: true } },
+      _count: { select: { contents: true, other_content_categories: true } },
     },
   });
 }
 
 export async function getCategory(categoryId: string) {
-  const category = await prisma.contentCategory.findUnique({
+  const category = await prisma.content_categories.findUnique({
     where: { id: categoryId },
     include: {
-      parent: { select: { id: true, name: true, slug: true } },
-      children: { select: { id: true, name: true, slug: true } },
+      content_categories: { select: { id: true, name: true, slug: true } },
+      other_content_categories: { select: { id: true, name: true, slug: true } },
       _count: { select: { contents: true } },
     },
   });
@@ -311,10 +338,10 @@ export async function createCategory(data: {
   parentId?: string;
   sortOrder?: number;
 }) {
-  const existing = await prisma.contentCategory.findUnique({ where: { slug: data.slug } });
+  const existing = await prisma.content_categories.findUnique({ where: { slug: data.slug } });
   if (existing) throw new HttpError(400, 'Category with this slug already exists');
 
-  return prisma.contentCategory.create({
+  return prisma.content_categories.create({
     data: {
       name: data.name,
       slug: data.slug,
@@ -336,11 +363,11 @@ export async function updateCategory(
     isActive?: boolean;
   }
 ) {
-  const category = await prisma.contentCategory.findUnique({ where: { id: categoryId } });
+  const category = await prisma.content_categories.findUnique({ where: { id: categoryId } });
   if (!category) throw new HttpError(404, 'Category not found');
 
   if (data.slug && data.slug !== category.slug) {
-    const existing = await prisma.contentCategory.findUnique({ where: { slug: data.slug } });
+    const existing = await prisma.content_categories.findUnique({ where: { slug: data.slug } });
     if (existing) throw new HttpError(400, 'Category with this slug already exists');
   }
 
@@ -348,7 +375,7 @@ export async function updateCategory(
     throw new HttpError(400, 'Category cannot be its own parent');
   }
 
-  return prisma.contentCategory.update({
+  return prisma.content_categories.update({
     where: { id: categoryId },
     data: {
       name: data.name,
@@ -362,17 +389,17 @@ export async function updateCategory(
 }
 
 export async function deleteCategory(categoryId: string) {
-  const category = await prisma.contentCategory.findUnique({
+  const category = await prisma.content_categories.findUnique({
     where: { id: categoryId },
-    include: { _count: { select: { contents: true, children: true } } },
+    include: { _count: { select: { contents: true, other_content_categories: true } } },
   });
 
   if (!category) throw new HttpError(404, 'Category not found');
-  if (category._count.contents > 0 || category._count.children > 0) {
+  if (category._count.contents > 0 || category._count.other_content_categories > 0) {
     throw new HttpError(400, 'Category must be empty before deletion');
   }
 
-  await prisma.contentCategory.delete({ where: { id: categoryId } });
+  await prisma.content_categories.delete({ where: { id: categoryId } });
   return { deleted: true };
 }
 
@@ -381,7 +408,7 @@ export async function deleteCategory(categoryId: string) {
 // ============================================
 
 export async function getTags(search?: string) {
-  const where: Prisma.ContentTagWhereInput = {};
+  const where: Prisma.content_tagsWhereInput = {};
   if (search) {
     where.OR = [
       { name: { contains: search, mode: 'insensitive' } },
@@ -389,20 +416,20 @@ export async function getTags(search?: string) {
     ];
   }
 
-  return prisma.contentTag.findMany({
+  return prisma.content_tags.findMany({
     where,
     orderBy: { name: 'asc' },
     include: {
-      _count: { select: { contents: true } },
+      _count: { select: { ContentToContentTag: true } },
     },
   });
 }
 
 export async function getTag(tagId: string) {
-  const tag = await prisma.contentTag.findUnique({
+  const tag = await prisma.content_tags.findUnique({
     where: { id: tagId },
     include: {
-      _count: { select: { contents: true } },
+      _count: { select: { ContentToContentTag: true } },
     },
   });
 
@@ -411,10 +438,10 @@ export async function getTag(tagId: string) {
 }
 
 export async function createTag(data: { name: string; slug: string; color?: string }) {
-  const existing = await prisma.contentTag.findUnique({ where: { slug: data.slug } });
+  const existing = await prisma.content_tags.findUnique({ where: { slug: data.slug } });
   if (existing) throw new HttpError(400, 'Tag with this slug already exists');
 
-  return prisma.contentTag.create({
+  return prisma.content_tags.create({
     data: {
       name: data.name,
       slug: data.slug,
@@ -424,15 +451,15 @@ export async function createTag(data: { name: string; slug: string; color?: stri
 }
 
 export async function updateTag(tagId: string, data: { name?: string; slug?: string; color?: string }) {
-  const tag = await prisma.contentTag.findUnique({ where: { id: tagId } });
+  const tag = await prisma.content_tags.findUnique({ where: { id: tagId } });
   if (!tag) throw new HttpError(404, 'Tag not found');
 
   if (data.slug && data.slug !== tag.slug) {
-    const existing = await prisma.contentTag.findUnique({ where: { slug: data.slug } });
+    const existing = await prisma.content_tags.findUnique({ where: { slug: data.slug } });
     if (existing) throw new HttpError(400, 'Tag with this slug already exists');
   }
 
-  return prisma.contentTag.update({
+  return prisma.content_tags.update({
     where: { id: tagId },
     data: {
       name: data.name,
@@ -443,10 +470,10 @@ export async function updateTag(tagId: string, data: { name?: string; slug?: str
 }
 
 export async function deleteTag(tagId: string) {
-  const tag = await prisma.contentTag.findUnique({ where: { id: tagId } });
+  const tag = await prisma.content_tags.findUnique({ where: { id: tagId } });
   if (!tag) throw new HttpError(404, 'Tag not found');
 
-  await prisma.contentTag.delete({ where: { id: tagId } });
+  await prisma.content_tags.delete({ where: { id: tagId } });
   return { deleted: true };
 }
 
@@ -455,17 +482,17 @@ export async function deleteTag(tagId: string) {
 // ============================================
 
 export async function getTemplates(type?: ContentType) {
-  const where: Prisma.ContentTemplateWhereInput = {};
+  const where: Prisma.content_templatesWhereInput = {};
   if (type) where.type = type;
 
-  return prisma.contentTemplate.findMany({
+  return prisma.content_templates.findMany({
     where,
     orderBy: { name: 'asc' },
   });
 }
 
 export async function getTemplate(templateId: string) {
-  const template = await prisma.contentTemplate.findUnique({
+  const template = await prisma.content_templates.findUnique({
     where: { id: templateId },
   });
 
@@ -484,10 +511,10 @@ export async function createTemplate(
     defaultBody?: object;
   }
 ) {
-  const existing = await prisma.contentTemplate.findUnique({ where: { slug: data.slug } });
+  const existing = await prisma.content_templates.findUnique({ where: { slug: data.slug } });
   if (existing) throw new HttpError(400, 'Template with this slug already exists');
 
-  return prisma.contentTemplate.create({
+  return prisma.content_templates.create({
     data: {
       name: data.name,
       slug: data.slug,
@@ -510,10 +537,10 @@ export async function updateTemplate(
     isActive?: boolean;
   }
 ) {
-  const template = await prisma.contentTemplate.findUnique({ where: { id: templateId } });
+  const template = await prisma.content_templates.findUnique({ where: { id: templateId } });
   if (!template) throw new HttpError(404, 'Template not found');
 
-  return prisma.contentTemplate.update({
+  return prisma.content_templates.update({
     where: { id: templateId },
     data: {
       name: data.name,
@@ -526,10 +553,10 @@ export async function updateTemplate(
 }
 
 export async function deleteTemplate(templateId: string) {
-  const template = await prisma.contentTemplate.findUnique({ where: { id: templateId } });
+  const template = await prisma.content_templates.findUnique({ where: { id: templateId } });
   if (!template) throw new HttpError(404, 'Template not found');
 
-  await prisma.contentTemplate.delete({ where: { id: templateId } });
+  await prisma.content_templates.delete({ where: { id: templateId } });
   return { deleted: true };
 }
 
@@ -546,17 +573,17 @@ export async function getPublishedContents(filters: {
 }) {
   const { type, categorySlug, tagSlug, page = 1, limit = 20 } = filters;
 
-  const where: Prisma.ContentWhereInput = {
+  const where: Prisma.contentsWhereInput = {
     status: 'PUBLISHED',
     isPublic: true,
   };
 
   if (type) where.type = type;
-  if (categorySlug) where.category = { slug: categorySlug };
-  if (tagSlug) where.tags = { some: { slug: tagSlug } };
+  if (categorySlug) where.content_categories = { slug: categorySlug };
+  if (tagSlug) where.ContentToContentTag = { some: { content_tags: { slug: tagSlug } } };
 
   const [contents, total] = await Promise.all([
-    prisma.content.findMany({
+    prisma.contents.findMany({
       where,
       skip: (page - 1) * limit,
       take: limit,
@@ -569,13 +596,11 @@ export async function getPublishedContents(filters: {
         excerpt: true,
         publishedAt: true,
         authorId: true,
-        category: { select: { name: true, slug: true } },
-        tags: { select: { name: true, slug: true } },
         metaTitle: true,
         metaDescription: true,
       },
     }),
-    prisma.content.count({ where }),
+    prisma.contents.count({ where }),
   ]);
 
   return {
@@ -585,18 +610,22 @@ export async function getPublishedContents(filters: {
 }
 
 export async function getPublishedContent(slug: string) {
-  const content = await prisma.content.findFirst({
+  const content = await prisma.contents.findFirst({
     where: { slug, status: 'PUBLISHED', isPublic: true },
     include: {
-      category: { select: { name: true, slug: true } },
-      tags: { select: { name: true, slug: true } },
+      content_categories: { select: { name: true, slug: true } },
+      ContentToContentTag: {
+        select: {
+          content_tags: { select: { name: true, slug: true } }
+        }
+      },
     },
   });
 
   if (!content) throw new HttpError(404, 'Content not found');
 
   // Increment view count
-  await prisma.content.update({
+  await prisma.contents.update({
     where: { id: content.id },
     data: { viewCount: { increment: 1 } },
   });

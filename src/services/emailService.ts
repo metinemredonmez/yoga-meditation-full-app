@@ -5,9 +5,9 @@ import { config } from '../utils/config';
 import { logger } from '../utils/logger';
 
 // Transporter - lazy initialization
-let transporter: Transporter<SMTPTransport.SentMessageInfo> | null = null;
+let transporter: nodemailer.Transporter | null = null;
 
-function getTransporter(): Transporter<SMTPTransport.SentMessageInfo> {
+function getTransporter(): nodemailer.Transporter {
   if (!transporter) {
     if (!config.SMTP_HOST) {
       throw new Error('SMTP_HOST is not configured');

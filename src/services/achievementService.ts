@@ -5,7 +5,7 @@ import {
   AchievementDifficulty,
   AchievementRequirementType,
 } from '@prisma/client';
-import * as xpService from './xpService';
+// import * as xpService from './xpService'; // TODO: Create xpService
 
 // ============================================
 // Achievement Queries
@@ -33,12 +33,12 @@ export async function getAchievements(filters: {
     where.isSecret = false;
   }
 
-  const achievements = await prisma.achievement.findMany({
+  const achievements = await prisma.achievements.findMany({
     where,
     orderBy: [{ category: 'asc' }, { sortOrder: 'asc' }],
     include: {
-      badge: true,
-      tier: true,
+      badges: true,
+      achievement_tiers: true,
     },
   });
 
@@ -46,29 +46,29 @@ export async function getAchievements(filters: {
 }
 
 export async function getAchievementById(id: string) {
-  return prisma.achievement.findUnique({
+  return prisma.achievements.findUnique({
     where: { id },
     include: {
-      badge: true,
-      tier: true,
-      prerequisite: true,
-      nextAchievements: true,
+      badges: true,
+      achievement_tiers: true,
+      achievements: true,
+      other_achievements: true,
     },
   });
 }
 
 export async function getAchievementBySlug(slug: string) {
-  return prisma.achievement.findUnique({
+  return prisma.achievements.findUnique({
     where: { slug },
     include: {
-      badge: true,
-      tier: true,
+      badges: true,
+      achievement_tiers: true,
     },
   });
 }
 
 export async function getAchievementCategories() {
-  const categories = await prisma.achievement.groupBy({
+  const categories = await prisma.achievements.groupBy({
     by: ['category'],
     _count: { id: true },
     where: { isActive: true },
@@ -95,16 +95,16 @@ export async function getUserAchievements(userId: string, filters?: {
   }
 
   if (filters?.category) {
-    where.achievement = { category: filters.category };
+    where.achievements = { category: filters.category };
   }
 
-  const userAchievements = await prisma.userAchievement.findMany({
+  const userAchievements = await prisma.user_achievements.findMany({
     where,
     include: {
-      achievement: {
+      achievements: {
         include: {
-          badge: true,
-          tier: true,
+          badges: true,
+          achievement_tiers: true,
         },
       },
     },
@@ -121,29 +121,29 @@ export async function getUserAchievementProgress(
   userId: string,
   achievementId: string,
 ) {
-  let progress = await prisma.userAchievement.findUnique({
+  let progress = await prisma.user_achievements.findUnique({
     where: {
       userId_achievementId: { userId, achievementId },
     },
     include: {
-      achievement: true,
+      achievements: true,
     },
   });
 
   if (!progress) {
-    const achievement = await prisma.achievement.findUnique({
+    const achievement = await prisma.achievements.findUnique({
       where: { id: achievementId },
     });
 
     if (achievement) {
-      progress = await prisma.userAchievement.create({
+      progress = await prisma.user_achievements.create({
         data: {
           userId,
           achievementId,
           targetValue: achievement.requirementValue,
         },
         include: {
-          achievement: true,
+          achievements: true,
         },
       });
     }
@@ -163,7 +163,7 @@ export async function updateAchievementProgress(
   metadata?: Record<string, unknown>,
 ) {
   // Find achievements matching this requirement type
-  const achievements = await prisma.achievement.findMany({
+  const achievements = await prisma.achievements.findMany({
     where: {
       requirementType: type,
       isActive: true,
@@ -181,7 +181,7 @@ export async function updateAchievementProgress(
   for (const achievement of achievements) {
     // Check prerequisites
     if (achievement.prerequisiteId) {
-      const prereqProgress = await prisma.userAchievement.findUnique({
+      const prereqProgress = await prisma.user_achievements.findUnique({
         where: {
           userId_achievementId: {
             userId,
@@ -196,7 +196,7 @@ export async function updateAchievementProgress(
     }
 
     // Get or create progress
-    let progress = await prisma.userAchievement.findUnique({
+    let progress = await prisma.user_achievements.findUnique({
       where: {
         userId_achievementId: { userId, achievementId: achievement.id },
       },
@@ -205,7 +205,7 @@ export async function updateAchievementProgress(
     const wasCompleted = progress?.isCompleted ?? false;
 
     if (!progress) {
-      progress = await prisma.userAchievement.create({
+      progress = await prisma.user_achievements.create({
         data: {
           userId,
           achievementId: achievement.id,
@@ -220,7 +220,7 @@ export async function updateAchievementProgress(
       const newValue = progress.currentValue + value;
       const isCompleted = newValue >= achievement.requirementValue;
 
-      progress = await prisma.userAchievement.update({
+      progress = await prisma.user_achievements.update({
         where: { id: progress.id },
         data: {
           currentValue: newValue,
@@ -257,7 +257,7 @@ export async function setAchievementProgress(
   achievementId: string,
   currentValue: number,
 ) {
-  const achievement = await prisma.achievement.findUnique({
+  const achievement = await prisma.achievements.findUnique({
     where: { id: achievementId },
   });
 
@@ -265,7 +265,7 @@ export async function setAchievementProgress(
     throw new Error('Achievement not found');
   }
 
-  let progress = await prisma.userAchievement.findUnique({
+  let progress = await prisma.user_achievements.findUnique({
     where: {
       userId_achievementId: { userId, achievementId },
     },
@@ -275,7 +275,7 @@ export async function setAchievementProgress(
   const isCompleted = currentValue >= achievement.requirementValue;
 
   if (!progress) {
-    progress = await prisma.userAchievement.create({
+    progress = await prisma.user_achievements.create({
       data: {
         userId,
         achievementId,
@@ -290,7 +290,7 @@ export async function setAchievementProgress(
       },
     });
   } else {
-    progress = await prisma.userAchievement.update({
+    progress = await prisma.user_achievements.update({
       where: { id: progress.id },
       data: {
         currentValue,
@@ -316,31 +316,33 @@ export async function setAchievementProgress(
 // ============================================
 
 async function onAchievementCompleted(userId: string, achievementId: string) {
-  const achievement = await prisma.achievement.findUnique({
+  const achievement = await prisma.achievements.findUnique({
     where: { id: achievementId },
-    include: { badge: true, tier: true },
+    include: { badges: true, achievement_tiers: true },
   });
 
   if (!achievement) return;
 
   // Award XP
   if (achievement.xpReward > 0) {
-    const multiplier = achievement.tier?.multiplier || 1;
+    const multiplier = achievement.achievement_tiers?.multiplier || 1;
     const xp = Math.floor(achievement.xpReward * multiplier);
 
-    await xpService.awardXP(
-      userId,
-      xp,
-      'ACHIEVEMENT_UNLOCK',
-      achievementId,
-      `Achievement unlocked: ${achievement.name}`,
-      'ACHIEVEMENT_BONUS',
-    );
+    // TODO: Implement XP service
+    // await xpService.addXP(
+    //   userId,
+    //   xp,
+    //   'ACHIEVEMENT_UNLOCK',
+    //   achievementId,
+    //   `Achievement unlocked: ${achievement.name}`,
+    //   'ACHIEVEMENT_BONUS',
+    // );
+    logger.info({ userId, achievementId, xp }, 'XP would be awarded for achievement');
   }
 
   // Award badge if applicable
   if (achievement.badgeId) {
-    await prisma.userBadge.upsert({
+    await prisma.user_badges.upsert({
       where: {
         userId_badgeId: { userId, badgeId: achievement.badgeId },
       },
@@ -362,11 +364,11 @@ export async function claimAchievementReward(
   userId: string,
   achievementId: string,
 ) {
-  const progress = await prisma.userAchievement.findUnique({
+  const progress = await prisma.user_achievements.findUnique({
     where: {
       userId_achievementId: { userId, achievementId },
     },
-    include: { achievement: true },
+    include: { achievements: true },
   });
 
   if (!progress) {
@@ -381,15 +383,15 @@ export async function claimAchievementReward(
     return { success: false, message: 'Reward already claimed' };
   }
 
-  await prisma.userAchievement.update({
+  await prisma.user_achievements.update({
     where: { id: progress.id },
     data: { claimedAt: new Date() },
   });
 
   return {
     success: true,
-    achievement: progress.achievement,
-    xpAwarded: progress.achievement.xpReward,
+    achievement: progress.achievements,
+    xpAwarded: progress.achievements.xpReward,
   };
 }
 
@@ -399,24 +401,24 @@ export async function claimAchievementReward(
 
 export async function getSecretAchievements(userId: string) {
   // Get user's completed secret achievements
-  const completedSecrets = await prisma.userAchievement.findMany({
+  const completedSecrets = await prisma.user_achievements.findMany({
     where: {
       userId,
       isCompleted: true,
-      achievement: { isSecret: true },
+      achievements: { isSecret: true },
     },
-    include: { achievement: true },
+    include: { achievements: true },
   });
 
   // Get total secret achievement count
-  const totalSecrets = await prisma.achievement.count({
+  const totalSecrets = await prisma.achievements.count({
     where: { isSecret: true, isActive: true },
   });
 
   return {
     unlockedCount: completedSecrets.length,
     totalCount: totalSecrets,
-    achievements: completedSecrets.map((p) => p.achievement),
+    achievements: completedSecrets.map((p) => p.achievements),
   };
 }
 
@@ -426,24 +428,24 @@ export async function getSecretAchievements(userId: string) {
 
 export async function getUserAchievementStats(userId: string) {
   const [total, completed, categories] = await Promise.all([
-    prisma.achievement.count({ where: { isActive: true, isSecret: false } }),
-    prisma.userAchievement.count({
+    prisma.achievements.count({ where: { isActive: true, isSecret: false } }),
+    prisma.user_achievements.count({
       where: { userId, isCompleted: true },
     }),
-    prisma.userAchievement.groupBy({
+    prisma.user_achievements.groupBy({
       by: ['achievementId'],
       where: { userId, isCompleted: true },
     }),
   ]);
 
   // Get XP from achievements
-  const completedAchievements = await prisma.userAchievement.findMany({
+  const completedAchievements = await prisma.user_achievements.findMany({
     where: { userId, isCompleted: true },
-    include: { achievement: true },
+    include: { achievements: true },
   });
 
   const totalXPFromAchievements = completedAchievements.reduce(
-    (sum, ua) => sum + (ua.achievement.xpReward || 0),
+    (sum, ua) => sum + (ua.achievements.xpReward || 0),
     0,
   );
 
@@ -497,7 +499,7 @@ export async function createAchievement(data: {
   tierId?: string;
   prerequisiteId?: string;
 }) {
-  return prisma.achievement.create({
+  return prisma.achievements.create({
     data: {
       ...data,
       rewardType: data.rewardType as any,
@@ -532,7 +534,7 @@ export async function updateAchievement(
     prerequisiteId: string;
   }>,
 ) {
-  return prisma.achievement.update({
+  return prisma.achievements.update({
     where: { id },
     data: {
       ...data,
@@ -542,7 +544,7 @@ export async function updateAchievement(
 }
 
 export async function deleteAchievement(id: string) {
-  return prisma.achievement.delete({
+  return prisma.achievements.delete({
     where: { id },
   });
 }

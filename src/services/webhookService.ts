@@ -60,7 +60,7 @@ export async function createEndpoint(input: CreateEndpointInput) {
   const plainSecret = providedSecret ?? generateWebhookSecret();
   const hashedSecret = hashSecret(plainSecret);
 
-  const endpoint = await prisma.webhookEndpoint.create({
+  const endpoint = await prisma.webhook_endpoints.create({
     data: {
       userId,
       name,
@@ -84,7 +84,7 @@ export async function createEndpoint(input: CreateEndpointInput) {
  */
 export async function updateEndpoint(endpointId: string, userId: string, updates: UpdateEndpointInput) {
   // Verify ownership
-  const existing = await prisma.webhookEndpoint.findFirst({
+  const existing = await prisma.webhook_endpoints.findFirst({
     where: { id: endpointId, userId },
   });
 
@@ -100,7 +100,7 @@ export async function updateEndpoint(endpointId: string, userId: string, updates
     }
   }
 
-  const endpoint = await prisma.webhookEndpoint.update({
+  const endpoint = await prisma.webhook_endpoints.update({
     where: { id: endpointId },
     data: {
       ...(updates.name !== undefined && { name: updates.name }),
@@ -119,7 +119,7 @@ export async function updateEndpoint(endpointId: string, userId: string, updates
  * Delete a webhook endpoint
  */
 export async function deleteEndpoint(endpointId: string, userId: string): Promise<void> {
-  const existing = await prisma.webhookEndpoint.findFirst({
+  const existing = await prisma.webhook_endpoints.findFirst({
     where: { id: endpointId, userId },
   });
 
@@ -127,7 +127,7 @@ export async function deleteEndpoint(endpointId: string, userId: string): Promis
     throw new Error('Webhook endpoint not found');
   }
 
-  await prisma.webhookEndpoint.delete({
+  await prisma.webhook_endpoints.delete({
     where: { id: endpointId },
   });
 
@@ -138,11 +138,11 @@ export async function deleteEndpoint(endpointId: string, userId: string): Promis
  * Get a single webhook endpoint
  */
 export async function getEndpoint(endpointId: string, userId: string) {
-  const endpoint = await prisma.webhookEndpoint.findFirst({
+  const endpoint = await prisma.webhook_endpoints.findFirst({
     where: { id: endpointId, userId },
     include: {
       _count: {
-        select: { deliveries: true },
+        select: { webhook_deliveries: true },
       },
     },
   });
@@ -155,7 +155,7 @@ export async function getEndpoint(endpointId: string, userId: string) {
   const { secret: _, ...safeEndpoint } = endpoint;
   return {
     ...safeEndpoint,
-    deliveryCount: endpoint._count.deliveries,
+    deliveryCount: endpoint._count.webhook_deliveries,
   };
 }
 
@@ -163,12 +163,12 @@ export async function getEndpoint(endpointId: string, userId: string) {
  * List all webhook endpoints for a user
  */
 export async function listEndpoints(userId: string) {
-  const endpoints = await prisma.webhookEndpoint.findMany({
+  const endpoints = await prisma.webhook_endpoints.findMany({
     where: { userId },
     orderBy: { createdAt: 'desc' },
     include: {
       _count: {
-        select: { deliveries: true },
+        select: { webhook_deliveries: true },
       },
     },
   });
@@ -177,7 +177,7 @@ export async function listEndpoints(userId: string) {
     const { secret: _, ...safeEndpoint } = endpoint;
     return {
       ...safeEndpoint,
-      deliveryCount: endpoint._count.deliveries,
+      deliveryCount: endpoint._count.webhook_deliveries,
     };
   });
 }
@@ -186,7 +186,7 @@ export async function listEndpoints(userId: string) {
  * Test a webhook endpoint by sending a test event
  */
 export async function testEndpoint(endpointId: string, userId: string) {
-  const endpoint = await prisma.webhookEndpoint.findFirst({
+  const endpoint = await prisma.webhook_endpoints.findFirst({
     where: { id: endpointId, userId },
   });
 
@@ -215,7 +215,7 @@ export async function testEndpoint(endpointId: string, userId: string) {
  * Rotate the secret for a webhook endpoint
  */
 export async function rotateSecret(endpointId: string, userId: string) {
-  const existing = await prisma.webhookEndpoint.findFirst({
+  const existing = await prisma.webhook_endpoints.findFirst({
     where: { id: endpointId, userId },
   });
 
@@ -226,7 +226,7 @@ export async function rotateSecret(endpointId: string, userId: string) {
   const newSecret = generateWebhookSecret();
   const hashedSecret = hashSecret(newSecret);
 
-  await prisma.webhookEndpoint.update({
+  await prisma.webhook_endpoints.update({
     where: { id: endpointId },
     data: { secret: hashedSecret },
   });
@@ -241,7 +241,7 @@ export async function rotateSecret(endpointId: string, userId: string) {
  * Enable a webhook endpoint
  */
 export async function enableEndpoint(endpointId: string, userId: string) {
-  const existing = await prisma.webhookEndpoint.findFirst({
+  const existing = await prisma.webhook_endpoints.findFirst({
     where: { id: endpointId, userId },
   });
 
@@ -249,7 +249,7 @@ export async function enableEndpoint(endpointId: string, userId: string) {
     throw new Error('Webhook endpoint not found');
   }
 
-  const endpoint = await prisma.webhookEndpoint.update({
+  const endpoint = await prisma.webhook_endpoints.update({
     where: { id: endpointId },
     data: {
       isActive: true,
@@ -266,7 +266,7 @@ export async function enableEndpoint(endpointId: string, userId: string) {
  * Disable a webhook endpoint
  */
 export async function disableEndpoint(endpointId: string, userId: string) {
-  const existing = await prisma.webhookEndpoint.findFirst({
+  const existing = await prisma.webhook_endpoints.findFirst({
     where: { id: endpointId, userId },
   });
 
@@ -274,7 +274,7 @@ export async function disableEndpoint(endpointId: string, userId: string) {
     throw new Error('Webhook endpoint not found');
   }
 
-  const endpoint = await prisma.webhookEndpoint.update({
+  const endpoint = await prisma.webhook_endpoints.update({
     where: { id: endpointId },
     data: { isActive: false },
   });
@@ -288,7 +288,7 @@ export async function disableEndpoint(endpointId: string, userId: string) {
  * Get all active endpoints subscribed to a specific event
  */
 export async function getEndpointsForEvent(event: WebhookEvent) {
-  const endpoints = await prisma.webhookEndpoint.findMany({
+  const endpoints = await prisma.webhook_endpoints.findMany({
     where: {
       isActive: true,
       events: { has: event },

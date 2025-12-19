@@ -45,6 +45,7 @@ export async function createProgram(req: Request, res: Response, next: NextFunct
       description,
       level: level || 'BEGINNER',
       durationMin: (durationWeeks || 4) * 7 * 60, // Convert weeks to minutes (approximate)
+      tags: [],
       coverUrl: coverImageUrl || thumbnailUrl,
     });
 

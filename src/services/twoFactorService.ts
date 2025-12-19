@@ -25,7 +25,7 @@ interface VerifyResult {
  */
 export async function setup2FA(userId: string): Promise<SetupResult> {
   // Get user email for the QR code label
-  const user = await prisma.user.findUnique({
+  const user = await prisma.users.findUnique({
     where: { id: userId },
     select: { email: true },
   });
@@ -48,7 +48,7 @@ export async function setup2FA(userId: string): Promise<SetupResult> {
 
   // Store encrypted secret temporarily (not verified yet)
   // The secret will only be saved permanently after verification
-  await prisma.user.update({
+  await prisma.users.update({
     where: { id: userId },
     data: {
       twoFactorSecret: encrypt(secret),
@@ -82,7 +82,7 @@ export async function setup2FA(userId: string): Promise<SetupResult> {
  * Verify 2FA token and enable 2FA
  */
 export async function verify2FASetup(userId: string, token: string): Promise<VerifyResult> {
-  const user = await prisma.user.findUnique({
+  const user = await prisma.users.findUnique({
     where: { id: userId },
     select: { twoFactorSecret: true, twoFactorEnabled: true },
   });
@@ -103,7 +103,7 @@ export async function verify2FASetup(userId: string, token: string): Promise<Ver
   }
 
   // Enable 2FA
-  await prisma.user.update({
+  await prisma.users.update({
     where: { id: userId },
     data: {
       twoFactorEnabled: true,
@@ -120,7 +120,7 @@ export async function verify2FASetup(userId: string, token: string): Promise<Ver
  * Verify 2FA token during login
  */
 export async function verify2FAToken(userId: string, token: string): Promise<VerifyResult> {
-  const user = await prisma.user.findUnique({
+  const user = await prisma.users.findUnique({
     where: { id: userId },
     select: { twoFactorSecret: true, twoFactorEnabled: true },
   });
@@ -180,7 +180,7 @@ async function verifyBackupCode(userId: string, code: string): Promise<VerifyRes
 export async function disable2FA(userId: string, password: string): Promise<VerifyResult> {
   const { comparePassword } = await import('../utils/password');
 
-  const user = await prisma.user.findUnique({
+  const user = await prisma.users.findUnique({
     where: { id: userId },
     select: { passwordHash: true, twoFactorEnabled: true },
   });
@@ -200,7 +200,7 @@ export async function disable2FA(userId: string, password: string): Promise<Veri
 
   // Disable 2FA
   await prisma.$transaction([
-    prisma.user.update({
+    prisma.users.update({
       where: { id: userId },
       data: {
         twoFactorEnabled: false,
@@ -222,7 +222,7 @@ export async function disable2FA(userId: string, password: string): Promise<Veri
  * Regenerate backup codes
  */
 export async function regenerateBackupCodes(userId: string): Promise<string[]> {
-  const user = await prisma.user.findUnique({
+  const user = await prisma.users.findUnique({
     where: { id: userId },
     select: { twoFactorEnabled: true },
   });
@@ -256,7 +256,7 @@ export async function regenerateBackupCodes(userId: string): Promise<string[]> {
  * Check if user has 2FA enabled
  */
 export async function is2FAEnabled(userId: string): Promise<boolean> {
-  const user = await prisma.user.findUnique({
+  const user = await prisma.users.findUnique({
     where: { id: userId },
     select: { twoFactorEnabled: true },
   });

@@ -26,9 +26,9 @@ export async function createRefund(
   input: CreateRefundInput,
   adminUserId?: string
 ): Promise<RefundResult> {
-  const payment = await prisma.payment.findUnique({
+  const payment = await prisma.payments.findUnique({
     where: { id: input.paymentId },
-    include: { subscription: true, user: true },
+    include: { subscriptions: true, users: true },
   });
 
   if (!payment) {
@@ -82,7 +82,7 @@ export async function createRefund(
   }
 
   // Create refund record
-  const refund = await prisma.refund.create({
+  const refund = await prisma.refunds.create({
     data: {
       paymentId: payment.id,
       provider: payment.provider,
@@ -96,7 +96,7 @@ export async function createRefund(
 
   // Update payment's refunded amount
   const isFullRefund = refundAmount >= maxRefundable;
-  await prisma.payment.update({
+  await prisma.payments.update({
     where: { id: payment.id },
     data: {
       refundedAmount: new Prisma.Decimal(alreadyRefunded + refundAmount),
@@ -167,9 +167,9 @@ async function processStripeRefund(
  * Get refund by ID
  */
 export async function getRefund(refundId: string) {
-  return prisma.refund.findUnique({
+  return prisma.refunds.findUnique({
     where: { id: refundId },
-    include: { payment: true },
+    include: { payments: true },
   });
 }
 
@@ -177,7 +177,7 @@ export async function getRefund(refundId: string) {
  * Get refunds for a payment
  */
 export async function getPaymentRefunds(paymentId: string) {
-  return prisma.refund.findMany({
+  return prisma.refunds.findMany({
     where: { paymentId },
     orderBy: { createdAt: 'desc' },
   });
@@ -194,7 +194,7 @@ export async function getRefunds(filters: {
   page?: number;
   limit?: number;
 }) {
-  const where: Prisma.RefundWhereInput = {};
+  const where: Prisma.refundsWhereInput = {};
 
   if (filters.status) {
     where.status = filters.status;
@@ -219,18 +219,18 @@ export async function getRefunds(filters: {
   const skip = (page - 1) * limit;
 
   const [refunds, total] = await Promise.all([
-    prisma.refund.findMany({
+    prisma.refunds.findMany({
       where,
       include: {
-        payment: {
-          include: { user: { select: { id: true, email: true, firstName: true, lastName: true } } },
+        payments: {
+          include: { users: { select: { id: true, email: true, firstName: true, lastName: true } } },
         },
       },
       orderBy: { createdAt: 'desc' },
       skip,
       take: limit,
     }),
-    prisma.refund.count({ where }),
+    prisma.refunds.count({ where }),
   ]);
 
   return {
@@ -248,7 +248,7 @@ export async function getRefunds(filters: {
  * Calculate refundable amount for a payment
  */
 export async function calculateRefundableAmount(paymentId: string): Promise<number> {
-  const payment = await prisma.payment.findUnique({
+  const payment = await prisma.payments.findUnique({
     where: { id: paymentId },
   });
 
@@ -273,7 +273,7 @@ export async function processStripeRefundWebhook(stripeRefund: {
   reason: string | null;
 }) {
   // Find the payment by Stripe payment intent ID
-  const payment = await prisma.payment.findFirst({
+  const payment = await prisma.payments.findFirst({
     where: {
       OR: [
         { stripePaymentIntentId: stripeRefund.payment_intent },
@@ -288,14 +288,14 @@ export async function processStripeRefundWebhook(stripeRefund: {
   }
 
   // Check if refund already exists
-  const existingRefund = await prisma.refund.findFirst({
+  const existingRefund = await prisma.refunds.findFirst({
     where: { providerRefundId: stripeRefund.id },
   });
 
   if (existingRefund) {
     // Update status if changed
     if (existingRefund.status !== mapStripeRefundStatus(stripeRefund.status)) {
-      await prisma.refund.update({
+      await prisma.refunds.update({
         where: { id: existingRefund.id },
         data: { status: mapStripeRefundStatus(stripeRefund.status) },
       });
@@ -306,7 +306,7 @@ export async function processStripeRefundWebhook(stripeRefund: {
   const refundAmount = stripeRefund.amount / 100;
 
   // Create refund record
-  await prisma.refund.create({
+  await prisma.refunds.create({
     data: {
       paymentId: payment.id,
       provider: 'STRIPE',
@@ -323,7 +323,7 @@ export async function processStripeRefundWebhook(stripeRefund: {
   const newRefundedAmount = currentRefunded + refundAmount;
   const isFullRefund = newRefundedAmount >= Number(payment.amount);
 
-  await prisma.payment.update({
+  await prisma.payments.update({
     where: { id: payment.id },
     data: {
       refundedAmount: new Prisma.Decimal(newRefundedAmount),

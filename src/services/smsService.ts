@@ -91,7 +91,7 @@ export async function sendSms(
   const formattedPhone = formatPhoneNumber(phoneNumber);
 
   // Create SMS log entry
-  const smsLog = await prisma.smsLog.create({
+  const smsLog = await prisma.sms_logs.create({
     data: {
       userId: userId ?? null,
       phoneNumber: formattedPhone,
@@ -110,7 +110,7 @@ export async function sendSms(
       'SMS simulated (Twilio not configured)',
     );
 
-    await prisma.smsLog.update({
+    await prisma.sms_logs.update({
       where: { id: smsLog.id },
       data: {
         status: 'SENT',
@@ -146,7 +146,7 @@ export async function sendSms(
 
     const twilioMessage = await client.messages.create(messageOptions);
 
-    await prisma.smsLog.update({
+    await prisma.sms_logs.update({
       where: { id: smsLog.id },
       data: {
         status: 'SENT',
@@ -173,7 +173,7 @@ export async function sendSms(
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     const errorCode = (error as { code?: string })?.code;
 
-    await prisma.smsLog.update({
+    await prisma.sms_logs.update({
       where: { id: smsLog.id },
       data: {
         status: 'FAILED',
@@ -206,7 +206,7 @@ export async function sendOtp(
   const formattedPhone = formatPhoneNumber(phoneNumber);
 
   // Invalidate any existing OTPs for this phone and purpose
-  await prisma.otpVerification.updateMany({
+  await prisma.otp_verifications.updateMany({
     where: {
       phoneNumber: formattedPhone,
       purpose,
@@ -224,7 +224,7 @@ export async function sendOtp(
   const expiresAt = new Date(Date.now() + config.sms.otpExpiryMinutes * 60 * 1000);
 
   // Store OTP
-  await prisma.otpVerification.create({
+  await prisma.otp_verifications.create({
     data: {
       phoneNumber: formattedPhone,
       code: hashedCode,
@@ -284,7 +284,7 @@ export async function verifyOtp(
   const formattedPhone = formatPhoneNumber(phoneNumber);
 
   // Find the most recent valid OTP for this phone and purpose
-  const otpRecord = await prisma.otpVerification.findFirst({
+  const otpRecord = await prisma.otp_verifications.findFirst({
     where: {
       phoneNumber: formattedPhone,
       purpose,
@@ -319,7 +319,7 @@ export async function verifyOtp(
   }
 
   // Increment attempts
-  await prisma.otpVerification.update({
+  await prisma.otp_verifications.update({
     where: { id: otpRecord.id },
     data: { attempts: { increment: 1 } },
   });
@@ -341,7 +341,7 @@ export async function verifyOtp(
   }
 
   // Mark as verified
-  await prisma.otpVerification.update({
+  await prisma.otp_verifications.update({
     where: { id: otpRecord.id },
     data: { verifiedAt: new Date() },
   });
@@ -369,7 +369,7 @@ export async function resendOtp(
 
   // Check for recent OTP sends (rate limit: 1 per minute)
   const oneMinuteAgo = new Date(Date.now() - 60 * 1000);
-  const recentOtp = await prisma.otpVerification.findFirst({
+  const recentOtp = await prisma.otp_verifications.findFirst({
     where: {
       phoneNumber: formattedPhone,
       purpose,
@@ -390,7 +390,7 @@ export async function resendOtp(
 
   // Check hourly limit (max 5 per hour)
   const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
-  const hourlyCount = await prisma.otpVerification.count({
+  const hourlyCount = await prisma.otp_verifications.count({
     where: {
       phoneNumber: formattedPhone,
       purpose,
@@ -464,7 +464,7 @@ export async function getSmsSendHistory(
   const skip = (page - 1) * limit;
 
   const [logs, total] = await Promise.all([
-    prisma.smsLog.findMany({
+    prisma.sms_logs.findMany({
       where: { userId },
       orderBy: { createdAt: 'desc' },
       skip,
@@ -479,7 +479,7 @@ export async function getSmsSendHistory(
         createdAt: true,
       },
     }),
-    prisma.smsLog.count({ where: { userId } }),
+    prisma.sms_logs.count({ where: { userId } }),
   ]);
 
   // Mask phone numbers in response
@@ -506,7 +506,7 @@ export async function updateSmsStatus(
   errorCode?: string,
   errorMessage?: string,
 ): Promise<void> {
-  const smsLog = await prisma.smsLog.findFirst({
+  const smsLog = await prisma.sms_logs.findFirst({
     where: { twilioSid },
   });
 
@@ -517,7 +517,7 @@ export async function updateSmsStatus(
 
   const newStatus: SmsStatus = status === 'delivered' ? 'DELIVERED' : 'FAILED';
 
-  await prisma.smsLog.update({
+  await prisma.sms_logs.update({
     where: { id: smsLog.id },
     data: {
       status: newStatus,
@@ -536,7 +536,7 @@ export async function updateSmsStatus(
 export async function cleanupExpiredOtps(): Promise<number> {
   const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
 
-  const result = await prisma.otpVerification.deleteMany({
+  const result = await prisma.otp_verifications.deleteMany({
     where: {
       OR: [
         { expiresAt: { lt: sevenDaysAgo } },

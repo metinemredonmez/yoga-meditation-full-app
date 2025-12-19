@@ -25,7 +25,7 @@ export interface SubscriptionStatusResult {
   isTrialing: boolean;
   isInGracePeriod: boolean;
   daysRemaining: number | null;
-  subscription: Awaited<ReturnType<typeof getUserSubscription>> | null;
+  subscriptions: Awaited<ReturnType<typeof getUserSubscription>> | null;
 }
 
 /**
@@ -43,7 +43,7 @@ export async function getSubscriptionStatus(userId: string): Promise<Subscriptio
       isTrialing: false,
       isInGracePeriod: false,
       daysRemaining: null,
-      subscription: null,
+      subscriptions: null,
     };
   }
 
@@ -67,7 +67,7 @@ export async function getSubscriptionStatus(userId: string): Promise<Subscriptio
     isTrialing,
     isInGracePeriod,
     daysRemaining,
-    subscription,
+    subscriptions: subscription,
   };
 }
 
@@ -95,7 +95,7 @@ export async function canAccessContent(
   requiredTier: SubscriptionTier
 ): Promise<boolean> {
   const userTier = await getSubscriptionTier(userId);
-  const tierOrder: SubscriptionTier[] = ['FREE', 'BASIC', 'PREMIUM', 'ENTERPRISE'];
+  const tierOrder: SubscriptionTier[] = ['FREE', 'PREMIUM', 'ENTERPRISE'];
   return tierOrder.indexOf(userTier) >= tierOrder.indexOf(requiredTier);
 }
 
@@ -121,7 +121,7 @@ export async function isInGracePeriod(userId: string): Promise<boolean> {
  * Get user's current active subscription with plan details
  */
 export async function getUserSubscription(userId: string) {
-  return prisma.subscription.findFirst({
+  return prisma.subscriptions.findFirst({
     where: {
       userId,
       status: { in: ['ACTIVE', 'TRIALING', 'GRACE_PERIOD', 'PAST_DUE'] },
@@ -135,7 +135,7 @@ export async function getUserSubscription(userId: string) {
  * Get subscription by ID
  */
 export async function getSubscriptionById(subscriptionId: string) {
-  return prisma.subscription.findUnique({
+  return prisma.subscriptions.findUnique({
     where: { id: subscriptionId },
     include: { plan: true },
   });
@@ -145,7 +145,7 @@ export async function getSubscriptionById(subscriptionId: string) {
  * Get user's subscription history
  */
 export async function getSubscriptionHistory(userId: string, limit = 10) {
-  return prisma.subscription.findMany({
+  return prisma.subscriptions.findMany({
     where: { userId },
     include: { plan: true },
     orderBy: { createdAt: 'desc' },
@@ -198,8 +198,8 @@ export async function createCheckoutSession(
     customer: customer.id,
     mode: 'subscription',
     line_items: [{ price: priceId, quantity: 1 }],
-    success_url: input.successUrl || `${config.payment.successUrl}?session_id={CHECKOUT_SESSION_ID}`,
-    cancel_url: input.cancelUrl || config.payment.cancelUrl,
+    success_url: input.successUrl || `${config.payments.successUrl}?session_id={CHECKOUT_SESSION_ID}`,
+    cancel_url: input.cancelUrl || config.payments.cancelUrl,
     subscription_data: {
       trial_period_days: plan.trialDays > 0 ? plan.trialDays : undefined,
       metadata: {
@@ -286,7 +286,7 @@ export async function cancelSubscription(
   userId: string,
   reason?: string,
   immediately = false
-): Promise<typeof subscription | null> {
+) {
   const subscription = await getUserSubscription(userId);
 
   if (!subscription) {
@@ -307,7 +307,7 @@ export async function cancelSubscription(
   }
 
   // Update local subscription
-  const updated = await prisma.subscription.update({
+  const updated = await prisma.subscriptions.update({
     where: { id: subscription.id },
     data: {
       status: immediately ? 'CANCELLED' : subscription.status,
@@ -321,7 +321,7 @@ export async function cancelSubscription(
 
   // Update user tier if cancelled immediately
   if (immediately) {
-    await prisma.user.update({
+    await prisma.users.update({
       where: { id: userId },
       data: {
         subscriptionTier: 'FREE',
@@ -368,7 +368,7 @@ export async function resumeSubscription(userId: string) {
   }
 
   // Update local subscription
-  const updated = await prisma.subscription.update({
+  const updated = await prisma.subscriptions.update({
     where: { id: subscription.id },
     data: {
       cancelAtPeriodEnd: false,
@@ -439,7 +439,7 @@ export async function changePlan(
   }
 
   // Update local subscription
-  const updated = await prisma.subscription.update({
+  const updated = await prisma.subscriptions.update({
     where: { id: subscription.id },
     data: {
       planId: newPlanId,
@@ -449,7 +449,7 @@ export async function changePlan(
   });
 
   // Update user tier
-  await prisma.user.update({
+  await prisma.users.update({
     where: { id: userId },
     data: { subscriptionTier: newPlan.tier },
   });
@@ -472,7 +472,7 @@ export async function syncSubscriptionFromStripe(stripeSubscriptionId: string) {
   const stripe = getStripeClient();
   const stripeSubscription = await stripe.subscriptions.retrieve(stripeSubscriptionId);
 
-  const subscription = await prisma.subscription.findFirst({
+  const subscription = await prisma.subscriptions.findFirst({
     where: { stripeSubscriptionId },
     include: { plan: true },
   });
@@ -496,7 +496,7 @@ export async function syncSubscriptionFromStripe(stripeSubscriptionId: string) {
 
   const newStatus = statusMap[stripeSubscription.status] || 'ACTIVE';
 
-  const updated = await prisma.subscription.update({
+  const updated = await prisma.subscriptions.update({
     where: { id: subscription.id },
     data: {
       status: newStatus,
@@ -509,7 +509,7 @@ export async function syncSubscriptionFromStripe(stripeSubscriptionId: string) {
 
   // Update user tier based on status
   if (newStatus === 'ACTIVE' || newStatus === 'TRIALING') {
-    await prisma.user.update({
+    await prisma.users.update({
       where: { id: subscription.userId },
       data: {
         subscriptionTier: subscription.plan.tier,
@@ -517,7 +517,7 @@ export async function syncSubscriptionFromStripe(stripeSubscriptionId: string) {
       },
     });
   } else if (newStatus === 'CANCELLED' || newStatus === 'EXPIRED') {
-    await prisma.user.update({
+    await prisma.users.update({
       where: { id: subscription.userId },
       data: {
         subscriptionTier: 'FREE',
@@ -554,14 +554,14 @@ export async function grantSubscription(
   // Cancel any existing subscription
   const existingSubscription = await getUserSubscription(userId);
   if (existingSubscription) {
-    await prisma.subscription.update({
+    await prisma.subscriptions.update({
       where: { id: existingSubscription.id },
       data: { status: 'CANCELLED', cancelledAt: new Date() },
     });
   }
 
   // Create new subscription
-  const subscription = await prisma.subscription.create({
+  const subscription = await prisma.subscriptions.create({
     data: {
       userId,
       planId,
@@ -576,7 +576,7 @@ export async function grantSubscription(
   });
 
   // Update user
-  await prisma.user.update({
+  await prisma.users.update({
     where: { id: userId },
     data: {
       subscriptionTier: plan.tier,
@@ -609,14 +609,14 @@ export async function extendSubscription(
   const currentEnd = subscription.currentPeriodEnd || new Date();
   const newEnd = new Date(currentEnd.getTime() + days * 24 * 60 * 60 * 1000);
 
-  const updated = await prisma.subscription.update({
+  const updated = await prisma.subscriptions.update({
     where: { id: subscriptionId },
     data: { currentPeriodEnd: newEnd },
     include: { plan: true },
   });
 
   // Update user expiration
-  await prisma.user.update({
+  await prisma.users.update({
     where: { id: subscription.userId },
     data: { subscriptionExpiresAt: newEnd },
   });

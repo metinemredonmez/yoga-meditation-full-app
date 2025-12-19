@@ -19,9 +19,9 @@ function generateInvoiceNumber(): string {
  * Create invoice from payment
  */
 export async function createInvoiceFromPayment(paymentId: string) {
-  const payment = await prisma.payment.findUnique({
+  const payment = await prisma.payments.findUnique({
     where: { id: paymentId },
-    include: { user: true, subscription: true },
+    include: { users: true, subscriptions: true },
   });
 
   if (!payment) {
@@ -29,7 +29,7 @@ export async function createInvoiceFromPayment(paymentId: string) {
   }
 
   // Check if invoice already exists for this payment
-  const existingInvoice = await prisma.invoice.findFirst({
+  const existingInvoice = await prisma.invoices.findFirst({
     where: { paymentId },
   });
 
@@ -37,7 +37,7 @@ export async function createInvoiceFromPayment(paymentId: string) {
     return existingInvoice;
   }
 
-  const invoice = await prisma.invoice.create({
+  const invoice = await prisma.invoices.create({
     data: {
       userId: payment.userId,
       subscriptionId: payment.subscriptionId,
@@ -62,12 +62,12 @@ export async function createInvoiceFromPayment(paymentId: string) {
  * Get invoice by ID
  */
 export async function getInvoice(invoiceId: string) {
-  return prisma.invoice.findUnique({
+  return prisma.invoices.findUnique({
     where: { id: invoiceId },
     include: {
-      user: { select: { id: true, email: true, firstName: true, lastName: true } },
-      subscription: { include: { plan: true } },
-      payment: true,
+      users: { select: { id: true, email: true, firstName: true, lastName: true } },
+      subscriptions: { include: { plan: true } },
+      payments: true,
     },
   });
 }
@@ -83,7 +83,7 @@ export async function getUserInvoices(
     limit?: number;
   }
 ) {
-  const where: Prisma.InvoiceWhereInput = { userId };
+  const where: Prisma.invoicesWhereInput = { userId };
 
   if (filters?.status) {
     where.status = filters.status;
@@ -94,17 +94,17 @@ export async function getUserInvoices(
   const skip = (page - 1) * limit;
 
   const [invoices, total] = await Promise.all([
-    prisma.invoice.findMany({
+    prisma.invoices.findMany({
       where,
       include: {
-        subscription: { include: { plan: true } },
-        payment: true,
+        subscriptions: { include: { plan: true } },
+        payments: true,
       },
       orderBy: { createdAt: 'desc' },
       skip,
       take: limit,
     }),
-    prisma.invoice.count({ where }),
+    prisma.invoices.count({ where }),
   ]);
 
   return {
@@ -129,7 +129,7 @@ export async function getAllInvoices(filters?: {
   page?: number;
   limit?: number;
 }) {
-  const where: Prisma.InvoiceWhereInput = {};
+  const where: Prisma.invoicesWhereInput = {};
 
   if (filters?.status) {
     where.status = filters.status;
@@ -154,18 +154,18 @@ export async function getAllInvoices(filters?: {
   const skip = (page - 1) * limit;
 
   const [invoices, total] = await Promise.all([
-    prisma.invoice.findMany({
+    prisma.invoices.findMany({
       where,
       include: {
-        user: { select: { id: true, email: true, firstName: true, lastName: true } },
-        subscription: { include: { plan: true } },
-        payment: true,
+        users: { select: { id: true, email: true, firstName: true, lastName: true } },
+        subscriptions: { include: { plan: true } },
+        payments: true,
       },
       orderBy: { createdAt: 'desc' },
       skip,
       take: limit,
     }),
-    prisma.invoice.count({ where }),
+    prisma.invoices.count({ where }),
   ]);
 
   return {
@@ -183,7 +183,7 @@ export async function getAllInvoices(filters?: {
  * Get invoice PDF URL
  */
 export async function getInvoicePdfUrl(invoiceId: string): Promise<string | null> {
-  const invoice = await prisma.invoice.findUnique({
+  const invoice = await prisma.invoices.findUnique({
     where: { id: invoiceId },
   });
 
@@ -206,7 +206,7 @@ export async function getInvoicePdfUrl(invoiceId: string): Promise<string | null
  * Void an invoice
  */
 export async function voidInvoice(invoiceId: string, reason?: string) {
-  const invoice = await prisma.invoice.findUnique({
+  const invoice = await prisma.invoices.findUnique({
     where: { id: invoiceId },
   });
 
@@ -228,7 +228,7 @@ export async function voidInvoice(invoiceId: string, reason?: string) {
     await stripe.invoices.voidInvoice(invoice.stripeInvoiceId);
   }
 
-  const updated = await prisma.invoice.update({
+  const updated = await prisma.invoices.update({
     where: { id: invoiceId },
     data: { status: 'VOID' },
   });
@@ -244,7 +244,7 @@ export async function voidInvoice(invoiceId: string, reason?: string) {
 export async function processStripeInvoiceWebhook(stripeInvoice: {
   id: string;
   customer: string;
-  subscription: string | null;
+  subscriptions: string | null;
   status: string;
   amount_due: number;
   amount_paid: number;
@@ -254,7 +254,7 @@ export async function processStripeInvoiceWebhook(stripeInvoice: {
   due_date: number | null;
 }) {
   // Find user by Stripe customer ID
-  const user = await prisma.user.findFirst({
+  const user = await prisma.users.findFirst({
     where: { stripeCustomerId: stripeInvoice.customer },
   });
 
@@ -265,15 +265,15 @@ export async function processStripeInvoiceWebhook(stripeInvoice: {
 
   // Find subscription if available
   let subscriptionId: string | undefined;
-  if (stripeInvoice.subscription) {
-    const subscription = await prisma.subscription.findFirst({
-      where: { stripeSubscriptionId: stripeInvoice.subscription },
+  if (stripeInvoice.subscriptions) {
+    const subscription = await prisma.subscriptions.findFirst({
+      where: { stripeSubscriptionId: stripeInvoice.subscriptions },
     });
     subscriptionId = subscription?.id;
   }
 
   // Check if invoice already exists
-  let invoice = await prisma.invoice.findFirst({
+  let invoice = await prisma.invoices.findFirst({
     where: { stripeInvoiceId: stripeInvoice.id },
   });
 
@@ -281,7 +281,7 @@ export async function processStripeInvoiceWebhook(stripeInvoice: {
 
   if (invoice) {
     // Update existing invoice
-    invoice = await prisma.invoice.update({
+    invoice = await prisma.invoices.update({
       where: { id: invoice.id },
       data: {
         status: invoiceStatus,
@@ -292,7 +292,7 @@ export async function processStripeInvoiceWebhook(stripeInvoice: {
     });
   } else {
     // Create new invoice
-    invoice = await prisma.invoice.create({
+    invoice = await prisma.invoices.create({
       data: {
         userId: user.id,
         subscriptionId,
@@ -342,7 +342,7 @@ export async function getInvoiceStats(filters?: {
   startDate?: Date;
   endDate?: Date;
 }) {
-  const where: Prisma.InvoiceWhereInput = {};
+  const where: Prisma.invoicesWhereInput = {};
 
   if (filters?.startDate || filters?.endDate) {
     where.createdAt = {};
@@ -361,11 +361,11 @@ export async function getInvoiceStats(filters?: {
     voidedInvoices,
     totalRevenue,
   ] = await Promise.all([
-    prisma.invoice.count({ where }),
-    prisma.invoice.count({ where: { ...where, status: 'PAID' } }),
-    prisma.invoice.count({ where: { ...where, status: 'OPEN' } }),
-    prisma.invoice.count({ where: { ...where, status: 'VOID' } }),
-    prisma.invoice.aggregate({
+    prisma.invoices.count({ where }),
+    prisma.invoices.count({ where: { ...where, status: 'PAID' } }),
+    prisma.invoices.count({ where: { ...where, status: 'OPEN' } }),
+    prisma.invoices.count({ where: { ...where, status: 'VOID' } }),
+    prisma.invoices.aggregate({
       where: { ...where, status: 'PAID' },
       _sum: { amountPaid: true },
     }),
@@ -428,7 +428,7 @@ export async function createDetailedInvoice(input: CreateDetailedInvoiceInput) {
   // Calculate amount due
   const amountDue = subtotal + taxAmount - discountAmount;
 
-  const invoice = await prisma.invoice.create({
+  const invoice = await prisma.invoices.create({
     data: {
       userId: input.userId,
       subscriptionId: input.subscriptionId,
@@ -453,7 +453,7 @@ export async function createDetailedInvoice(input: CreateDetailedInvoiceInput) {
       dueDate: input.dueDate,
       periodStart: input.periodStart,
       periodEnd: input.periodEnd,
-      items: {
+      invoice_items: {
         create: input.items.map((item) => ({
           description: item.description,
           quantity: item.quantity,
@@ -463,8 +463,8 @@ export async function createDetailedInvoice(input: CreateDetailedInvoiceInput) {
       },
     },
     include: {
-      items: true,
-      user: {
+      invoice_items: true,
+      users: {
         select: {
           id: true,
           email: true,
@@ -483,7 +483,7 @@ export async function createDetailedInvoice(input: CreateDetailedInvoiceInput) {
  * Mark invoice as paid
  */
 export async function markInvoiceAsPaid(invoiceId: string, amountPaid?: number) {
-  const invoice = await prisma.invoice.findUnique({
+  const invoice = await prisma.invoices.findUnique({
     where: { id: invoiceId },
   });
 
@@ -493,7 +493,7 @@ export async function markInvoiceAsPaid(invoiceId: string, amountPaid?: number) 
 
   const paidAmount = amountPaid || Number(invoice.amountDue);
 
-  const updatedInvoice = await prisma.invoice.update({
+  const updatedInvoice = await prisma.invoices.update({
     where: { id: invoiceId },
     data: {
       status: InvoiceStatus.PAID,
@@ -501,7 +501,7 @@ export async function markInvoiceAsPaid(invoiceId: string, amountPaid?: number) 
       paidAt: new Date(),
     },
     include: {
-      items: true,
+      invoice_items: true,
     },
   });
 
@@ -513,11 +513,11 @@ export async function markInvoiceAsPaid(invoiceId: string, amountPaid?: number) 
  * Generate PDF for an invoice
  */
 export async function generateInvoicePDF(invoiceId: string): Promise<Buffer> {
-  const invoice = await prisma.invoice.findUnique({
+  const invoice = await prisma.invoices.findUnique({
     where: { id: invoiceId },
     include: {
-      items: true,
-      user: {
+      invoice_items: true,
+      users: {
         select: {
           id: true,
           email: true,
@@ -525,7 +525,7 @@ export async function generateInvoicePDF(invoiceId: string): Promise<Buffer> {
           lastName: true,
         },
       },
-      subscription: {
+      subscriptions: {
         include: {
           plan: true,
         },
@@ -595,7 +595,7 @@ export async function generateInvoicePDF(invoiceId: string): Promise<Buffer> {
     // Items
     doc.font('Helvetica');
     let y = doc.y;
-    for (const item of invoice.items) {
+    for (const item of invoice.invoice_items) {
       doc.text(item.description, 50, y, { width: 240 });
       doc.text(String(item.quantity), 300, y, { width: 50, align: 'center' });
       doc.text(`${Number(item.unitPrice).toFixed(2)} ${invoice.currency}`, 350, y, {
@@ -669,7 +669,7 @@ export async function generateInvoicePDF(invoiceId: string): Promise<Buffer> {
  * Save invoice PDF path
  */
 export async function saveInvoicePdfPath(invoiceId: string, pdfPath: string): Promise<void> {
-  await prisma.invoice.update({
+  await prisma.invoices.update({
     where: { id: invoiceId },
     data: { invoicePdf: pdfPath },
   });
@@ -681,7 +681,7 @@ export async function saveInvoicePdfPath(invoiceId: string, pdfPath: string): Pr
  * Get tax rate by country
  */
 export async function getTaxRateByCountry(country: string, state?: string): Promise<number> {
-  const taxRate = await prisma.taxRate.findFirst({
+  const taxRate = await prisma.tax_rates.findFirst({
     where: {
       country,
       state: state || null,
@@ -694,7 +694,7 @@ export async function getTaxRateByCountry(country: string, state?: string): Prom
   }
 
   // Return default tax rate if no specific rate found
-  const defaultRate = await prisma.taxRate.findFirst({
+  const defaultRate = await prisma.tax_rates.findFirst({
     where: {
       isDefault: true,
       isActive: true,
@@ -715,7 +715,7 @@ export async function createTaxRate(data: {
   description?: string;
   isDefault?: boolean;
 }) {
-  return prisma.taxRate.create({
+  return prisma.tax_rates.create({
     data: {
       name: data.name,
       country: data.country,
@@ -731,7 +731,7 @@ export async function createTaxRate(data: {
  * List all tax rates
  */
 export async function listTaxRates() {
-  return prisma.taxRate.findMany({
+  return prisma.tax_rates.findMany({
     where: { isActive: true },
     orderBy: [{ isDefault: 'desc' }, { country: 'asc' }],
   });
@@ -750,7 +750,7 @@ export async function updateTaxRate(
     isDefault?: boolean;
   }
 ) {
-  return prisma.taxRate.update({
+  return prisma.tax_rates.update({
     where: { id },
     data: {
       name: data.name,
@@ -766,7 +766,7 @@ export async function updateTaxRate(
  * Delete tax rate
  */
 export async function deleteTaxRate(id: string) {
-  return prisma.taxRate.update({
+  return prisma.tax_rates.update({
     where: { id },
     data: { isActive: false },
   });

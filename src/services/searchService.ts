@@ -157,12 +157,11 @@ async function searchPrograms(query: string, filters: SearchFilters, limit: numb
   if (filters.duration?.max) where.durationWeeks = { lte: filters.duration.max };
   if (filters.instructorId) where.instructorId = filters.instructorId;
 
-  const programs = await prisma.program.findMany({
+  const programs = await prisma.programs.findMany({
     where,
     take: limit,
     orderBy: [
-      { enrollmentCount: 'desc' },
-      { averageRating: 'desc' }
+      { createdAt: 'desc' }
     ],
     select: {
       id: true,
@@ -170,9 +169,7 @@ async function searchPrograms(query: string, filters: SearchFilters, limit: numb
       description: true,
       thumbnailUrl: true,
       level: true,
-      durationWeeks: true,
-      enrollmentCount: true,
-      averageRating: true
+      durationWeeks: true
     }
   });
 
@@ -184,11 +181,9 @@ async function searchPrograms(query: string, filters: SearchFilters, limit: numb
     thumbnailUrl: p.thumbnailUrl,
     metadata: {
       level: p.level,
-      durationWeeks: p.durationWeeks,
-      enrollmentCount: p.enrollmentCount,
-      rating: p.averageRating
+      durationWeeks: p.durationWeeks
     },
-    score: calculateRelevanceScore(query, p.title, p.description || '', p.enrollmentCount || 0)
+    score: calculateRelevanceScore(query, p.title, p.description || '', 0)
   }));
 }
 
@@ -205,12 +200,12 @@ async function searchClasses(query: string, filters: SearchFilters, limit: numbe
   if (filters.duration?.max) where.duration = { lte: filters.duration.max };
   if (filters.instructorId) where.instructorId = filters.instructorId;
 
-  const classes = await prisma.class.findMany({
+  const classes = await prisma.classes.findMany({
     where,
     take: limit,
     orderBy: [
-      { viewCount: 'desc' },
-      { averageRating: 'desc' }
+      { completions: 'desc' },
+      { createdAt: 'desc' }
     ],
     select: {
       id: true,
@@ -219,9 +214,9 @@ async function searchClasses(query: string, filters: SearchFilters, limit: numbe
       thumbnailUrl: true,
       level: true,
       duration: true,
-      viewCount: true,
-      averageRating: true,
-      instructor: {
+      completions: true,
+      instructorId: true,
+      users: {
         select: { firstName: true, lastName: true }
       }
     }
@@ -236,11 +231,10 @@ async function searchClasses(query: string, filters: SearchFilters, limit: numbe
     metadata: {
       level: c.level,
       duration: c.duration,
-      viewCount: c.viewCount,
-      rating: c.averageRating,
-      instructor: c.instructor ? `${c.instructor.firstName} ${c.instructor.lastName}` : null
+      completions: c.completions,
+      instructor: c.users ? `${c.users.firstName} ${c.users.lastName}` : null
     },
-    score: calculateRelevanceScore(query, c.title, c.description || '', c.viewCount || 0)
+    score: calculateRelevanceScore(query, c.title, c.description || '', c.completions || 0)
   }));
 }
 
@@ -255,7 +249,7 @@ async function searchPoses(query: string, filters: SearchFilters, limit: number)
 
   if (filters.level) where.difficulty = filters.level;
 
-  const poses = await prisma.pose.findMany({
+  const poses = await prisma.poses.findMany({
     where,
     take: limit,
     select: {
@@ -283,7 +277,7 @@ async function searchPoses(query: string, filters: SearchFilters, limit: number)
 }
 
 async function searchInstructors(query: string, filters: SearchFilters, limit: number): Promise<SearchResult[]> {
-  const instructors = await prisma.user.findMany({
+  const instructors = await prisma.users.findMany({
     where: {
       role: 'TEACHER',
       isActive: true,
@@ -295,17 +289,14 @@ async function searchInstructors(query: string, filters: SearchFilters, limit: n
     },
     take: limit,
     orderBy: [
-      { followerCount: 'desc' },
-      { averageRating: 'desc' }
+      { createdAt: 'desc' }
     ],
     select: {
       id: true,
       firstName: true,
       lastName: true,
       bio: true,
-      avatarUrl: true,
-      followerCount: true,
-      averageRating: true
+      avatarUrl: true
     }
   });
 
@@ -315,11 +306,8 @@ async function searchInstructors(query: string, filters: SearchFilters, limit: n
     title: `${i.firstName || ''} ${i.lastName || ''}`.trim(),
     description: i.bio || '',
     thumbnailUrl: i.avatarUrl,
-    metadata: {
-      followerCount: i.followerCount,
-      rating: i.averageRating
-    },
-    score: calculateRelevanceScore(query, `${i.firstName} ${i.lastName}`, i.bio || '', i.followerCount || 0)
+    metadata: {},
+    score: calculateRelevanceScore(query, `${i.firstName} ${i.lastName}`, i.bio || '', 0)
   }));
 }
 
@@ -334,7 +322,7 @@ async function searchPodcasts(query: string, filters: SearchFilters, limit: numb
 
   if (filters.category) where.category = filters.category;
 
-  const podcasts = await prisma.podcast.findMany({
+  const podcasts = await prisma.podcasts.findMany({
     where,
     take: limit,
     orderBy: [
@@ -368,25 +356,24 @@ async function searchPodcasts(query: string, filters: SearchFilters, limit: numb
 }
 
 async function searchChallenges(query: string, filters: SearchFilters, limit: number): Promise<SearchResult[]> {
-  const challenges = await prisma.challenge.findMany({
+  const challenges = await prisma.challenges.findMany({
     where: {
       isActive: true,
-      endDate: { gte: new Date() },
+      endAt: { gte: new Date() },
       OR: [
         { title: { contains: query, mode: 'insensitive' } },
         { description: { contains: query, mode: 'insensitive' } }
       ]
     },
     take: limit,
-    orderBy: { participantCount: 'desc' },
+    orderBy: { createdAt: 'desc' },
     select: {
       id: true,
       title: true,
       description: true,
       thumbnailUrl: true,
-      startDate: true,
-      endDate: true,
-      participantCount: true
+      startAt: true,
+      endAt: true
     }
   });
 
@@ -397,11 +384,10 @@ async function searchChallenges(query: string, filters: SearchFilters, limit: nu
     description: c.description || '',
     thumbnailUrl: c.thumbnailUrl,
     metadata: {
-      startDate: c.startDate,
-      endDate: c.endDate,
-      participantCount: c.participantCount
+      startAt: c.startAt,
+      endAt: c.endAt
     },
-    score: calculateRelevanceScore(query, c.title, c.description || '', c.participantCount || 0)
+    score: calculateRelevanceScore(query, c.title, c.description || '', 0)
   }));
 }
 
@@ -456,7 +442,7 @@ function calculateFacets(results: SearchResult[]) {
 
 async function generateSuggestions(query: string): Promise<string[]> {
   // Get popular search terms that are similar
-  const popularSearches = await prisma.searchLog.groupBy({
+  const popularSearches = await prisma.search_logs.groupBy({
     by: ['query'],
     where: {
       query: { startsWith: query.slice(0, 3), mode: 'insensitive' },
@@ -472,7 +458,7 @@ async function generateSuggestions(query: string): Promise<string[]> {
 
 async function logSearchQuery(query: string, resultCount: number, userId?: string): Promise<void> {
   try {
-    await prisma.searchLog.create({
+    await prisma.search_logs.create({
       data: {
         query,
         resultCount,
@@ -490,7 +476,7 @@ async function logSearchQuery(query: string, resultCount: number, userId?: strin
 // ============================================
 
 export async function getTrendingSearches(limit = 10): Promise<string[]> {
-  const trending = await prisma.searchLog.groupBy({
+  const trending = await prisma.search_logs.groupBy({
     by: ['query'],
     where: {
       createdAt: { gte: new Date(Date.now() - 24 * 60 * 60 * 1000) }, // Last 24 hours
@@ -508,11 +494,11 @@ export async function getPopularContent(type?: string, limit = 10): Promise<Sear
   const results: SearchResult[] = [];
 
   if (!type || type === 'program') {
-    const programs = await prisma.program.findMany({
+    const programs = await prisma.programs.findMany({
       where: { isPublished: true },
       take: limit,
-      orderBy: { enrollmentCount: 'desc' },
-      select: { id: true, title: true, description: true, thumbnailUrl: true, enrollmentCount: true }
+      orderBy: { createdAt: 'desc' },
+      select: { id: true, title: true, description: true, thumbnailUrl: true }
     });
     results.push(...programs.map(p => ({
       type: 'program' as const,
@@ -520,17 +506,17 @@ export async function getPopularContent(type?: string, limit = 10): Promise<Sear
       title: p.title,
       description: p.description || '',
       thumbnailUrl: p.thumbnailUrl,
-      metadata: { enrollmentCount: p.enrollmentCount },
-      score: p.enrollmentCount || 0
+      metadata: {},
+      score: 0
     })));
   }
 
   if (!type || type === 'class') {
-    const classes = await prisma.class.findMany({
-      where: { isPublished: true },
+    const classes = await prisma.classes.findMany({
+      where: { status: 'PUBLISHED' },
       take: limit,
-      orderBy: { viewCount: 'desc' },
-      select: { id: true, title: true, description: true, thumbnailUrl: true, viewCount: true }
+      orderBy: { completions: 'desc' },
+      select: { id: true, title: true, description: true, thumbnailUrl: true, completions: true }
     });
     results.push(...classes.map(c => ({
       type: 'class' as const,
@@ -538,8 +524,8 @@ export async function getPopularContent(type?: string, limit = 10): Promise<Sear
       title: c.title,
       description: c.description || '',
       thumbnailUrl: c.thumbnailUrl,
-      metadata: { viewCount: c.viewCount },
-      score: c.viewCount || 0
+      metadata: { completions: c.completions },
+      score: c.completions || 0
     })));
   }
 

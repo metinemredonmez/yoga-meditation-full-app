@@ -164,7 +164,7 @@ const queryUsers = async (options: {
   page: number;
   limit: number;
 }) => {
-  const where: Prisma.UserWhereInput = {
+  const where: Prisma.usersWhereInput = {
     createdAt: {
       gte: options.dateRange.from,
       lte: options.dateRange.to,
@@ -184,7 +184,7 @@ const queryUsers = async (options: {
   }
 
   const [rows, totalCount] = await Promise.all([
-    prisma.user.findMany({
+    prisma.users.findMany({
       where,
       select: {
         id: true,
@@ -201,7 +201,7 @@ const queryUsers = async (options: {
       skip: (options.page - 1) * options.limit,
       take: options.limit,
     }),
-    prisma.user.count({ where }),
+    prisma.users.count({ where }),
   ]);
 
   return {
@@ -218,7 +218,7 @@ const queryUserGrowth = async (options: {
   dateRange: { from: Date; to: Date };
 }) => {
   // Group users by date
-  const users = await prisma.user.findMany({
+  const users = await prisma.users.findMany({
     where: {
       createdAt: {
         gte: options.dateRange.from,
@@ -236,13 +236,13 @@ const queryUserGrowth = async (options: {
   let cumulative = 0;
 
   // Get initial count before date range
-  const initialCount = await prisma.user.count({
+  const initialCount = await prisma.users.count({
     where: { createdAt: { lt: options.dateRange.from } },
   });
   cumulative = initialCount;
 
   users.forEach(user => {
-    const dateKey = user.createdAt.toISOString().split('T')[0];
+    const dateKey = user.createdAt.toISOString().split('T')[0]!;
     growthMap.set(dateKey, (growthMap.get(dateKey) || 0) + 1);
   });
 
@@ -259,7 +259,7 @@ const queryRevenue = async (options: {
   filters: Record<string, unknown>;
   dateRange: { from: Date; to: Date };
 }) => {
-  const payments = await prisma.payment.findMany({
+  const payments = await prisma.payments.findMany({
     where: {
       status: 'COMPLETED',
       createdAt: {
@@ -278,9 +278,9 @@ const queryRevenue = async (options: {
   const revenueMap = new Map<string, { revenue: number; transactions: number }>();
 
   payments.forEach(payment => {
-    const dateKey = payment.createdAt.toISOString().split('T')[0];
+    const dateKey = payment.createdAt.toISOString().split('T')[0]!;
     const existing = revenueMap.get(dateKey) || { revenue: 0, transactions: 0 };
-    existing.revenue += payment.amount;
+    existing.revenue += Number(payment.amount);
     existing.transactions += 1;
     revenueMap.set(dateKey, existing);
   });
@@ -302,7 +302,7 @@ const queryPayments = async (options: {
   page: number;
   limit: number;
 }) => {
-  const where: Prisma.PaymentWhereInput = {
+  const where: Prisma.paymentsWhereInput = {
     createdAt: {
       gte: options.dateRange.from,
       lte: options.dateRange.to,
@@ -314,7 +314,7 @@ const queryPayments = async (options: {
   }
 
   const [rows, totalCount] = await Promise.all([
-    prisma.payment.findMany({
+    prisma.payments.findMany({
       where,
       select: {
         id: true,
@@ -331,13 +331,13 @@ const queryPayments = async (options: {
       skip: (options.page - 1) * options.limit,
       take: options.limit,
     }),
-    prisma.payment.count({ where }),
+    prisma.payments.count({ where }),
   ]);
 
   return {
     rows: rows.map(p => ({
       ...p,
-      amount: p.amount / 100, // Convert from cents
+      amount: Number(p.amount) / 100, // Convert from cents
       paymentMethod: p.provider,
     })),
     totalCount,
@@ -352,7 +352,7 @@ const querySubscriptions = async (options: {
   page: number;
   limit: number;
 }) => {
-  const where: Prisma.SubscriptionWhereInput = {
+  const where: Prisma.subscriptionsWhereInput = {
     createdAt: {
       gte: options.dateRange.from,
       lte: options.dateRange.to,
@@ -364,15 +364,20 @@ const querySubscriptions = async (options: {
   }
 
   const [rows, totalCount] = await Promise.all([
-    prisma.subscription.findMany({
+    prisma.subscriptions.findMany({
       where,
       select: {
         id: true,
         userId: true,
-        tier: true,
         status: true,
-        startDate: true,
-        endDate: true,
+        currentPeriodStart: true,
+        currentPeriodEnd: true,
+        plan: {
+          select: {
+            tier: true,
+            name: true,
+          },
+        },
       },
       orderBy: options.sortBy
         ? { [options.sortBy]: options.sortOrder }
@@ -380,13 +385,16 @@ const querySubscriptions = async (options: {
       skip: (options.page - 1) * options.limit,
       take: options.limit,
     }),
-    prisma.subscription.count({ where }),
+    prisma.subscriptions.count({ where }),
   ]);
 
   return {
     rows: rows.map(s => ({
       ...s,
-      plan: s.tier,
+      tier: s.plan.tier,
+      planName: s.plan.name,
+      startDate: s.currentPeriodStart,
+      endDate: s.currentPeriodEnd,
     })),
     totalCount,
   };
@@ -398,7 +406,7 @@ const queryContentStats = async (options: {
   page: number;
   limit: number;
 }) => {
-  const programs = await prisma.program.findMany({
+  const programs = await prisma.programs.findMany({
     select: {
       id: true,
       title: true,
@@ -421,7 +429,7 @@ const queryContentStats = async (options: {
     rating: 0, // Would need rating system
   }));
 
-  const totalCount = await prisma.program.count();
+  const totalCount = await prisma.programs.count();
 
   return { rows, totalCount };
 };
@@ -432,9 +440,9 @@ const queryInstructorPerformance = async (options: {
   page: number;
   limit: number;
 }) => {
-  const instructors = await prisma.instructorProfile.findMany({
+  const instructors = await prisma.instructor_profiles.findMany({
     include: {
-      user: {
+      users: {
         select: {
           id: true,
           firstName: true,
@@ -444,7 +452,8 @@ const queryInstructorPerformance = async (options: {
       },
       _count: {
         select: {
-          classes: true,
+          live_streams: true,
+          meditations: true,
         },
       },
     },
@@ -454,14 +463,14 @@ const queryInstructorPerformance = async (options: {
 
   const rows = instructors.map(i => ({
     instructorId: i.userId,
-    name: [i.user.firstName, i.user.lastName].filter(Boolean).join(' ') || i.user.email,
-    classes: i._count.classes,
+    name: [i.users.firstName, i.users.lastName].filter(Boolean).join(' ') || i.users.email,
+    classes: i._count.live_streams + i._count.meditations,
     students: 0, // Would need enrollment tracking
-    rating: i.averageRating || 0,
+    rating: Number(i.averageRating) || 0,
     revenue: 0, // Would need revenue tracking per instructor
   }));
 
-  const totalCount = await prisma.instructorProfile.count();
+  const totalCount = await prisma.instructor_profiles.count();
 
   return { rows, totalCount };
 };
@@ -472,10 +481,10 @@ export const createReportInstance = async (
   config: ReportConfig,
   userId: string
 ) => {
-  return prisma.reportInstance.create({
+  return prisma.report_instances.create({
     data: {
       definitionId,
-      filters: config.filters || {},
+      filters: config.filters as Prisma.InputJsonValue || {},
       columns: config.columns || [],
       sortBy: config.sortBy,
       sortOrder: config.sortOrder,
@@ -486,28 +495,28 @@ export const createReportInstance = async (
       createdById: userId,
     },
     include: {
-      definition: true,
+      report_definitions: true,
     },
   });
 };
 
 // Get report instance
 export const getReportInstance = async (id: string) => {
-  return prisma.reportInstance.findUnique({
+  return prisma.report_instances.findUnique({
     where: { id },
     include: {
-      definition: true,
-      exports: true,
+      report_definitions: true,
+      report_exports: true,
     },
   });
 };
 
 // Get user's report instances
 export const getUserReportInstances = async (userId: string) => {
-  return prisma.reportInstance.findMany({
+  return prisma.report_instances.findMany({
     where: { createdById: userId },
     include: {
-      definition: true,
+      report_definitions: true,
     },
     orderBy: { createdAt: 'desc' },
   });
@@ -515,16 +524,16 @@ export const getUserReportInstances = async (userId: string) => {
 
 // Delete report instance
 export const deleteReportInstance = async (id: string) => {
-  return prisma.reportInstance.delete({
+  return prisma.report_instances.delete({
     where: { id },
   });
 };
 
 // Refresh report instance (regenerate data)
 export const refreshReportInstance = async (id: string) => {
-  const instance = await prisma.reportInstance.findUnique({
+  const instance = await prisma.report_instances.findUnique({
     where: { id },
-    include: { definition: true },
+    include: { report_definitions: true },
   });
 
   if (!instance) {
@@ -543,7 +552,7 @@ export const refreshReportInstance = async (id: string) => {
   });
 
   // Update cache
-  await prisma.reportInstance.update({
+  await prisma.report_instances.update({
     where: { id },
     data: {
       cachedData: reportData.data as Prisma.InputJsonValue,
@@ -563,7 +572,7 @@ export const cacheReportData = async (
   data: unknown[],
   executionTime: number
 ) => {
-  return prisma.reportInstance.update({
+  return prisma.report_instances.update({
     where: { id: instanceId },
     data: {
       cachedData: data as Prisma.InputJsonValue,
@@ -576,7 +585,7 @@ export const cacheReportData = async (
 };
 
 export const getCachedData = async (instanceId: string) => {
-  const instance = await prisma.reportInstance.findUnique({
+  const instance = await prisma.report_instances.findUnique({
     where: { id: instanceId },
     select: {
       cachedData: true,
@@ -597,10 +606,10 @@ export const getCachedData = async (instanceId: string) => {
 };
 
 export const invalidateCache = async (instanceId: string) => {
-  return prisma.reportInstance.update({
+  return prisma.report_instances.update({
     where: { id: instanceId },
     data: {
-      cachedData: null,
+      cachedData: Prisma.JsonNull,
       cachedAt: null,
       cacheExpiresAt: null,
     },

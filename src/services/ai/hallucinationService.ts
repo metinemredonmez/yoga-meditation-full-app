@@ -111,7 +111,7 @@ export const checkForHallucination = async (
   }
 
   // Save check result to database
-  await prisma.hallucinationCheck.create({
+  await prisma.hallucination_checks.create({
     data: {
       content,
       contentType: options.contentType || 'unknown',
@@ -219,7 +219,7 @@ const runSourceGroundingCheck = async (
   const contentEmbedding = await createEmbedding(content, userId);
 
   // Find relevant grounding documents
-  const documents = await prisma.groundingDocument.findMany({
+  const documents = await prisma.grounding_documents.findMany({
     where: {
       isActive: true,
       embedding: { not: Prisma.DbNull },
@@ -635,7 +635,7 @@ export const addGroundingDocument = async (data: {
   const contentHash = createContentHash(data.content);
 
   // Check if already exists
-  const existing = await prisma.groundingDocument.findUnique({
+  const existing = await prisma.grounding_documents.findUnique({
     where: { contentHash },
   });
 
@@ -646,7 +646,7 @@ export const addGroundingDocument = async (data: {
   // Create embedding
   const embedding = await createEmbedding(data.content, data.userId);
 
-  return prisma.groundingDocument.create({
+  return prisma.grounding_documents.create({
     data: {
       title: data.title,
       content: data.content,
@@ -681,7 +681,7 @@ export const updateGroundingDocument = async (
     updateData.embedding = await createEmbedding(data.content, data.userId);
   }
 
-  return prisma.groundingDocument.update({
+  return prisma.grounding_documents.update({
     where: { id: documentId },
     data: updateData,
   });
@@ -692,7 +692,7 @@ export const getGroundingDocuments = async (
   sourceType?: string,
   limit: number = 100
 ) => {
-  return prisma.groundingDocument.findMany({
+  return prisma.grounding_documents.findMany({
     where: {
       isActive: true,
       ...(sourceType && { sourceType }),
@@ -818,7 +818,7 @@ export const validateAIResponse = async (
   }
 
   // Save validation result
-  await prisma.aIResponseValidation.create({
+  await prisma.ai_response_validations.create({
     data: {
       responseId: responseId || 'unknown',
       responseType,
@@ -889,7 +889,7 @@ export const getHallucinationStats = async (
   startDate: Date,
   endDate: Date
 ) => {
-  const checks = await prisma.hallucinationCheck.findMany({
+  const checks = await prisma.hallucination_checks.findMany({
     where: {
       createdAt: {
         gte: startDate,

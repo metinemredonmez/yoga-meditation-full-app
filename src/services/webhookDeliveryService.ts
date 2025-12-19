@@ -23,7 +23,7 @@ export async function createDelivery(
   event: WebhookEvent,
   payload: Record<string, unknown>
 ) {
-  const delivery = await prisma.webhookDelivery.create({
+  const delivery = await prisma.webhook_deliveries.create({
     data: {
       endpointId,
       event,
@@ -52,9 +52,9 @@ export async function queueDelivery(
  * Send a webhook delivery
  */
 export async function sendDelivery(deliveryId: string): Promise<boolean> {
-  const delivery = await prisma.webhookDelivery.findUnique({
+  const delivery = await prisma.webhook_deliveries.findUnique({
     where: { id: deliveryId },
-    include: { endpoint: true },
+    include: { webhook_endpoints: true },
   });
 
   if (!delivery) {
@@ -62,13 +62,13 @@ export async function sendDelivery(deliveryId: string): Promise<boolean> {
     return false;
   }
 
-  if (!delivery.endpoint.isActive) {
+  if (!delivery.webhook_endpoints.isActive) {
     logger.warn({ deliveryId, endpointId: delivery.endpointId }, 'Endpoint is disabled, skipping delivery');
     return false;
   }
 
   // Update status to SENDING
-  await prisma.webhookDelivery.update({
+  await prisma.webhook_deliveries.update({
     where: { id: deliveryId },
     data: {
       status: 'SENDING',
@@ -88,12 +88,12 @@ export async function sendDelivery(deliveryId: string): Promise<boolean> {
     // Create signature using the stored (hashed) secret
     // Note: In production, you'd store the plain secret encrypted, not hashed
     // For now, we use the hashed secret as the signing key
-    const signature = createSignature(body, delivery.endpoint.secret, timestamp);
+    const signature = createSignature(body, delivery.webhook_endpoints.secret, timestamp);
 
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), config.webhook.timeoutMs);
 
-    const response = await fetch(delivery.endpoint.url, {
+    const response = await fetch(delivery.webhook_endpoints.url, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -113,7 +113,7 @@ export async function sendDelivery(deliveryId: string): Promise<boolean> {
 
     if (response.ok) {
       // Success
-      await prisma.webhookDelivery.update({
+      await prisma.webhook_deliveries.update({
         where: { id: deliveryId },
         data: {
           status: 'DELIVERED',
@@ -124,7 +124,7 @@ export async function sendDelivery(deliveryId: string): Promise<boolean> {
       });
 
       // Update endpoint success status
-      await prisma.webhookEndpoint.update({
+      await prisma.webhook_endpoints.update({
         where: { id: delivery.endpointId },
         data: {
           lastSuccessAt: new Date(),
@@ -186,7 +186,7 @@ async function handleDeliveryFailure(
   const delayIndex = Math.min(currentAttempts - 1, retryDelays.length - 1);
   const nextRetryDelay = retryDelays[delayIndex] ?? 60;
 
-  await prisma.webhookDelivery.update({
+  await prisma.webhook_deliveries.update({
     where: { id: deliveryId },
     data: {
       status: shouldRetry ? 'PENDING' : 'FAILED',
@@ -198,7 +198,7 @@ async function handleDeliveryFailure(
   });
 
   // Update endpoint failure count
-  const endpoint = await prisma.webhookEndpoint.update({
+  const endpoint = await prisma.webhook_endpoints.update({
     where: { id: endpointId },
     data: {
       lastFailureAt: new Date(),
@@ -208,7 +208,7 @@ async function handleDeliveryFailure(
 
   // Auto-disable after too many consecutive failures
   if (endpoint.failureCount >= MAX_CONSECUTIVE_FAILURES) {
-    await prisma.webhookEndpoint.update({
+    await prisma.webhook_endpoints.update({
       where: { id: endpointId },
       data: { isActive: false },
     });
@@ -229,7 +229,7 @@ async function handleDeliveryFailure(
  * Process pending deliveries in the queue
  */
 export async function processDeliveryQueue(concurrency: number = 10): Promise<number> {
-  const pendingDeliveries = await prisma.webhookDelivery.findMany({
+  const pendingDeliveries = await prisma.webhook_deliveries.findMany({
     where: {
       status: 'PENDING',
       OR: [{ nextRetryAt: null }, { nextRetryAt: { lte: new Date() } }],
@@ -262,11 +262,10 @@ export async function processDeliveryQueue(concurrency: number = 10): Promise<nu
  * Retry failed deliveries that are due for retry
  */
 export async function retryFailedDeliveries(): Promise<number> {
-  const dueForRetry = await prisma.webhookDelivery.findMany({
+  const dueForRetry = await prisma.webhook_deliveries.findMany({
     where: {
       status: 'PENDING',
       nextRetryAt: { lte: new Date() },
-      attempts: { lt: prisma.webhookDelivery.fields.maxAttempts },
     },
     take: 50,
     orderBy: { nextRetryAt: 'asc' },
@@ -296,10 +295,10 @@ export async function retryFailedDeliveries(): Promise<number> {
  * Get delivery status
  */
 export async function getDeliveryStatus(deliveryId: string) {
-  return prisma.webhookDelivery.findUnique({
+  return prisma.webhook_deliveries.findUnique({
     where: { id: deliveryId },
     include: {
-      endpoint: {
+      webhook_endpoints: {
         select: { id: true, name: true, url: true },
       },
     },
@@ -321,13 +320,13 @@ export async function listDeliveries(endpointId: string, filters: DeliveryFilter
   };
 
   const [deliveries, total] = await Promise.all([
-    prisma.webhookDelivery.findMany({
+    prisma.webhook_deliveries.findMany({
       where,
       orderBy: { createdAt: 'desc' },
       skip: (page - 1) * limit,
       take: limit,
     }),
-    prisma.webhookDelivery.count({ where }),
+    prisma.webhook_deliveries.count({ where }),
   ]);
 
   return {
@@ -345,7 +344,7 @@ export async function listDeliveries(endpointId: string, filters: DeliveryFilter
  * Cancel a pending delivery
  */
 export async function cancelDelivery(deliveryId: string): Promise<boolean> {
-  const delivery = await prisma.webhookDelivery.findUnique({
+  const delivery = await prisma.webhook_deliveries.findUnique({
     where: { id: deliveryId },
   });
 
@@ -353,7 +352,7 @@ export async function cancelDelivery(deliveryId: string): Promise<boolean> {
     return false;
   }
 
-  await prisma.webhookDelivery.update({
+  await prisma.webhook_deliveries.update({
     where: { id: deliveryId },
     data: {
       status: 'FAILED',
@@ -368,7 +367,7 @@ export async function cancelDelivery(deliveryId: string): Promise<boolean> {
  * Retry a specific delivery
  */
 export async function retryDelivery(deliveryId: string): Promise<boolean> {
-  const delivery = await prisma.webhookDelivery.findUnique({
+  const delivery = await prisma.webhook_deliveries.findUnique({
     where: { id: deliveryId },
   });
 
@@ -377,7 +376,7 @@ export async function retryDelivery(deliveryId: string): Promise<boolean> {
   }
 
   // Reset for retry
-  await prisma.webhookDelivery.update({
+  await prisma.webhook_deliveries.update({
     where: { id: deliveryId },
     data: {
       status: 'PENDING',
@@ -397,10 +396,10 @@ export async function getDeliveryStats(endpointId?: string) {
   const where = endpointId ? { endpointId } : {};
 
   const [total, pending, delivered, failed] = await Promise.all([
-    prisma.webhookDelivery.count({ where }),
-    prisma.webhookDelivery.count({ where: { ...where, status: 'PENDING' } }),
-    prisma.webhookDelivery.count({ where: { ...where, status: 'DELIVERED' } }),
-    prisma.webhookDelivery.count({ where: { ...where, status: 'FAILED' } }),
+    prisma.webhook_deliveries.count({ where }),
+    prisma.webhook_deliveries.count({ where: { ...where, status: 'PENDING' } }),
+    prisma.webhook_deliveries.count({ where: { ...where, status: 'DELIVERED' } }),
+    prisma.webhook_deliveries.count({ where: { ...where, status: 'FAILED' } }),
   ]);
 
   return {
@@ -419,7 +418,7 @@ export async function purgeOldDeliveries(daysOld: number = 30): Promise<number> 
   const cutoffDate = new Date();
   cutoffDate.setDate(cutoffDate.getDate() - daysOld);
 
-  const result = await prisma.webhookDelivery.deleteMany({
+  const result = await prisma.webhook_deliveries.deleteMany({
     where: {
       createdAt: { lt: cutoffDate },
       status: { in: ['DELIVERED', 'FAILED'] },

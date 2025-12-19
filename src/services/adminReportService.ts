@@ -109,8 +109,8 @@ export async function getUsageReport(): Promise<UsageReport> {
   const sevenDaysAgo = new Date(now.getTime() - 7 * MILLISECONDS_IN_DAY);
 
   const [totalUsers, activeBookings, streakSourceBookings, topChallengesRaw] = await Promise.all([
-    prisma.user.count(),
-    prisma.booking.findMany({
+    prisma.users.count(),
+    prisma.bookings.findMany({
       where: {
         createdAt: { gte: sevenDaysAgo },
         status: { not: BookingStatus.CANCELLED },
@@ -119,7 +119,7 @@ export async function getUsageReport(): Promise<UsageReport> {
       orderBy: { userId: 'asc' },
       select: { userId: true },
     }),
-    prisma.booking.findMany({
+    prisma.bookings.findMany({
       where: { status: { not: BookingStatus.CANCELLED } },
       select: { userId: true, createdAt: true },
       orderBy: [
@@ -127,14 +127,14 @@ export async function getUsageReport(): Promise<UsageReport> {
         { createdAt: 'asc' },
       ],
     }),
-    prisma.challenge.findMany({
+    prisma.challenges.findMany({
       select: {
         id: true,
         title: true,
-        _count: { select: { enrollments: true } },
+        _count: { select: { challenge_enrollments: true } },
       },
       orderBy: {
-        enrollments: { _count: 'desc' },
+        challenge_enrollments: { _count: 'desc' },
       },
       take: 5,
     }),
@@ -143,11 +143,11 @@ export async function getUsageReport(): Promise<UsageReport> {
   const streakDistribution = calculateStreakDistribution(streakSourceBookings);
 
   const topChallenges = topChallengesRaw
-    .filter((challenge) => challenge._count.enrollments > 0)
+    .filter((challenge) => challenge._count.challenge_enrollments > 0)
     .map((challenge) => ({
       id: challenge.id,
       title: challenge.title,
-      enrollmentCount: challenge._count.enrollments,
+      enrollmentCount: challenge._count.challenge_enrollments,
     }));
 
   return {
@@ -165,7 +165,7 @@ export async function getRevenueReport(): Promise<RevenueReport> {
   const thirtyDaysAgo = new Date(now.getTime() - 30 * MILLISECONDS_IN_DAY);
 
   const [subscriptionPaymentsThisMonth, activeSubscriptions, failedPaymentsLast30dRaw] = await Promise.all([
-    prisma.payment.findMany({
+    prisma.payments.findMany({
       where: {
         status: PaymentStatus.COMPLETED,
         subscriptionId: { not: null },
@@ -173,8 +173,8 @@ export async function getRevenueReport(): Promise<RevenueReport> {
       },
       select: { amount: true },
     }),
-    prisma.subscription.count({ where: { status: SubscriptionStatus.ACTIVE } }),
-    prisma.payment.findMany({
+    prisma.subscriptions.count({ where: { status: SubscriptionStatus.ACTIVE } }),
+    prisma.payments.findMany({
       where: {
         status: PaymentStatus.FAILED,
         createdAt: { gte: thirtyDaysAgo },

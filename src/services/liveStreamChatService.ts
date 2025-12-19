@@ -29,7 +29,7 @@ export async function sendMessage(input: SendMessageInput) {
   const { streamId, userId, message, type = 'MESSAGE', replyToId } = input;
 
   // Check if chat is enabled for this stream
-  const stream = await prisma.liveStream.findUnique({
+  const stream = await prisma.live_streams.findUnique({
     where: { id: streamId },
     select: { chatEnabled: true, status: true },
   });
@@ -48,7 +48,7 @@ export async function sendMessage(input: SendMessageInput) {
 
   // Verify replyToId exists if provided
   if (replyToId) {
-    const replyTo = await prisma.liveStreamChat.findUnique({
+    const replyTo = await prisma.live_stream_chats.findUnique({
       where: { id: replyToId },
     });
     if (!replyTo || replyTo.streamId !== streamId) {
@@ -56,7 +56,7 @@ export async function sendMessage(input: SendMessageInput) {
     }
   }
 
-  const chatMessage = await prisma.liveStreamChat.create({
+  const chatMessage = await prisma.live_stream_chats.create({
     data: {
       streamId,
       userId,
@@ -65,18 +65,18 @@ export async function sendMessage(input: SendMessageInput) {
       replyToId,
     },
     include: {
-      user: {
+      users: {
         select: {
           id: true,
           firstName: true,
           lastName: true,
         },
       },
-      replyTo: {
+      live_stream_chats: {
         select: {
           id: true,
           message: true,
-          user: {
+          users: {
             select: {
               firstName: true,
               lastName: true,
@@ -111,21 +111,21 @@ export async function getMessages(
   }
 
   const [items, total] = await Promise.all([
-    prisma.liveStreamChat.findMany({
+    prisma.live_stream_chats.findMany({
       where,
       include: {
-        user: {
+        users: {
           select: {
             id: true,
             firstName: true,
             lastName: true,
           },
         },
-        replyTo: {
+        live_stream_chats: {
           select: {
             id: true,
             message: true,
-            user: {
+            users: {
               select: {
                 firstName: true,
                 lastName: true,
@@ -138,7 +138,7 @@ export async function getMessages(
       skip: (page - 1) * limit,
       take: limit,
     }),
-    prisma.liveStreamChat.count({ where }),
+    prisma.live_stream_chats.count({ where }),
   ]);
 
   return {
@@ -151,12 +151,12 @@ export async function getMessages(
 }
 
 export async function deleteMessage(messageId: string, deletedBy: string) {
-  const message = await prisma.liveStreamChat.findUnique({
+  const message = await prisma.live_stream_chats.findUnique({
     where: { id: messageId },
     include: {
-      stream: {
+      live_streams: {
         include: {
-          instructor: true,
+          instructor_profiles: true,
         },
       },
     },
@@ -168,14 +168,14 @@ export async function deleteMessage(messageId: string, deletedBy: string) {
 
   // Check permission: message owner, host, or co-host can delete
   const isOwner = message.userId === deletedBy;
-  const isHost = message.stream.instructor.userId === deletedBy;
-  const isCoHost = message.stream.coHostIds.includes(deletedBy);
+  const isHost = message.live_streams.instructor_profiles.userId === deletedBy;
+  const isCoHost = message.live_streams.coHostIds.includes(deletedBy);
 
   if (!isOwner && !isHost && !isCoHost) {
     throw new Error('Not authorized to delete this message');
   }
 
-  await prisma.liveStreamChat.update({
+  await prisma.live_stream_chats.update({
     where: { id: messageId },
     data: {
       isDeleted: true,
@@ -188,12 +188,12 @@ export async function deleteMessage(messageId: string, deletedBy: string) {
 }
 
 export async function pinMessage(messageId: string, pinnedBy: string) {
-  const message = await prisma.liveStreamChat.findUnique({
+  const message = await prisma.live_stream_chats.findUnique({
     where: { id: messageId },
     include: {
-      stream: {
+      live_streams: {
         include: {
-          instructor: true,
+          instructor_profiles: true,
         },
       },
     },
@@ -204,24 +204,24 @@ export async function pinMessage(messageId: string, pinnedBy: string) {
   }
 
   // Only host or co-host can pin
-  const isHost = message.stream.instructor.userId === pinnedBy;
-  const isCoHost = message.stream.coHostIds.includes(pinnedBy);
+  const isHost = message.live_streams.instructor_profiles.userId === pinnedBy;
+  const isCoHost = message.live_streams.coHostIds.includes(pinnedBy);
 
   if (!isHost && !isCoHost) {
     throw new Error('Not authorized to pin messages');
   }
 
   // Unpin any existing pinned messages (optional: allow multiple pins)
-  await prisma.liveStreamChat.updateMany({
+  await prisma.live_stream_chats.updateMany({
     where: { streamId: message.streamId, isPinned: true },
     data: { isPinned: false },
   });
 
-  const updated = await prisma.liveStreamChat.update({
+  const updated = await prisma.live_stream_chats.update({
     where: { id: messageId },
     data: { isPinned: true },
     include: {
-      user: {
+      users: {
         select: {
           id: true,
           firstName: true,
@@ -236,12 +236,12 @@ export async function pinMessage(messageId: string, pinnedBy: string) {
 }
 
 export async function unpinMessage(messageId: string, unpinnedBy: string) {
-  const message = await prisma.liveStreamChat.findUnique({
+  const message = await prisma.live_stream_chats.findUnique({
     where: { id: messageId },
     include: {
-      stream: {
+      live_streams: {
         include: {
-          instructor: true,
+          instructor_profiles: true,
         },
       },
     },
@@ -252,14 +252,14 @@ export async function unpinMessage(messageId: string, unpinnedBy: string) {
   }
 
   // Only host or co-host can unpin
-  const isHost = message.stream.instructor.userId === unpinnedBy;
-  const isCoHost = message.stream.coHostIds.includes(unpinnedBy);
+  const isHost = message.live_streams.instructor_profiles.userId === unpinnedBy;
+  const isCoHost = message.live_streams.coHostIds.includes(unpinnedBy);
 
   if (!isHost && !isCoHost) {
     throw new Error('Not authorized to unpin messages');
   }
 
-  const updated = await prisma.liveStreamChat.update({
+  const updated = await prisma.live_stream_chats.update({
     where: { id: messageId },
     data: { isPinned: false },
   });
@@ -269,14 +269,14 @@ export async function unpinMessage(messageId: string, unpinnedBy: string) {
 }
 
 export async function getPinnedMessages(streamId: string) {
-  return prisma.liveStreamChat.findMany({
+  return prisma.live_stream_chats.findMany({
     where: {
       streamId,
       isPinned: true,
       isDeleted: false,
     },
     include: {
-      user: {
+      users: {
         select: {
           id: true,
           firstName: true,
@@ -291,19 +291,19 @@ export async function getPinnedMessages(streamId: string) {
 export async function sendSystemMessage(streamId: string, message: string) {
   // System messages use a null userId (or a special system user)
   // For now, we'll use the stream creator as the "system"
-  const stream = await prisma.liveStream.findUnique({
+  const stream = await prisma.live_streams.findUnique({
     where: { id: streamId },
-    include: { instructor: true },
+    include: { instructor_profiles: true },
   });
 
   if (!stream) {
     throw new Error('Stream not found');
   }
 
-  return prisma.liveStreamChat.create({
+  return prisma.live_stream_chats.create({
     data: {
       streamId,
-      userId: stream.instructor.userId,
+      userId: stream.instructor_profiles.userId,
       message,
       type: 'SYSTEM',
     },
@@ -315,9 +315,9 @@ export async function sendAnnouncement(
   userId: string,
   message: string,
 ) {
-  const stream = await prisma.liveStream.findUnique({
+  const stream = await prisma.live_streams.findUnique({
     where: { id: streamId },
-    include: { instructor: true },
+    include: { instructor_profiles: true },
   });
 
   if (!stream) {
@@ -325,14 +325,14 @@ export async function sendAnnouncement(
   }
 
   // Only host or co-host can send announcements
-  const isHost = stream.instructor.userId === userId;
+  const isHost = stream.instructor_profiles.userId === userId;
   const isCoHost = stream.coHostIds.includes(userId);
 
   if (!isHost && !isCoHost) {
     throw new Error('Not authorized to send announcements');
   }
 
-  return prisma.liveStreamChat.create({
+  return prisma.live_stream_chats.create({
     data: {
       streamId,
       userId,
@@ -340,7 +340,7 @@ export async function sendAnnouncement(
       type: 'ANNOUNCEMENT',
     },
     include: {
-      user: {
+      users: {
         select: {
           id: true,
           firstName: true,
@@ -361,14 +361,14 @@ export async function askQuestion(streamId: string, userId: string, question: st
 }
 
 export async function getQuestions(streamId: string) {
-  return prisma.liveStreamChat.findMany({
+  return prisma.live_stream_chats.findMany({
     where: {
       streamId,
       type: 'QUESTION',
       isDeleted: false,
     },
     include: {
-      user: {
+      users: {
         select: {
           id: true,
           firstName: true,
@@ -381,9 +381,9 @@ export async function getQuestions(streamId: string) {
 }
 
 export async function clearChat(streamId: string, clearedBy: string) {
-  const stream = await prisma.liveStream.findUnique({
+  const stream = await prisma.live_streams.findUnique({
     where: { id: streamId },
-    include: { instructor: true },
+    include: { instructor_profiles: true },
   });
 
   if (!stream) {
@@ -391,11 +391,11 @@ export async function clearChat(streamId: string, clearedBy: string) {
   }
 
   // Only host can clear chat
-  if (stream.instructor.userId !== clearedBy) {
+  if (stream.instructor_profiles.userId !== clearedBy) {
     throw new Error('Not authorized to clear chat');
   }
 
-  await prisma.liveStreamChat.updateMany({
+  await prisma.live_stream_chats.updateMany({
     where: { streamId },
     data: {
       isDeleted: true,
@@ -408,7 +408,7 @@ export async function clearChat(streamId: string, clearedBy: string) {
 }
 
 export async function getMessageCount(streamId: string) {
-  return prisma.liveStreamChat.count({
+  return prisma.live_stream_chats.count({
     where: {
       streamId,
       isDeleted: false,

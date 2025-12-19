@@ -1,9 +1,9 @@
 import { prisma } from '../utils/database';
 import type { PoseFilters, CreatePoseInput, UpdatePoseInput } from '../validation/poseSchemas';
-import { Prisma, type Pose } from '@prisma/client';
+import { Prisma, type poses } from '@prisma/client';
 
-function buildPoseWhere(filters: PoseFilters): Prisma.PoseWhereInput {
-  const where: Prisma.PoseWhereInput = {};
+function buildPoseWhere(filters: PoseFilters): Prisma.posesWhereInput {
+  const where: Prisma.posesWhereInput = {};
 
   if (filters.difficulty) {
     where.difficulty = filters.difficulty;
@@ -27,7 +27,7 @@ function buildPoseWhere(filters: PoseFilters): Prisma.PoseWhereInput {
   return where;
 }
 
-function mapPose(pose: Pose) {
+function mapPose(pose: poses) {
   return {
     id: pose.id,
     sanskritName: pose.sanskritName,
@@ -40,7 +40,7 @@ function mapPose(pose: Pose) {
 }
 
 export async function listPoses(filters: PoseFilters) {
-  const poses = await prisma.pose.findMany({
+  const poses = await prisma.poses.findMany({
     where: buildPoseWhere(filters),
     orderBy: [{ difficulty: 'asc' }, { englishName: 'asc' }],
   });
@@ -49,12 +49,12 @@ export async function listPoses(filters: PoseFilters) {
 }
 
 export async function getPoseById(poseId: string) {
-  const pose = await prisma.pose.findUnique({ where: { id: poseId } });
+  const pose = await prisma.poses.findUnique({ where: { id: poseId } });
   return pose ? mapPose(pose) : null;
 }
 
 export async function createPose(data: CreatePoseInput) {
-  const pose = await prisma.pose.create({
+  const pose = await prisma.poses.create({
     data: {
       sanskritName: data.sanskritName ?? null,
       englishName: data.englishName,
@@ -69,7 +69,7 @@ export async function createPose(data: CreatePoseInput) {
 }
 
 export async function updatePose(poseId: string, data: UpdatePoseInput) {
-  const pose = await prisma.pose.update({
+  const pose = await prisma.poses.update({
     where: { id: poseId },
     data: {
       ...(data.sanskritName !== undefined ? { sanskritName: data.sanskritName } : {}),
@@ -85,5 +85,5 @@ export async function updatePose(poseId: string, data: UpdatePoseInput) {
 }
 
 export async function deletePose(poseId: string) {
-  await prisma.pose.delete({ where: { id: poseId } });
+  await prisma.poses.delete({ where: { id: poseId } });
 }

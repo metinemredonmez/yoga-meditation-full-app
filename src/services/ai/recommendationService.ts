@@ -18,25 +18,25 @@ export const generateRecommendations = async (
   // Get user preferences and history
   const [user, userPreference, recentBehaviors, existingRecommendations] =
     await Promise.all([
-      prisma.user.findUnique({
+      prisma.users.findUnique({
         where: { id: userId },
         include: {
-          videoProgress: {
+          video_progress: {
             orderBy: { updatedAt: 'desc' },
             take: 50,
           },
           favorites: { take: 20 },
         },
       }),
-      prisma.userAIPreference.findUnique({
+      prisma.user_ai_preferences.findUnique({
         where: { userId },
       }),
-      prisma.userBehavior.findMany({
+      prisma.user_behaviors.findMany({
         where: { userId },
         orderBy: { createdAt: 'desc' },
         take: 100,
       }),
-      prisma.recommendation.findMany({
+      prisma.recommendations.findMany({
         where: {
           userId,
           expiresAt: { gt: new Date() },
@@ -48,12 +48,12 @@ export const generateRecommendations = async (
   if (!userPreference?.enableRecommendations) return;
 
   // Generate different types of recommendations
-  const recommendations: Prisma.RecommendationCreateManyInput[] = [];
+  const recommendations: Prisma.recommendationsCreateManyInput[] = [];
 
   // Continue watching
   const continueWatching = await generateContinueWatching(userId, limit);
   recommendations.push(
-    ...continueWatching.map((r) => ({ ...r, context, userId }))
+    ...continueWatching.map((r) => ({ ...r, context, userId } as Prisma.recommendationsCreateManyInput))
   );
 
   // For you (personalized)
@@ -62,11 +62,11 @@ export const generateRecommendations = async (
     recentBehaviors,
     limit
   );
-  recommendations.push(...forYou.map((r) => ({ ...r, context, userId })));
+  recommendations.push(...forYou.map((r) => ({ ...r, context, userId } as Prisma.recommendationsCreateManyInput)));
 
   // Trending
   const trending = await generateTrendingRecommendations(limit);
-  recommendations.push(...trending.map((r) => ({ ...r, context, userId })));
+  recommendations.push(...trending.map((r) => ({ ...r, context, userId } as Prisma.recommendationsCreateManyInput)));
 
   // Filter out already recommended items
   const existingEntityIds = new Set(
@@ -85,7 +85,7 @@ export const generateRecommendations = async (
 
   // Save recommendations
   if (diversifiedRecommendations.length > 0) {
-    await prisma.recommendation.createMany({
+    await prisma.recommendations.createMany({
       data: diversifiedRecommendations.slice(0, limit * 3),
       skipDuplicates: true,
     });
@@ -99,7 +99,7 @@ export const getPersonalizedFeed = async (
   limit: number = 20
 ) => {
   // Try to get cached recommendations first
-  const recommendations = await prisma.recommendation.findMany({
+  const recommendations = await prisma.recommendations.findMany({
     where: {
       userId,
       expiresAt: { gt: new Date() },
@@ -114,7 +114,7 @@ export const getPersonalizedFeed = async (
   if (recommendations.length < limit) {
     await generateRecommendations(userId, RecommendationContext.HOME_FEED, limit);
 
-    return prisma.recommendation.findMany({
+    return prisma.recommendations.findMany({
       where: {
         userId,
         expiresAt: { gt: new Date() },
@@ -134,7 +134,7 @@ export const getContinueWatching = async (
   userId: string,
   limit: number = 5
 ) => {
-  return prisma.recommendation.findMany({
+  return prisma.recommendations.findMany({
     where: {
       userId,
       type: RecommendationType.CONTINUE_WATCHING,
@@ -150,9 +150,9 @@ export const getContinueWatching = async (
 const generateContinueWatching = async (
   userId: string,
   limit: number
-): Promise<Partial<Prisma.RecommendationCreateManyInput>[]> => {
+): Promise<Partial<Prisma.recommendationsCreateManyInput>[]> => {
   // Find incomplete video progress
-  const incompleteProgress = await prisma.videoProgress.findMany({
+  const incompleteProgress = await prisma.video_progress.findMany({
     where: {
       userId,
       completed: false,
@@ -178,9 +178,9 @@ const generatePersonalizedRecommendations = async (
   userId: string,
   behaviors: { entityType?: string | null; entityId?: string | null }[],
   limit: number
-): Promise<Partial<Prisma.RecommendationCreateManyInput>[]> => {
+): Promise<Partial<Prisma.recommendationsCreateManyInput>[]> => {
   // Get user embedding
-  let userEmbedding = await prisma.userEmbedding.findUnique({
+  let userEmbedding = await prisma.user_embeddings.findUnique({
     where: { userId },
   });
 
@@ -192,13 +192,13 @@ const generatePersonalizedRecommendations = async (
   if (!userEmbedding) return [];
 
   // Get content embeddings
-  const contentEmbeddings = await prisma.contentEmbedding.findMany({
+  const contentEmbeddings = await prisma.content_embeddings.findMany({
     take: 100,
   });
 
   // Calculate similarity scores
   const userVector = userEmbedding.embedding as number[];
-  const recommendations: Partial<Prisma.RecommendationCreateManyInput>[] = [];
+  const recommendations: Partial<Prisma.recommendationsCreateManyInput>[] = [];
 
   for (const content of contentEmbeddings) {
     const contentVector = content.embedding as number[];
@@ -228,11 +228,11 @@ const generatePersonalizedRecommendations = async (
 // Generate trending recommendations
 const generateTrendingRecommendations = async (
   limit: number
-): Promise<Partial<Prisma.RecommendationCreateManyInput>[]> => {
+): Promise<Partial<Prisma.recommendationsCreateManyInput>[]> => {
   // Get most viewed content in last 7 days
   const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
 
-  const trendingPrograms = await prisma.program.findMany({
+  const trendingPrograms = await prisma.programs.findMany({
     select: {
       id: true,
       title: true,
@@ -262,7 +262,7 @@ const generateTrendingRecommendations = async (
 // Generate user embedding
 const generateUserEmbedding = async (userId: string) => {
   // Get user's behavior history
-  const behaviors = await prisma.userBehavior.findMany({
+  const behaviors = await prisma.user_behaviors.findMany({
     where: { userId },
     orderBy: { createdAt: 'desc' },
     take: 50,
@@ -282,7 +282,7 @@ const generateUserEmbedding = async (userId: string) => {
   const embedding = await createEmbedding(interactionText, userId);
 
   // Save embedding
-  return prisma.userEmbedding.upsert({
+  return prisma.user_embeddings.upsert({
     where: { userId },
     update: {
       embedding: embedding,
@@ -324,11 +324,11 @@ const cosineSimilarity = (a: number[], b: number[]): number => {
 
 // Apply diversity filter
 const applyDiversityFilter = (
-  recommendations: Partial<Prisma.RecommendationCreateManyInput>[],
+  recommendations: Partial<Prisma.recommendationsCreateManyInput>[],
   diversityFactor: number
-): Prisma.RecommendationCreateManyInput[] => {
+): Prisma.recommendationsCreateManyInput[] => {
   const entityTypes = new Map<string, number>();
-  const filtered: Prisma.RecommendationCreateManyInput[] = [];
+  const filtered: Prisma.recommendationsCreateManyInput[] = [];
   const maxPerType = Math.ceil(recommendations.length / 3);
 
   for (const rec of recommendations) {
@@ -339,7 +339,7 @@ const applyDiversityFilter = (
     const threshold = maxPerType * (1 + diversityFactor);
 
     if (currentCount < threshold) {
-      filtered.push(rec as Prisma.RecommendationCreateManyInput);
+      filtered.push(rec as Prisma.recommendationsCreateManyInput);
       entityTypes.set(entityType, currentCount + 1);
     }
   }
@@ -349,7 +349,7 @@ const applyDiversityFilter = (
 
 // Record recommendation view
 export const recordRecommendationView = async (recommendationId: string) => {
-  return prisma.recommendation.update({
+  return prisma.recommendations.update({
     where: { id: recommendationId },
     data: {
       isViewed: true,
@@ -360,7 +360,7 @@ export const recordRecommendationView = async (recommendationId: string) => {
 
 // Record recommendation click
 export const recordRecommendationClick = async (recommendationId: string) => {
-  return prisma.recommendation.update({
+  return prisma.recommendations.update({
     where: { id: recommendationId },
     data: {
       isClicked: true,
@@ -374,7 +374,7 @@ export const recordRecommendationDismiss = async (
   recommendationId: string,
   feedback?: RecommendationFeedback
 ) => {
-  return prisma.recommendation.update({
+  return prisma.recommendations.update({
     where: { id: recommendationId },
     data: {
       isDismissed: true,
@@ -390,7 +390,7 @@ export const getSimilarContent = async (
   entityId: string,
   limit: number = 5
 ) => {
-  const sourceEmbedding = await prisma.contentEmbedding.findFirst({
+  const sourceEmbedding = await prisma.content_embeddings.findFirst({
     where: {
       entityType,
       entityId,
@@ -399,7 +399,7 @@ export const getSimilarContent = async (
 
   if (!sourceEmbedding) return [];
 
-  const allEmbeddings = await prisma.contentEmbedding.findMany({
+  const allEmbeddings = await prisma.content_embeddings.findMany({
     where: {
       NOT: {
         AND: [{ entityType }, { entityId }],
@@ -423,7 +423,7 @@ export const getSimilarContent = async (
 // Refresh all user recommendations (cron job)
 export const refreshAllRecommendations = async () => {
   // Get active users (those with recent activity)
-  const activeUsers = await prisma.userBehavior.groupBy({
+  const activeUsers = await prisma.user_behaviors.groupBy({
     by: ['userId'],
     where: {
       createdAt: { gt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) },
@@ -458,7 +458,7 @@ export const refreshAllRecommendations = async () => {
 
 // Clean up expired recommendations
 export const cleanupExpiredRecommendations = async () => {
-  const result = await prisma.recommendation.deleteMany({
+  const result = await prisma.recommendations.deleteMany({
     where: {
       expiresAt: { lt: new Date() },
     },

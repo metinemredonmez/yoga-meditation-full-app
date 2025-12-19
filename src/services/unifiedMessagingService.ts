@@ -219,7 +219,7 @@ export async function sendMessage(options: SendMessageOptions): Promise<SendMess
   const { userId, channel, subject, body, bodyHtml, templateId, data, metadata } = options;
 
   // Create message log
-  const messageLog = await prisma.messageLog.create({
+  const messageLog = await prisma.message_logs.create({
     data: {
       userId,
       templateId,
@@ -254,7 +254,7 @@ export async function sendMessage(options: SendMessageOptions): Promise<SendMess
     }
 
     // Update message log
-    await prisma.messageLog.update({
+    await prisma.message_logs.update({
       where: { id: messageLog.id },
       data: {
         status: result.success ? 'SENT' : 'FAILED',
@@ -267,7 +267,7 @@ export async function sendMessage(options: SendMessageOptions): Promise<SendMess
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
 
-    await prisma.messageLog.update({
+    await prisma.message_logs.update({
       where: { id: messageLog.id },
       data: {
         status: 'FAILED',
@@ -295,7 +295,7 @@ async function sendEmailMessage(
   bodyHtml?: string,
   logId?: string,
 ): Promise<SendMessageResult> {
-  const user = await prisma.user.findUnique({
+  const user = await prisma.users.findUnique({
     where: { id: userId },
     select: { email: true, firstName: true },
   });
@@ -364,7 +364,7 @@ async function sendSmsMessage(
   body: string,
   logId?: string,
 ): Promise<SendMessageResult> {
-  const user = await prisma.user.findUnique({
+  const user = await prisma.users.findUnique({
     where: { id: userId },
     select: { phoneNumber: true },
   });
@@ -411,7 +411,7 @@ async function sendInAppMessage(
   logId?: string,
 ): Promise<SendMessageResult> {
   // In-app notifications are stored in NotificationLog and shown in the app
-  await prisma.notificationLog.create({
+  await prisma.notification_logs.create({
     data: {
       userId,
       title,
@@ -484,7 +484,7 @@ export async function checkUserPreference(
   userId: string,
   category: string,
 ): Promise<boolean> {
-  const preference = await prisma.userMessagePreference.findUnique({
+  const preference = await prisma.user_message_preferences.findUnique({
     where: { userId },
   });
 
@@ -497,8 +497,8 @@ export async function checkUserPreference(
   const categoryMap: Record<string, keyof typeof preference> = {
     welcome: 'welcomeEmail',
     trial: 'trialReminders',
-    subscription: 'subscriptionAlerts',
-    payment: 'paymentAlerts',
+    subscriptions: 'subscriptionAlerts',
+    payments: 'paymentAlerts',
     weekly_digest: 'weeklyDigest',
     monthly_digest: 'monthlyDigest',
     inactivity: 'inactivityReminders',
@@ -519,7 +519,7 @@ export async function checkUserPreference(
  * Check if user is in quiet hours
  */
 export async function isInQuietHours(userId: string): Promise<boolean> {
-  const preference = await prisma.userMessagePreference.findUnique({
+  const preference = await prisma.user_message_preferences.findUnique({
     where: { userId },
   });
 
@@ -565,7 +565,7 @@ export async function getUserMessageStats(userId: string): Promise<{
   totalClicked: number;
   byChannel: Record<string, number>;
 }> {
-  const logs = await prisma.messageLog.findMany({
+  const logs = await prisma.message_logs.findMany({
     where: { userId },
     select: {
       channel: true,
@@ -605,7 +605,7 @@ export async function getUserMessageStats(userId: string): Promise<{
  * Update message log when email is opened
  */
 export async function trackEmailOpen(logId: string): Promise<void> {
-  await prisma.messageLog.update({
+  await prisma.message_logs.update({
     where: { id: logId },
     data: {
       status: 'OPENED',
@@ -618,7 +618,7 @@ export async function trackEmailOpen(logId: string): Promise<void> {
  * Update message log when link is clicked
  */
 export async function trackEmailClick(logId: string): Promise<void> {
-  await prisma.messageLog.update({
+  await prisma.message_logs.update({
     where: { id: logId },
     data: {
       status: 'CLICKED',

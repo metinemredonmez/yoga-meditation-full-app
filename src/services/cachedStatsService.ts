@@ -40,16 +40,16 @@ export async function getCachedDashboardStats(): Promise<DashboardStats> {
         activeChallenges,
         totalCompletedVideos,
       ] = await Promise.all([
-        prisma.user.count(),
-        prisma.program.count(),
-        prisma.pose.count(),
-        prisma.challenge.count({
+        prisma.users.count(),
+        prisma.programs.count(),
+        prisma.poses.count(),
+        prisma.challenges.count({
           where: {
             startAt: { lte: now },
             endAt: { gte: now },
           },
         }),
-        prisma.videoProgress.count({
+        prisma.video_progress.count({
           where: { completed: true },
         }),
       ]);
@@ -83,23 +83,22 @@ export async function getCachedUserStats(userId: string): Promise<UserStats> {
         favoritePrograms,
         challengeEnrollments,
       ] = await Promise.all([
-        prisma.videoProgress.count({
+        prisma.video_progress.count({
           where: { userId, completed: true },
         }),
-        prisma.videoProgress.findMany({
+        prisma.video_progress.findMany({
           where: { userId, completed: true },
           select: {
             duration: true,
           },
         }),
-        prisma.favorite.count({
+        prisma.favorites.count({
           where: { userId, itemType: 'PROGRAM' },
         }),
-        prisma.challengeEnrollment.findMany({
+        prisma.challenge_enrollments.findMany({
           where: { userId },
-          select: {
-            challengeId: true,
-            challenge: {
+          include: {
+            challenges: {
               select: { targetDays: true },
             },
           },
@@ -115,7 +114,7 @@ export async function getCachedUserStats(userId: string): Promise<UserStats> {
       );
 
       // Calculate streak (simplified - counts consecutive days with activity)
-      const recentActivity = await prisma.videoProgress.findMany({
+      const recentActivity = await prisma.video_progress.findMany({
         where: { userId, completed: true },
         orderBy: { lastWatchedAt: 'desc' },
         take: 365,
@@ -160,14 +159,14 @@ export async function getCachedUserStats(userId: string): Promise<UserStats> {
       // Count completed challenges
       let challengesCompleted = 0;
       for (const enrollment of challengeEnrollments) {
-        const checksCount = await prisma.dailyCheck.count({
+        const checksCount = await prisma.daily_checks.count({
           where: {
             userId,
             challengeId: enrollment.challengeId,
           },
         });
 
-        if (checksCount >= enrollment.challenge.targetDays) {
+        if (checksCount >= (enrollment.challenges?.targetDays || 0)) {
           challengesCompleted++;
         }
       }
@@ -212,15 +211,15 @@ export async function getCachedContentStats() {
         posesByDifficulty,
         sessionsByProgram,
       ] = await Promise.all([
-        prisma.program.groupBy({
+        prisma.programs.groupBy({
           by: ['level'],
           _count: { id: true },
         }),
-        prisma.pose.groupBy({
+        prisma.poses.groupBy({
           by: ['difficulty'],
           _count: { id: true },
         }),
-        prisma.programSession.groupBy({
+        prisma.program_sessions.groupBy({
           by: ['programId'],
           _count: { id: true },
         }),

@@ -10,7 +10,7 @@ const CYCLE_DAYS = 30;
 // ============================================
 
 export async function getDailyRewardStatus(userId: string) {
-  let userReward = await prisma.userDailyReward.findUnique({
+  let userReward = await prisma.user_daily_rewards.findUnique({
     where: { userId },
   });
 
@@ -19,7 +19,7 @@ export async function getDailyRewardStatus(userId: string) {
 
   // Create if doesn't exist
   if (!userReward) {
-    userReward = await prisma.userDailyReward.create({
+    userReward = await prisma.user_daily_rewards.create({
       data: { userId },
     });
   }
@@ -31,7 +31,7 @@ export async function getDailyRewardStatus(userId: string) {
 
   if (daysSinceCycleStart >= CYCLE_DAYS) {
     // Reset cycle
-    userReward = await prisma.userDailyReward.update({
+    userReward = await prisma.user_daily_rewards.update({
       where: { userId },
       data: {
         currentDay: 1,
@@ -54,12 +54,12 @@ export async function getDailyRewardStatus(userId: string) {
   }
 
   // Get today's reward
-  const todayReward = await prisma.dailyReward.findUnique({
+  const todayReward = await prisma.daily_rewards.findUnique({
     where: { day: userReward.currentDay },
   });
 
   // Get upcoming rewards
-  const upcomingRewards = await prisma.dailyReward.findMany({
+  const upcomingRewards = await prisma.daily_rewards.findMany({
     where: {
       day: { gt: userReward.currentDay, lte: userReward.currentDay + 7 },
     },
@@ -95,11 +95,10 @@ export async function claimDailyReward(userId: string) {
   const now = new Date();
 
   // Award XP
-  const xpResult = await xpService.awardXP(
+  const xpResult = await xpService.addXP(
     userId,
     status.todayReward.xpReward,
     'DAILY_LOGIN',
-    undefined,
     `Day ${status.currentDay} daily reward`,
   );
 
@@ -117,7 +116,7 @@ export async function claimDailyReward(userId: string) {
   const nextDay = status.currentDay >= CYCLE_DAYS ? 1 : status.currentDay + 1;
   const shouldResetCycle = status.currentDay >= CYCLE_DAYS;
 
-  await prisma.userDailyReward.update({
+  await prisma.user_daily_rewards.update({
     where: { userId },
     data: {
       currentDay: nextDay,
@@ -151,7 +150,7 @@ async function processBonusReward(
       return { type: 'streak_freeze', granted: true };
 
     case 'BADGE':
-      await prisma.userBadge.upsert({
+      await prisma.user_badges.upsert({
         where: { userId_badgeId: { userId, badgeId: bonusValue } },
         create: { userId, badgeId: bonusValue },
         update: {},
@@ -159,7 +158,7 @@ async function processBonusReward(
       return { type: 'badge', badgeId: bonusValue };
 
     case 'TITLE':
-      await prisma.userTitle.upsert({
+      await prisma.user_titles.upsert({
         where: { userId_titleId: { userId, titleId: bonusValue } },
         create: { userId, titleId: bonusValue },
         update: {},
@@ -167,7 +166,7 @@ async function processBonusReward(
       return { type: 'title', titleId: bonusValue };
 
     case 'AVATAR_FRAME':
-      await prisma.userAvatarFrame.upsert({
+      await prisma.user_avatar_frames.upsert({
         where: { userId_frameId: { userId, frameId: bonusValue } },
         create: { userId, frameId: bonusValue },
         update: {},
@@ -188,7 +187,7 @@ async function processBonusReward(
 // ============================================
 
 export async function getDailyRewardCalendar() {
-  return prisma.dailyReward.findMany({
+  return prisma.daily_rewards.findMany({
     orderBy: { day: 'asc' },
   });
 }
@@ -196,7 +195,7 @@ export async function getDailyRewardCalendar() {
 export async function getUserCalendar(userId: string) {
   const [calendar, userReward] = await Promise.all([
     getDailyRewardCalendar(),
-    prisma.userDailyReward.findUnique({ where: { userId } }),
+    prisma.user_daily_rewards.findUnique({ where: { userId } }),
   ]);
 
   return calendar.map((reward) => ({
@@ -209,14 +208,14 @@ export async function getUserCalendar(userId: string) {
 
 // Get all daily rewards config (for admin)
 export async function getAllDailyRewards() {
-  return prisma.dailyReward.findMany({
+  return prisma.daily_rewards.findMany({
     orderBy: { day: 'asc' },
   });
 }
 
 // Get user's claim history
 export async function getClaimHistory(userId: string) {
-  const userReward = await prisma.userDailyReward.findUnique({
+  const userReward = await prisma.user_daily_rewards.findUnique({
     where: { userId },
   });
 
@@ -238,7 +237,7 @@ export async function getClaimHistory(userId: string) {
 
 // Reset user's daily reward cycle (admin)
 export async function resetUserDailyReward(userId: string) {
-  return prisma.userDailyReward.upsert({
+  return prisma.user_daily_rewards.upsert({
     where: { userId },
     create: { userId },
     update: {
@@ -260,7 +259,7 @@ export async function createDailyReward(data: {
   bonusValue?: string;
   isSpecial?: boolean;
 }) {
-  return prisma.dailyReward.create({
+  return prisma.daily_rewards.create({
     data: {
       ...data,
       bonusType: data.bonusType as any,
@@ -277,7 +276,7 @@ export async function updateDailyReward(
     isSpecial: boolean;
   }>,
 ) {
-  return prisma.dailyReward.update({
+  return prisma.daily_rewards.update({
     where: { day },
     data: {
       ...data,
@@ -287,7 +286,7 @@ export async function updateDailyReward(
 }
 
 export async function deleteDailyReward(day: number) {
-  return prisma.dailyReward.delete({ where: { day } });
+  return prisma.daily_rewards.delete({ where: { day } });
 }
 
 // ============================================
@@ -295,7 +294,7 @@ export async function deleteDailyReward(day: number) {
 // ============================================
 
 export async function seedDailyRewards() {
-  const existingCount = await prisma.dailyReward.count();
+  const existingCount = await prisma.daily_rewards.count();
   if (existingCount > 0) {
     return { message: 'Daily rewards already exist' };
   }
@@ -323,7 +322,7 @@ export async function seedDailyRewards() {
     };
   });
 
-  await prisma.dailyReward.createMany({ data: rewards });
+  await prisma.daily_rewards.createMany({ data: rewards });
 
   logger.info('Daily rewards seeded');
   return { message: 'Daily rewards created', count: rewards.length };
@@ -338,7 +337,7 @@ export async function resetExpiredCycles() {
   const cycleExpiry = new Date(now);
   cycleExpiry.setDate(cycleExpiry.getDate() - CYCLE_DAYS);
 
-  const result = await prisma.userDailyReward.updateMany({
+  const result = await prisma.user_daily_rewards.updateMany({
     where: {
       cycleStart: { lt: cycleExpiry },
     },

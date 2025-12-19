@@ -173,7 +173,7 @@ async function handleCustomerDeleted(customer: Stripe.Customer) {
   logger.info({ customerId: customer.id }, 'Stripe customer deleted');
 
   // Clear stripeCustomerId from user
-  await prisma.user.updateMany({
+  await prisma.users.updateMany({
     where: { stripeCustomerId: customer.id },
     data: { stripeCustomerId: null },
   });
@@ -190,7 +190,7 @@ async function handleSubscriptionCreated(subscription: Stripe.Subscription) {
 
   if (!userId || !planId) {
     // Try to find user by customer ID
-    const user = await prisma.user.findFirst({
+    const user = await prisma.users.findFirst({
       where: { stripeCustomerId: subscription.customer as string },
     });
 
@@ -211,7 +211,7 @@ async function handleSubscriptionCreated(subscription: Stripe.Subscription) {
   }
 
   // Create local subscription record
-  const localSubscription = await prisma.subscription.create({
+  const localSubscription = await prisma.subscriptions.create({
     data: {
       userId,
       planId,
@@ -229,7 +229,7 @@ async function handleSubscriptionCreated(subscription: Stripe.Subscription) {
   });
 
   // Update user tier
-  await prisma.user.update({
+  await prisma.users.update({
     where: { id: userId },
     data: {
       subscriptionTier: plan.tier,
@@ -259,7 +259,7 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
 async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
   logger.info({ subscriptionId: subscription.id }, 'Stripe subscription deleted');
 
-  const localSubscription = await prisma.subscription.findFirst({
+  const localSubscription = await prisma.subscriptions.findFirst({
     where: { stripeSubscriptionId: subscription.id },
     include: { plan: true },
   });
@@ -268,7 +268,7 @@ async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
     return;
   }
 
-  await prisma.subscription.update({
+  await prisma.subscriptions.update({
     where: { id: localSubscription.id },
     data: {
       status: 'CANCELLED',
@@ -277,7 +277,7 @@ async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
   });
 
   // Update user tier
-  await prisma.user.update({
+  await prisma.users.update({
     where: { id: localSubscription.userId },
     data: {
       subscriptionTier: 'FREE',
@@ -299,12 +299,12 @@ async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
 async function handleTrialWillEnd(subscription: Stripe.Subscription) {
   logger.info({ subscriptionId: subscription.id }, 'Stripe subscription trial will end');
 
-  const localSubscription = await prisma.subscription.findFirst({
+  const localSubscription = await prisma.subscriptions.findFirst({
     where: { stripeSubscriptionId: subscription.id },
-    include: { user: true },
+    include: { users: true },
   });
 
-  if (localSubscription?.user) {
+  if (localSubscription?.users) {
     // Send notification to user about trial ending
     // This would integrate with your notification service
     logger.info(
@@ -317,7 +317,7 @@ async function handleTrialWillEnd(subscription: Stripe.Subscription) {
 async function handleSubscriptionPaused(subscription: Stripe.Subscription) {
   logger.info({ subscriptionId: subscription.id }, 'Stripe subscription paused');
 
-  await prisma.subscription.updateMany({
+  await prisma.subscriptions.updateMany({
     where: { stripeSubscriptionId: subscription.id },
     data: { status: 'PAUSED' },
   });
@@ -338,7 +338,7 @@ async function handlePaymentSucceeded(paymentIntent: Stripe.PaymentIntent) {
 
   if (!userId) {
     // Try to find by customer
-    const user = await prisma.user.findFirst({
+    const user = await prisma.users.findFirst({
       where: { stripeCustomerId: paymentIntent.customer as string },
     });
 
@@ -355,7 +355,7 @@ async function handlePaymentSucceeded(paymentIntent: Stripe.PaymentIntent) {
 async function handlePaymentFailed(paymentIntent: Stripe.PaymentIntent) {
   logger.info({ paymentIntentId: paymentIntent.id }, 'Payment failed');
 
-  const user = await prisma.user.findFirst({
+  const user = await prisma.users.findFirst({
     where: { stripeCustomerId: paymentIntent.customer as string },
   });
 
@@ -380,7 +380,7 @@ async function handleInvoiceEvent(eventType: string, invoice: Stripe.Invoice) {
   await processStripeInvoiceWebhook({
     id: invoice.id,
     customer: invoice.customer as string,
-    subscription: invoice.subscription as string | null,
+    subscriptions: invoice.subscription as string | null,
     status: invoice.status || 'draft',
     amount_due: invoice.amount_due,
     amount_paid: invoice.amount_paid,
@@ -392,22 +392,22 @@ async function handleInvoiceEvent(eventType: string, invoice: Stripe.Invoice) {
 
   // If invoice paid, create payment record
   if (eventType === 'invoice.paid' && invoice.paid) {
-    const user = await prisma.user.findFirst({
+    const user = await prisma.users.findFirst({
       where: { stripeCustomerId: invoice.customer as string },
     });
 
     if (user) {
-      const localSubscription = await prisma.subscription.findFirst({
+      const localSubscription = await prisma.subscriptions.findFirst({
         where: { stripeSubscriptionId: invoice.subscription as string },
       });
 
       // Create payment record
-      const existingPayment = await prisma.payment.findFirst({
+      const existingPayment = await prisma.payments.findFirst({
         where: { stripePaymentIntentId: invoice.payment_intent as string },
       });
 
       if (!existingPayment && invoice.payment_intent) {
-        await prisma.payment.create({
+        await prisma.payments.create({
           data: {
             userId: user.id,
             subscriptionId: localSubscription?.id,
@@ -462,7 +462,7 @@ async function handleDisputeCreated(dispute: Stripe.Dispute) {
   );
 
   // Update payment status
-  const payment = await prisma.payment.findFirst({
+  const payment = await prisma.payments.findFirst({
     where: {
       OR: [
         { stripePaymentIntentId: dispute.payment_intent as string },
@@ -472,7 +472,7 @@ async function handleDisputeCreated(dispute: Stripe.Dispute) {
   });
 
   if (payment) {
-    await prisma.payment.update({
+    await prisma.payments.update({
       where: { id: payment.id },
       data: { status: 'DISPUTED' },
     });

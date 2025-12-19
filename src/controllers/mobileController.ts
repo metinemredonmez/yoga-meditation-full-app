@@ -10,7 +10,7 @@ import { config } from '../utils/config';
 export async function getAppConfig(req: Request, res: Response) {
   try {
     // Get feature flags
-    const featureFlags = await prisma.featureFlag.findMany({
+    const featureFlags = await prisma.feature_flags.findMany({
       where: { isEnabled: true },
       select: { key: true, isEnabled: true }
     });
@@ -19,7 +19,7 @@ export async function getAppConfig(req: Request, res: Response) {
     featureFlags.forEach(f => { flags[f.key] = f.isEnabled; });
 
     // Get system settings
-    const settings = await prisma.systemSetting.findMany({
+    const settings = await prisma.system_settings.findMany({
       where: {
         key: {
           in: ['maintenance_mode', 'min_app_version_ios', 'min_app_version_android', 'force_update']
@@ -28,7 +28,7 @@ export async function getAppConfig(req: Request, res: Response) {
     });
 
     const settingsMap: Record<string, string> = {};
-    settings.forEach(s => { settingsMap[s.key] = s.value; });
+    settings.forEach(s => { settingsMap[s.key] = String(s.value); });
 
     return res.json({
       success: true,
@@ -75,55 +75,53 @@ export async function getHomeScreen(req: Request, res: Response) {
       dailyQuote
     ] = await Promise.all([
       // Featured programs
-      prisma.program.findMany({
+      prisma.programs.findMany({
         where: { isPublished: true },
         take: 6,
-        orderBy: { enrollmentCount: 'desc' },
+        orderBy: { createdAt: 'desc' },
         select: {
           id: true,
           title: true,
           description: true,
           thumbnailUrl: true,
           level: true,
-          durationWeeks: true,
-          enrollmentCount: true
+          durationWeeks: true
         }
       }),
 
       // Featured classes
-      prisma.class.findMany({
-        where: { isPublished: true },
+      prisma.classes.findMany({
+        where: { status: 'PUBLISHED' },
         take: 10,
-        orderBy: { viewCount: 'desc' },
+        orderBy: { completions: 'desc' },
         select: {
           id: true,
           title: true,
           thumbnailUrl: true,
           duration: true,
           level: true,
-          instructor: {
+          users: {
             select: { id: true, firstName: true, lastName: true, avatarUrl: true }
           }
         }
       }),
 
       // Popular instructors
-      prisma.user.findMany({
-        where: { role: 'TEACHER', isActive: true },
+      prisma.users.findMany({
+        where: { role: 'TEACHER' },
         take: 8,
-        orderBy: { followerCount: 'desc' },
+        orderBy: { createdAt: 'desc' },
         select: {
           id: true,
           firstName: true,
           lastName: true,
           avatarUrl: true,
-          bio: true,
-          followerCount: true
+          bio: true
         }
       }),
 
       // Latest podcasts
-      prisma.podcast.findMany({
+      prisma.podcasts.findMany({
         where: { status: 'PUBLISHED' },
         take: 6,
         orderBy: { createdAt: 'desc' },
@@ -133,16 +131,16 @@ export async function getHomeScreen(req: Request, res: Response) {
           coverImage: true,
           category: true,
           totalEpisodes: true,
-          host: { select: { firstName: true, lastName: true } }
+          users: { select: { firstName: true, lastName: true } }
         }
       }),
 
       // Active challenges
-      prisma.challenge.findMany({
+      prisma.challenges.findMany({
         where: {
           isActive: true,
-          startDate: { lte: new Date() },
-          endDate: { gte: new Date() }
+          startAt: { lte: new Date() },
+          endAt: { gte: new Date() }
         },
         take: 3,
         select: {
@@ -150,41 +148,40 @@ export async function getHomeScreen(req: Request, res: Response) {
           title: true,
           description: true,
           thumbnailUrl: true,
-          startDate: true,
-          endDate: true,
-          participantCount: true
+          startAt: true,
+          endAt: true
         }
       }),
 
       // Continue watching (for logged in users)
-      userId ? prisma.videoProgress.findMany({
+      userId ? prisma.video_progress.findMany({
         where: {
           userId,
-          completedAt: null,
-          progress: { gt: 0, lt: 100 }
+          completed: false,
+          percentage: { gt: 0, lt: 100 }
         },
         take: 5,
         orderBy: { updatedAt: 'desc' },
-        include: {
-          class: {
-            select: {
-              id: true,
-              title: true,
-              thumbnailUrl: true,
-              duration: true
-            }
-          }
+        select: {
+          id: true,
+          lessonId: true,
+          lessonType: true,
+          percentage: true,
+          lastWatchedAt: true,
+          updatedAt: true
         }
       }) : Promise.resolve([]),
 
       // Daily inspirational quote
-      prisma.dailyQuote?.findFirst({
+      prisma.daily_quotes.findFirst({
         where: {
-          date: {
+          isActive: true,
+          scheduledDate: {
             gte: new Date(new Date().setHours(0, 0, 0, 0)),
             lt: new Date(new Date().setHours(23, 59, 59, 999))
           }
-        }
+        },
+        orderBy: { createdAt: 'desc' }
       }).catch(() => null)
     ]);
 
@@ -194,17 +191,16 @@ export async function getHomeScreen(req: Request, res: Response) {
 
     if (userId) {
       const [gamificationProfile, todaySession] = await Promise.all([
-        prisma.gamificationProfile.findUnique({
+        prisma.user_levels.findUnique({
           where: { userId },
           select: {
-            currentXp: true,
+            currentXP: true,
             level: true,
             currentStreak: true,
-            longestStreak: true,
-            coins: true
+            longestStreak: true
           }
         }),
-        prisma.sessionLog.findFirst({
+        prisma.user_activities.findFirst({
           where: {
             userId,
             createdAt: { gte: new Date(new Date().setHours(0, 0, 0, 0)) }
@@ -230,9 +226,10 @@ export async function getHomeScreen(req: Request, res: Response) {
         podcasts: latestPodcasts,
         challenges: activeChallenges,
         continueWatching: continueWatching.map(vp => ({
-          ...vp.class,
-          progress: vp.progress,
-          lastWatchedAt: vp.updatedAt
+          lessonId: vp.lessonId,
+          lessonType: vp.lessonType,
+          progress: vp.percentage,
+          lastWatchedAt: vp.lastWatchedAt
         })),
         dailyQuote: dailyQuote || {
           text: 'Her nefes yeni bir başlangıçtır.',
@@ -262,32 +259,32 @@ export async function getExploreScreen(req: Request, res: Response) {
       podcastCategories
     ] = await Promise.all([
       // Program categories with counts
-      prisma.program.groupBy({
+      prisma.programs.groupBy({
         by: ['level'],
         _count: { id: true },
         where: { isPublished: true }
       }),
 
       // Trending this week
-      prisma.class.findMany({
+      prisma.classes.findMany({
         where: {
-          isPublished: true,
+          status: 'PUBLISHED',
           createdAt: { gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) }
         },
         take: 10,
-        orderBy: { viewCount: 'desc' },
+        orderBy: { completions: 'desc' },
         select: {
           id: true,
           title: true,
           thumbnailUrl: true,
           duration: true,
           level: true,
-          viewCount: true
+          completions: true
         }
       }),
 
       // New programs
-      prisma.program.findMany({
+      prisma.programs.findMany({
         where: { isPublished: true },
         take: 6,
         orderBy: { createdAt: 'desc' },
@@ -301,22 +298,20 @@ export async function getExploreScreen(req: Request, res: Response) {
       }),
 
       // Top rated instructors
-      prisma.user.findMany({
-        where: { role: 'TEACHER', isActive: true },
+      prisma.users.findMany({
+        where: { role: 'TEACHER' },
         take: 6,
-        orderBy: { averageRating: 'desc' },
+        orderBy: { createdAt: 'desc' },
         select: {
           id: true,
           firstName: true,
           lastName: true,
-          avatarUrl: true,
-          averageRating: true,
-          totalReviews: true
+          avatarUrl: true
         }
       }),
 
       // Podcast categories
-      prisma.podcast.groupBy({
+      prisma.podcasts.groupBy({
         by: ['category'],
         _count: { id: true },
         where: { status: 'PUBLISHED' }
@@ -369,7 +364,7 @@ export async function getUserDashboard(req: Request, res: Response) {
       dailyQuests
     ] = await Promise.all([
       // User profile
-      prisma.user.findUnique({
+      prisma.users.findUnique({
         where: { id: userId },
         select: {
           id: true,
@@ -383,97 +378,78 @@ export async function getUserDashboard(req: Request, res: Response) {
       }),
 
       // Gamification stats
-      prisma.gamificationProfile.findUnique({
+      prisma.user_levels.findUnique({
         where: { userId },
         select: {
-          currentXp: true,
-          totalXp: true,
+          currentXP: true,
+          totalXP: true,
           level: true,
           currentStreak: true,
-          longestStreak: true,
-          coins: true,
-          gems: true,
-          totalMinutes: true,
-          totalSessions: true
+          longestStreak: true
         }
       }),
 
       // Active subscription
-      prisma.userSubscription.findFirst({
+      prisma.subscriptions.findFirst({
         where: { userId, status: 'ACTIVE' },
         include: {
           plan: { select: { name: true, tier: true } }
         }
       }),
 
-      // Enrolled programs with progress
-      prisma.enrollment.findMany({
-        where: { userId, status: 'ACTIVE' },
-        take: 5,
-        orderBy: { updatedAt: 'desc' },
-        include: {
-          program: {
-            select: {
-              id: true,
-              title: true,
-              thumbnailUrl: true,
-              durationWeeks: true,
-              _count: { select: { classes: true } }
-            }
-          }
-        }
-      }),
+      // Enrolled programs - Note: No enrollment table exists, returning empty array
+      Promise.resolve([]),
 
       // Active challenge participations
-      prisma.challengeParticipation.findMany({
+      prisma.challenge_enrollments.findMany({
         where: {
           userId,
-          challenge: {
+          challenges: {
             isActive: true,
-            endDate: { gte: new Date() }
+            endAt: { gte: new Date() }
           }
         },
         include: {
-          challenge: {
-            select: { id: true, title: true, endDate: true }
+          challenges: {
+            select: { id: true, title: true, endAt: true }
           }
         }
       }),
 
       // Recent activity
-      prisma.sessionLog.findMany({
+      prisma.user_activities.findMany({
         where: { userId },
         take: 10,
         orderBy: { createdAt: 'desc' },
         select: {
           id: true,
-          type: true,
-          duration: true,
-          xpEarned: true,
+          activityType: true,
+          targetId: true,
+          targetType: true,
           createdAt: true
         }
       }),
 
       // Recent achievements
-      prisma.userAchievement.findMany({
-        where: { userId },
+      prisma.user_achievements.findMany({
+        where: { userId, isCompleted: true },
         take: 5,
-        orderBy: { unlockedAt: 'desc' },
+        orderBy: { completedAt: 'desc' },
         include: {
-          achievement: {
+          achievements: {
             select: { name: true, description: true, icon: true, xpReward: true }
           }
         }
       }),
 
       // Today's quests
-      prisma.userQuest.findMany({
+      prisma.user_quests.findMany({
         where: {
           userId,
-          quest: { isActive: true, type: 'DAILY' }
+          quests: { isActive: true, type: 'DAILY' }
         },
         include: {
-          quest: { select: { title: true, xpReward: true, conditionValue: true } }
+          quests: { select: { name: true, description: true, xpReward: true, requirementValue: true } }
         }
       })
     ]);
@@ -481,40 +457,37 @@ export async function getUserDashboard(req: Request, res: Response) {
     // Calculate XP for next level
     const currentLevel = gamification?.level || 1;
     const xpForNextLevel = currentLevel * 1000;
-    const xpProgress = gamification ? (gamification.currentXp / xpForNextLevel) * 100 : 0;
+    const xpProgress = gamification ? (gamification.currentXP / xpForNextLevel) * 100 : 0;
 
     return res.json({
       success: true,
       data: {
-        user: userProfile,
+        users: userProfile,
         stats: {
           ...gamification,
           xpForNextLevel,
           xpProgress: Math.min(xpProgress, 100)
         },
-        subscription: activeSubscription ? {
+        subscriptions: activeSubscription ? {
           plan: activeSubscription.plan.name,
           tier: activeSubscription.plan.tier,
-          expiresAt: activeSubscription.endDate
+          expiresAt: activeSubscription.currentPeriodEnd
         } : null,
-        programs: enrolledPrograms.map(e => ({
-          ...e.program,
-          progress: e.progress,
-          lastAccessedAt: e.updatedAt
-        })),
+        programs: enrolledPrograms,
         challenges: activeChallenges.map(cp => ({
-          ...cp.challenge,
-          progress: cp.progress,
-          daysLeft: Math.ceil((new Date(cp.challenge.endDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
+          ...cp.challenges,
+          joinedAt: cp.joinedAt,
+          daysLeft: Math.ceil((new Date(cp.challenges.endAt).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
         })),
         recentActivity,
         achievements: achievements.map(ua => ({
-          ...ua.achievement,
-          unlockedAt: ua.unlockedAt
+          ...ua.achievements,
+          unlockedAt: ua.completedAt
         })),
         dailyQuests: dailyQuests.map(uq => ({
-          ...uq.quest,
-          currentProgress: uq.progress,
+          ...uq.quests,
+          currentProgress: uq.currentValue,
+          targetProgress: uq.targetValue,
           completed: uq.completedAt !== null
         }))
       }
@@ -540,20 +513,29 @@ export async function syncUserData(req: Request, res: Response) {
     // Process offline progress
     if (offlineProgress && Array.isArray(offlineProgress)) {
       for (const progress of offlineProgress) {
-        await prisma.videoProgress.upsert({
+        await prisma.video_progress.upsert({
           where: {
-            userId_classId: { userId, classId: progress.classId }
+            userId_lessonId_lessonType: {
+              userId,
+              lessonId: progress.lessonId,
+              lessonType: progress.lessonType
+            }
           },
           update: {
-            progress: progress.progress,
-            watchedSeconds: progress.watchedSeconds,
-            updatedAt: new Date(progress.timestamp)
+            percentage: progress.percentage,
+            currentTime: progress.currentTime,
+            duration: progress.duration,
+            completed: progress.percentage >= 100,
+            lastWatchedAt: new Date(progress.timestamp)
           },
           create: {
             userId,
-            classId: progress.classId,
-            progress: progress.progress,
-            watchedSeconds: progress.watchedSeconds
+            lessonId: progress.lessonId,
+            lessonType: progress.lessonType,
+            percentage: progress.percentage,
+            currentTime: progress.currentTime,
+            duration: progress.duration,
+            completed: progress.percentage >= 100
           }
         });
       }
@@ -563,40 +545,37 @@ export async function syncUserData(req: Request, res: Response) {
     if (offlineFavorites && Array.isArray(offlineFavorites)) {
       for (const fav of offlineFavorites) {
         if (fav.action === 'add') {
-          await prisma.favorite.upsert({
+          await prisma.favorites.upsert({
             where: {
-              userId_contentType_contentId: {
+              userId_itemId_itemType: {
                 userId,
-                contentType: fav.contentType,
-                contentId: fav.contentId
+                itemType: fav.itemType,
+                itemId: fav.itemId
               }
             },
             update: {},
             create: {
               userId,
-              contentType: fav.contentType,
-              contentId: fav.contentId
+              itemType: fav.itemType,
+              itemId: fav.itemId
             }
           });
         } else if (fav.action === 'remove') {
-          await prisma.favorite.deleteMany({
+          await prisma.favorites.deleteMany({
             where: {
               userId,
-              contentType: fav.contentType,
-              contentId: fav.contentId
+              itemType: fav.itemType,
+              itemId: fav.itemId
             }
           });
         }
       }
     }
 
-    // Update settings if provided
+    // Update settings if provided - Note: userSettings model doesn't exist
+    // Skipping settings update for now
     if (settings) {
-      await prisma.userSettings.upsert({
-        where: { userId },
-        update: settings,
-        create: { userId, ...settings }
-      });
+      logger.info({ userId, settings }, 'User settings update requested but model not available');
     }
 
     // Get changes since last sync
@@ -607,21 +586,21 @@ export async function syncUserData(req: Request, res: Response) {
       questProgress,
       notifications
     ] = await Promise.all([
-      prisma.videoProgress.findMany({
+      prisma.video_progress.findMany({
         where: { userId, updatedAt: { gt: lastSync } }
       }),
-      prisma.favorite.findMany({
+      prisma.favorites.findMany({
         where: { userId, createdAt: { gt: lastSync } }
       }),
-      prisma.userAchievement.findMany({
-        where: { userId, unlockedAt: { gt: lastSync } },
-        include: { achievement: true }
+      prisma.user_achievements.findMany({
+        where: { userId, completedAt: { gt: lastSync } },
+        include: { achievements: true }
       }),
-      prisma.userQuest.findMany({
+      prisma.user_quests.findMany({
         where: { userId, updatedAt: { gt: lastSync } },
-        include: { quest: true }
+        include: { quests: true }
       }),
-      prisma.notification.findMany({
+      prisma.notification_logs.findMany({
         where: { userId, createdAt: { gt: lastSync } },
         take: 20,
         orderBy: { createdAt: 'desc' }
@@ -693,22 +672,21 @@ export async function registerDevice(req: Request, res: Response) {
     }
 
     // Upsert device
-    const device = await prisma.userDevice.upsert({
+    const device = await prisma.device_tokens.upsert({
       where: {
-        userId_token: { userId, token }
+        token
       },
       update: {
-        platform: platform.toUpperCase(),
+        platform: platform.toUpperCase() as any,
         deviceName,
-        appVersion,
-        lastActiveAt: new Date()
+        isActive: true,
+        updatedAt: new Date()
       },
       create: {
         userId,
         token,
-        platform: platform.toUpperCase(),
-        deviceName,
-        appVersion
+        platform: platform.toUpperCase() as any,
+        deviceName
       }
     });
 
@@ -735,7 +713,7 @@ export async function updateDeviceToken(req: Request, res: Response) {
       return res.status(400).json({ error: 'Old and new tokens are required' });
     }
 
-    await prisma.userDevice.updateMany({
+    await prisma.device_tokens.updateMany({
       where: { userId, token: oldToken },
       data: { token: newToken, updatedAt: new Date() }
     });

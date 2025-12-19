@@ -109,7 +109,7 @@ async function recordAuditLog(params: {
   const { userId, actorRole, action, metadata } = params;
 
   try {
-    await prisma.auditLog.create({
+    await prisma.audit_logs.create({
       data: {
         userId: userId ?? null,
         actorRole: actorRole ?? null,
@@ -126,7 +126,7 @@ export async function signup(req: Request, res: Response) {
   try {
     const payload = signupSchema.parse(req.body);
 
-    const existingUser = await prisma.user.findUnique({
+    const existingUser = await prisma.users.findUnique({
       where: { email: payload.email },
     });
 
@@ -136,7 +136,7 @@ export async function signup(req: Request, res: Response) {
 
     const passwordHash = await hashPassword(payload.password);
 
-    const user = await prisma.user.create({
+    const user = await prisma.users.create({
       data: {
         email: payload.email,
         passwordHash,
@@ -196,7 +196,7 @@ export async function signup(req: Request, res: Response) {
 
     return res.status(201).json({
       message: 'Account created',
-      user: buildUserResponse(user),
+      users: buildUserResponse(user),
       // Still include tokens in response for mobile/API clients
       tokens: {
         accessToken: tokens.accessToken,
@@ -236,7 +236,7 @@ export async function login(req: Request, res: Response) {
       });
     }
 
-    const user = await prisma.user.findUnique({ where: { email: payload.email } });
+    const user = await prisma.users.findUnique({ where: { email: payload.email } });
 
     if (!user) {
       // Record failed attempt even for non-existent users (prevent enumeration)
@@ -292,7 +292,7 @@ export async function login(req: Request, res: Response) {
 
     return res.json({
       message: 'Login successful',
-      user: buildUserResponse(user),
+      users: buildUserResponse(user),
       // Still include tokens in response for mobile/API clients
       tokens: {
         accessToken: tokens.accessToken,
@@ -317,7 +317,7 @@ export async function getProfile(req: Request, res: Response) {
       return res.status(401).json({ error: 'Authentication required' });
     }
 
-    const user = await prisma.user.findUnique({
+    const user = await prisma.users.findUnique({
       where: { id: req.user.userId },
     });
 
@@ -325,7 +325,7 @@ export async function getProfile(req: Request, res: Response) {
       return res.status(404).json({ error: 'User not found' });
     }
 
-    return res.json({ user: buildUserResponse(user) });
+    return res.json({ users: buildUserResponse(user) });
   } catch (error) {
     logger.error({ err: error }, 'Fetch profile failed');
     return res.status(500).json({ error: 'Internal server error' });
@@ -345,7 +345,7 @@ export async function updateProfile(req: Request, res: Response) {
       return res.status(403).json({ error: 'Insufficient permissions' });
     }
 
-    const updateData: Prisma.UserUpdateInput = {};
+    const updateData: Prisma.usersUpdateInput = {};
 
     if (payload.firstName !== undefined) {
       updateData.firstName = payload.firstName;
@@ -363,7 +363,7 @@ export async function updateProfile(req: Request, res: Response) {
       updateData.bio = payload.bio ?? null;
     }
 
-    const user = await prisma.user.update({
+    const user = await prisma.users.update({
       where: { id },
       data: updateData,
     });
@@ -388,7 +388,7 @@ export async function updateProfile(req: Request, res: Response) {
 
     return res.json({
       message: 'Profile updated',
-      user: buildUserResponse(user),
+      users: buildUserResponse(user),
     });
   } catch (error) {
     if (error instanceof z.ZodError) {
@@ -409,7 +409,7 @@ export async function updateOwnProfile(req: Request, res: Response) {
     }
 
     const userId = req.user.userId;
-    const updateData: Prisma.UserUpdateInput = {};
+    const updateData: Prisma.usersUpdateInput = {};
 
     if (payload.firstName !== undefined) {
       updateData.firstName = payload.firstName;
@@ -431,7 +431,7 @@ export async function updateOwnProfile(req: Request, res: Response) {
       updateData.avatarUrl = payload.avatarUrl ?? null;
     }
 
-    const user = await prisma.user.update({
+    const user = await prisma.users.update({
       where: { id: userId },
       data: updateData,
     });
@@ -455,7 +455,7 @@ export async function updateOwnProfile(req: Request, res: Response) {
 
     return res.json({
       message: 'Profile updated',
-      user: buildUserResponse(user),
+      users: buildUserResponse(user),
     });
   } catch (error) {
     if (error instanceof z.ZodError) {
@@ -475,7 +475,7 @@ export async function changePassword(req: Request, res: Response) {
       return res.status(401).json({ error: 'Authentication required' });
     }
 
-    const user = await prisma.user.findUnique({
+    const user = await prisma.users.findUnique({
       where: { id: req.user.userId },
     });
 
@@ -502,7 +502,7 @@ export async function changePassword(req: Request, res: Response) {
 
     const newPasswordHash = await hashPassword(payload.newPassword);
 
-    await prisma.user.update({
+    await prisma.users.update({
       where: { id: req.user.userId },
       data: { passwordHash: newPasswordHash },
     });
@@ -532,7 +532,7 @@ export async function deleteOwnAccount(req: Request, res: Response) {
       return res.status(401).json({ error: 'Authentication required' });
     }
 
-    const user = await prisma.user.findUnique({
+    const user = await prisma.users.findUnique({
       where: { id: req.user.userId },
     });
 
@@ -549,9 +549,9 @@ export async function deleteOwnAccount(req: Request, res: Response) {
     const userEmail = user.email;
 
     await prisma.$transaction([
-      prisma.booking.deleteMany({ where: { userId } }),
-      prisma.payment.deleteMany({ where: { userId } }),
-      prisma.auditLog.create({
+      prisma.bookings.deleteMany({ where: { userId } }),
+      prisma.payments.deleteMany({ where: { userId } }),
+      prisma.audit_logs.create({
         data: {
           userId,
           actorRole: req.user.role,
@@ -559,7 +559,7 @@ export async function deleteOwnAccount(req: Request, res: Response) {
           metadata: { deletedBy: userId },
         },
       }),
-      prisma.user.delete({ where: { id: userId } }),
+      prisma.users.delete({ where: { id: userId } }),
     ]);
 
     eventEmitter.emit('user.deleted', {
@@ -630,15 +630,15 @@ export async function deleteUser(req: Request, res: Response) {
     }
 
     // Get user email before deletion for webhook
-    const userToDelete = await prisma.user.findUnique({
+    const userToDelete = await prisma.users.findUnique({
       where: { id },
       select: { email: true },
     });
 
     await prisma.$transaction([
-      prisma.booking.deleteMany({ where: { userId: id } }),
-      prisma.payment.deleteMany({ where: { userId: id } }),
-      prisma.auditLog.create({
+      prisma.bookings.deleteMany({ where: { userId: id } }),
+      prisma.payments.deleteMany({ where: { userId: id } }),
+      prisma.audit_logs.create({
         data: {
           userId: id,
           actorRole: req.user.role,
@@ -646,7 +646,7 @@ export async function deleteUser(req: Request, res: Response) {
           metadata: { deletedBy: req.user.userId },
         },
       }),
-      prisma.user.delete({ where: { id } }),
+      prisma.users.delete({ where: { id } }),
     ]);
 
     // Emit user deleted event for webhooks

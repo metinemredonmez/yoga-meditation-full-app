@@ -122,7 +122,7 @@ export function scheduleRatingRecalculationJob() {
     logger.info('Starting rating recalculation job');
 
     try {
-      const instructors = await prisma.instructorProfile.findMany({
+      const instructors = await prisma.instructor_profiles.findMany({
         where: { status: 'APPROVED' },
         select: { id: true },
       });
@@ -163,7 +163,7 @@ export function schedulePendingEarningsJob() {
       const fourteenDaysAgo = new Date();
       fourteenDaysAgo.setDate(fourteenDaysAgo.getDate() - 14);
 
-      const pendingEarnings = await prisma.instructorEarning.findMany({
+      const pendingEarnings = await prisma.instructor_earnings.findMany({
         where: {
           status: 'PENDING',
           createdAt: { lte: fourteenDaysAgo },
@@ -174,7 +174,7 @@ export function schedulePendingEarningsJob() {
 
       for (const earning of pendingEarnings) {
         try {
-          await prisma.instructorEarning.update({
+          await prisma.instructor_earnings.update({
             where: { id: earning.id },
             data: { status: 'CONFIRMED' },
           });
@@ -212,13 +212,13 @@ export function scheduleTierEvaluationJob() {
     logger.info('Starting tier evaluation job');
 
     try {
-      const instructors = await prisma.instructorProfile.findMany({
+      const instructors = await prisma.instructor_profiles.findMany({
         where: {
           status: 'APPROVED',
           tier: { not: 'PLATFORM_OWNER' }, // Don't touch platform owners
         },
         include: {
-          earnings: {
+          instructor_earnings: {
             where: {
               status: 'CONFIRMED',
               createdAt: {
@@ -232,7 +232,7 @@ export function scheduleTierEvaluationJob() {
       for (const instructor of instructors) {
         try {
           // Calculate total earnings in last 3 months
-          const totalEarnings = instructor.earnings.reduce(
+          const totalEarnings = instructor.instructor_earnings.reduce(
             (sum, e) => sum + Number(e.netAmount),
             0,
           );

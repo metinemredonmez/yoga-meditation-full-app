@@ -121,7 +121,7 @@ export async function handleVerifyPhone(req: Request, res: Response) {
     const payload = verifyPhoneBodySchema.parse(req.body);
 
     // Get user's phone number
-    const user = await prisma.user.findUnique({
+    const user = await prisma.users.findUnique({
       where: { id: req.user.userId },
       select: { phoneNumber: true, phoneVerified: true },
     });
@@ -155,7 +155,7 @@ export async function handleVerifyPhone(req: Request, res: Response) {
     }
 
     // Update user's phone verification status
-    await prisma.user.update({
+    await prisma.users.update({
       where: { id: req.user.userId },
       data: {
         phoneVerified: true,
@@ -192,7 +192,7 @@ export async function handleUpdatePhone(req: Request, res: Response) {
     const formattedPhone = formatPhoneNumber(payload.phoneNumber);
 
     // Check if phone is already in use by another user
-    const existingUser = await prisma.user.findFirst({
+    const existingUser = await prisma.users.findFirst({
       where: {
         phoneNumber: formattedPhone,
         id: { not: req.user.userId },
@@ -204,7 +204,7 @@ export async function handleUpdatePhone(req: Request, res: Response) {
     }
 
     // Update phone number (reset verification)
-    await prisma.user.update({
+    await prisma.users.update({
       where: { id: req.user.userId },
       data: {
         phoneNumber: formattedPhone,
@@ -244,7 +244,7 @@ export async function handleSendPhoneVerification(req: Request, res: Response) {
     }
 
     // Get user's phone number
-    const user = await prisma.user.findUnique({
+    const user = await prisma.users.findUnique({
       where: { id: req.user.userId },
       select: { phoneNumber: true, phoneVerified: true },
     });

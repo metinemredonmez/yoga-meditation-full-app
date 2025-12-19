@@ -159,13 +159,19 @@ async function processEvent(event: SendGridEvent) {
 }
 
 async function handleDelivered(event: SendGridEvent) {
-  // Update email log if exists
-  const emailLog = await prisma.emailLog.findFirst({
-    where: { providerMessageId: event.sg_message_id }
+  // Update message log if exists
+  // Note: message_logs doesn't have providerMessageId, using metadata to match
+  const emailLog = await prisma.message_logs.findFirst({
+    where: {
+      metadata: {
+        path: ['providerMessageId'],
+        equals: event.sg_message_id
+      }
+    }
   });
 
   if (emailLog) {
-    await prisma.emailLog.update({
+    await prisma.message_logs.update({
       where: { id: emailLog.id },
       data: {
         status: 'DELIVERED',
@@ -178,18 +184,23 @@ async function handleDelivered(event: SendGridEvent) {
 }
 
 async function handleOpen(event: SendGridEvent) {
-  const emailLog = await prisma.emailLog.findFirst({
-    where: { providerMessageId: event.sg_message_id }
+  const emailLog = await prisma.message_logs.findFirst({
+    where: {
+      metadata: {
+        path: ['providerMessageId'],
+        equals: event.sg_message_id
+      }
+    }
   });
 
   if (emailLog) {
-    await prisma.emailLog.update({
+    await prisma.message_logs.update({
       where: { id: emailLog.id },
       data: {
         openedAt: new Date(event.timestamp * 1000),
-        openCount: { increment: 1 },
         metadata: {
           ...(emailLog.metadata as object || {}),
+          openCount: ((emailLog.metadata as any)?.openCount || 0) + 1,
           lastOpenIp: event.ip,
           lastOpenUserAgent: event.useragent
         }
@@ -201,17 +212,23 @@ async function handleOpen(event: SendGridEvent) {
 }
 
 async function handleClick(event: SendGridEvent) {
-  const emailLog = await prisma.emailLog.findFirst({
-    where: { providerMessageId: event.sg_message_id }
+  const emailLog = await prisma.message_logs.findFirst({
+    where: {
+      metadata: {
+        path: ['providerMessageId'],
+        equals: event.sg_message_id
+      }
+    }
   });
 
   if (emailLog) {
-    await prisma.emailLog.update({
+    await prisma.message_logs.update({
       where: { id: emailLog.id },
       data: {
-        clickCount: { increment: 1 },
+        clickedAt: new Date(event.timestamp * 1000),
         metadata: {
           ...(emailLog.metadata as object || {}),
+          clickCount: ((emailLog.metadata as any)?.clickCount || 0) + 1,
           lastClickUrl: event.url,
           lastClickIp: event.ip
         }
@@ -223,15 +240,21 @@ async function handleClick(event: SendGridEvent) {
 }
 
 async function handleBounce(event: SendGridEvent) {
-  const emailLog = await prisma.emailLog.findFirst({
-    where: { providerMessageId: event.sg_message_id }
+  const emailLog = await prisma.message_logs.findFirst({
+    where: {
+      metadata: {
+        path: ['providerMessageId'],
+        equals: event.sg_message_id
+      }
+    }
   });
 
   if (emailLog) {
-    await prisma.emailLog.update({
+    await prisma.message_logs.update({
       where: { id: emailLog.id },
       data: {
         status: 'BOUNCED',
+        bouncedAt: new Date(event.timestamp * 1000),
         errorMessage: event.reason,
         metadata: {
           ...(emailLog.metadata as object || {}),
@@ -249,23 +272,17 @@ async function handleBounce(event: SendGridEvent) {
   }
 
   // Update user's email validity status
-  const user = await prisma.user.findFirst({
+  const user = await prisma.users.findFirst({
     where: { email: event.email }
   });
 
   if (user) {
     // Mark email as potentially invalid after hard bounces
     if (event.type === 'hard' || event.bounce_classification === 'Invalid Addresses') {
-      await prisma.user.update({
+      await prisma.users.update({
         where: { id: user.id },
         data: {
-          emailVerified: false,
-          metadata: {
-            ...(user.metadata as object || {}),
-            emailBounced: true,
-            emailBounceDate: new Date().toISOString(),
-            emailBounceReason: event.reason
-          }
+          emailVerified: false
         }
       });
 
@@ -275,12 +292,17 @@ async function handleBounce(event: SendGridEvent) {
 }
 
 async function handleDropped(event: SendGridEvent) {
-  const emailLog = await prisma.emailLog.findFirst({
-    where: { providerMessageId: event.sg_message_id }
+  const emailLog = await prisma.message_logs.findFirst({
+    where: {
+      metadata: {
+        path: ['providerMessageId'],
+        equals: event.sg_message_id
+      }
+    }
   });
 
   if (emailLog) {
-    await prisma.emailLog.update({
+    await prisma.message_logs.update({
       where: { id: emailLog.id },
       data: {
         status: 'FAILED',
@@ -299,26 +321,20 @@ async function handleSpamReport(event: SendGridEvent) {
   logger.warn({ email: event.email }, 'Spam report received');
 
   // Find user and update preferences
-  const user = await prisma.user.findFirst({
+  const user = await prisma.users.findFirst({
     where: { email: event.email }
   });
 
   if (user) {
     // Update notification preferences to disable marketing emails
-    await prisma.notificationPreference.upsert({
+    await prisma.notification_preferences.upsert({
       where: { userId: user.id },
       update: {
-        marketingEmails: false,
-        metadata: {
-          spamReportDate: new Date().toISOString()
-        }
+        marketingEmails: false
       },
       create: {
         userId: user.id,
-        marketingEmails: false,
-        metadata: {
-          spamReportDate: new Date().toISOString()
-        }
+        marketingEmails: false
       }
     });
 
@@ -329,27 +345,19 @@ async function handleSpamReport(event: SendGridEvent) {
 async function handleUnsubscribe(event: SendGridEvent) {
   logger.info({ email: event.email }, 'Unsubscribe request received');
 
-  const user = await prisma.user.findFirst({
+  const user = await prisma.users.findFirst({
     where: { email: event.email }
   });
 
   if (user) {
-    await prisma.notificationPreference.upsert({
+    await prisma.notification_preferences.upsert({
       where: { userId: user.id },
       update: {
-        marketingEmails: false,
-        metadata: {
-          unsubscribeDate: new Date().toISOString(),
-          unsubscribeSource: 'sendgrid'
-        }
+        marketingEmails: false
       },
       create: {
         userId: user.id,
-        marketingEmails: false,
-        metadata: {
-          unsubscribeDate: new Date().toISOString(),
-          unsubscribeSource: 'sendgrid'
-        }
+        marketingEmails: false
       }
     });
 
@@ -358,12 +366,17 @@ async function handleUnsubscribe(event: SendGridEvent) {
 }
 
 async function handleDeferred(event: SendGridEvent) {
-  const emailLog = await prisma.emailLog.findFirst({
-    where: { providerMessageId: event.sg_message_id }
+  const emailLog = await prisma.message_logs.findFirst({
+    where: {
+      metadata: {
+        path: ['providerMessageId'],
+        equals: event.sg_message_id
+      }
+    }
   });
 
   if (emailLog) {
-    await prisma.emailLog.update({
+    await prisma.message_logs.update({
       where: { id: emailLog.id },
       data: {
         status: 'PENDING',
@@ -410,17 +423,28 @@ export async function handleInboundEmail(req: Request, res: Response) {
     }, 'Inbound email received');
 
     // Store incoming email
-    await prisma.emailLog.create({
-      data: {
-        direction: 'INBOUND',
-        to: email.to,
-        from: email.from,
-        subject: email.subject,
-        body: email.text || email.html,
-        status: 'RECEIVED',
-        provider: 'SENDGRID'
-      }
+    // Note: message_logs requires userId, so we need to find user by email
+    const user = await prisma.users.findFirst({
+      where: { email: email.from }
     });
+
+    if (user) {
+      await prisma.message_logs.create({
+        data: {
+          userId: user.id,
+          channel: 'EMAIL',
+          subject: email.subject,
+          body: email.text || email.html,
+          status: 'DELIVERED',
+          metadata: {
+            direction: 'INBOUND',
+            to: email.to,
+            from: email.from,
+            provider: 'SENDGRID'
+          }
+        }
+      });
+    }
 
     // You can add custom logic here to:
     // - Parse support tickets

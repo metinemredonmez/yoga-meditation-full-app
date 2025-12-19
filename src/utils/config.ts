@@ -334,7 +334,7 @@ function loadConfig() {
         clientId: raw.GOOGLE_CLIENT_ID,
         clientSecret: raw.GOOGLE_CLIENT_SECRET,
       },
-      payment: {
+      payments: {
         successUrl: raw.PAYMENT_SUCCESS_URL,
         cancelUrl: raw.PAYMENT_CANCEL_URL,
         currency: raw.PAYMENT_CURRENCY,

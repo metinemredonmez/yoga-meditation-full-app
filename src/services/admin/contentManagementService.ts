@@ -32,7 +32,7 @@ export async function getContent(filters: ContentFilters) {
   } = {};
 
   if (!type || type === 'program') {
-    const where: Prisma.ProgramWhereInput = {};
+    const where: Prisma.programsWhereInput = {};
     if (search) {
       where.OR = [
         { title: { contains: search, mode: 'insensitive' } },
@@ -41,7 +41,7 @@ export async function getContent(filters: ContentFilters) {
     }
     if (level) where.level = level;
 
-    results.programs = await prisma.program.findMany({
+    results.programs = await prisma.programs.findMany({
       where,
       skip: (page - 1) * limit,
       take: limit,
@@ -53,7 +53,7 @@ export async function getContent(filters: ContentFilters) {
   }
 
   if (!type || type === 'class') {
-    const where: Prisma.ClassWhereInput = {};
+    const where: Prisma.classesWhereInput = {};
     if (search) {
       where.OR = [
         { title: { contains: search, mode: 'insensitive' } },
@@ -61,7 +61,7 @@ export async function getContent(filters: ContentFilters) {
       ];
     }
 
-    results.classes = await prisma.class.findMany({
+    results.classes = await prisma.classes.findMany({
       where,
       skip: (page - 1) * limit,
       take: limit,
@@ -74,7 +74,7 @@ export async function getContent(filters: ContentFilters) {
   }
 
   if (!type || type === 'pose') {
-    const where: Prisma.PoseWhereInput = {};
+    const where: Prisma.posesWhereInput = {};
     if (search) {
       where.OR = [
         { englishName: { contains: search, mode: 'insensitive' } },
@@ -83,7 +83,7 @@ export async function getContent(filters: ContentFilters) {
       ];
     }
 
-    results.poses = await prisma.pose.findMany({
+    results.poses = await prisma.poses.findMany({
       where,
       skip: (page - 1) * limit,
       take: limit,
@@ -92,7 +92,7 @@ export async function getContent(filters: ContentFilters) {
   }
 
   if (!type || type === 'challenge') {
-    const where: Prisma.ChallengeWhereInput = {};
+    const where: Prisma.challengesWhereInput = {};
     if (search) {
       where.OR = [
         { title: { contains: search, mode: 'insensitive' } },
@@ -100,7 +100,7 @@ export async function getContent(filters: ContentFilters) {
       ];
     }
 
-    results.challenges = await prisma.challenge.findMany({
+    results.challenges = await prisma.challenges.findMany({
       where,
       skip: (page - 1) * limit,
       take: limit,
@@ -118,7 +118,7 @@ export async function getContent(filters: ContentFilters) {
 export async function getPrograms(filters: ContentFilters) {
   const { search, level, page = 1, limit = 20, sortBy = 'createdAt', sortOrder = 'desc' } = filters;
 
-  const where: Prisma.ProgramWhereInput = {};
+  const where: Prisma.programsWhereInput = {};
   if (search) {
     where.OR = [
       { title: { contains: search, mode: 'insensitive' } },
@@ -128,7 +128,7 @@ export async function getPrograms(filters: ContentFilters) {
   if (level) where.level = level;
 
   const [programs, total] = await Promise.all([
-    prisma.program.findMany({
+    prisma.programs.findMany({
       where,
       skip: (page - 1) * limit,
       take: limit,
@@ -137,7 +137,7 @@ export async function getPrograms(filters: ContentFilters) {
         _count: { select: { sessions: true, comments: true } },
       },
     }),
-    prisma.program.count({ where }),
+    prisma.programs.count({ where }),
   ]);
 
   return {
@@ -147,7 +147,7 @@ export async function getPrograms(filters: ContentFilters) {
 }
 
 export async function getProgram(id: string) {
-  const program = await prisma.program.findUnique({
+  const program = await prisma.programs.findUnique({
     where: { id },
     include: {
       sessions: true,
@@ -163,22 +163,22 @@ export async function getProgram(id: string) {
   return program;
 }
 
-export async function updateProgram(id: string, data: Prisma.ProgramUpdateInput) {
-  const existing = await prisma.program.findUnique({ where: { id } });
+export async function updateProgram(id: string, data: Prisma.programsUpdateInput) {
+  const existing = await prisma.programs.findUnique({ where: { id } });
   if (!existing) {
     throw new HttpError(404, 'Program not found');
   }
 
-  return prisma.program.update({ where: { id }, data });
+  return prisma.programs.update({ where: { id }, data });
 }
 
 export async function deleteProgram(id: string) {
-  const existing = await prisma.program.findUnique({ where: { id } });
+  const existing = await prisma.programs.findUnique({ where: { id } });
   if (!existing) {
     throw new HttpError(404, 'Program not found');
   }
 
-  await prisma.program.delete({ where: { id } });
+  await prisma.programs.delete({ where: { id } });
   return { deleted: true, id };
 }
 
@@ -186,7 +186,7 @@ export async function deleteProgram(id: string) {
 export async function getClasses(filters: ContentFilters) {
   const { search, page = 1, limit = 20, sortBy = 'createdAt', sortOrder = 'desc' } = filters;
 
-  const where: Prisma.ClassWhereInput = {};
+  const where: Prisma.classesWhereInput = {};
   if (search) {
     where.OR = [
       { title: { contains: search, mode: 'insensitive' } },
@@ -195,7 +195,7 @@ export async function getClasses(filters: ContentFilters) {
   }
 
   const [classes, total] = await Promise.all([
-    prisma.class.findMany({
+    prisma.classes.findMany({
       where,
       skip: (page - 1) * limit,
       take: limit,
@@ -205,7 +205,7 @@ export async function getClasses(filters: ContentFilters) {
         _count: { select: { bookings: true } },
       },
     }),
-    prisma.class.count({ where }),
+    prisma.classes.count({ where }),
   ]);
 
   return {
@@ -215,7 +215,7 @@ export async function getClasses(filters: ContentFilters) {
 }
 
 export async function getClass(id: string) {
-  const classItem = await prisma.class.findUnique({
+  const classItem = await prisma.classes.findUnique({
     where: { id },
     include: {
       users: { select: { id: true, firstName: true, lastName: true, email: true } },
@@ -230,22 +230,22 @@ export async function getClass(id: string) {
   return classItem;
 }
 
-export async function updateClass(id: string, data: Prisma.ClassUpdateInput) {
-  const existing = await prisma.class.findUnique({ where: { id } });
+export async function updateClass(id: string, data: Prisma.classesUpdateInput) {
+  const existing = await prisma.classes.findUnique({ where: { id } });
   if (!existing) {
     throw new HttpError(404, 'Class not found');
   }
 
-  return prisma.class.update({ where: { id }, data });
+  return prisma.classes.update({ where: { id }, data });
 }
 
 export async function deleteClass(id: string) {
-  const existing = await prisma.class.findUnique({ where: { id } });
+  const existing = await prisma.classes.findUnique({ where: { id } });
   if (!existing) {
     throw new HttpError(404, 'Class not found');
   }
 
-  await prisma.class.delete({ where: { id } });
+  await prisma.classes.delete({ where: { id } });
   return { deleted: true, id };
 }
 
@@ -253,7 +253,7 @@ export async function deleteClass(id: string) {
 export async function getPoses(filters: ContentFilters) {
   const { search, page = 1, limit = 20, sortBy = 'createdAt', sortOrder = 'desc' } = filters;
 
-  const where: Prisma.PoseWhereInput = {};
+  const where: Prisma.posesWhereInput = {};
   if (search) {
     where.OR = [
       { englishName: { contains: search, mode: 'insensitive' } },
@@ -262,13 +262,13 @@ export async function getPoses(filters: ContentFilters) {
   }
 
   const [poses, total] = await Promise.all([
-    prisma.pose.findMany({
+    prisma.poses.findMany({
       where,
       skip: (page - 1) * limit,
       take: limit,
       orderBy: { [sortBy]: sortOrder },
     }),
-    prisma.pose.count({ where }),
+    prisma.poses.count({ where }),
   ]);
 
   return {
@@ -278,29 +278,29 @@ export async function getPoses(filters: ContentFilters) {
 }
 
 export async function getPose(id: string) {
-  const pose = await prisma.pose.findUnique({ where: { id } });
+  const pose = await prisma.poses.findUnique({ where: { id } });
   if (!pose) {
     throw new HttpError(404, 'Pose not found');
   }
   return pose;
 }
 
-export async function updatePose(id: string, data: Prisma.PoseUpdateInput) {
-  const existing = await prisma.pose.findUnique({ where: { id } });
+export async function updatePose(id: string, data: Prisma.posesUpdateInput) {
+  const existing = await prisma.poses.findUnique({ where: { id } });
   if (!existing) {
     throw new HttpError(404, 'Pose not found');
   }
 
-  return prisma.pose.update({ where: { id }, data });
+  return prisma.poses.update({ where: { id }, data });
 }
 
 export async function deletePose(id: string) {
-  const existing = await prisma.pose.findUnique({ where: { id } });
+  const existing = await prisma.poses.findUnique({ where: { id } });
   if (!existing) {
     throw new HttpError(404, 'Pose not found');
   }
 
-  await prisma.pose.delete({ where: { id } });
+  await prisma.poses.delete({ where: { id } });
   return { deleted: true, id };
 }
 
@@ -308,7 +308,7 @@ export async function deletePose(id: string) {
 export async function getChallenges(filters: ContentFilters) {
   const { search, page = 1, limit = 20, sortBy = 'createdAt', sortOrder = 'desc' } = filters;
 
-  const where: Prisma.ChallengeWhereInput = {};
+  const where: Prisma.challengesWhereInput = {};
   if (search) {
     where.OR = [
       { title: { contains: search, mode: 'insensitive' } },
@@ -317,7 +317,7 @@ export async function getChallenges(filters: ContentFilters) {
   }
 
   const [challenges, total] = await Promise.all([
-    prisma.challenge.findMany({
+    prisma.challenges.findMany({
       where,
       skip: (page - 1) * limit,
       take: limit,
@@ -326,7 +326,7 @@ export async function getChallenges(filters: ContentFilters) {
         _count: { select: { challenge_enrollments: true } },
       },
     }),
-    prisma.challenge.count({ where }),
+    prisma.challenges.count({ where }),
   ]);
 
   return {
@@ -336,7 +336,7 @@ export async function getChallenges(filters: ContentFilters) {
 }
 
 export async function getChallenge(id: string) {
-  const challenge = await prisma.challenge.findUnique({
+  const challenge = await prisma.challenges.findUnique({
     where: { id },
     include: {
       _count: { select: { challenge_enrollments: true, daily_checks: true } },
@@ -350,22 +350,22 @@ export async function getChallenge(id: string) {
   return challenge;
 }
 
-export async function updateChallenge(id: string, data: Prisma.ChallengeUpdateInput) {
-  const existing = await prisma.challenge.findUnique({ where: { id } });
+export async function updateChallenge(id: string, data: Prisma.challengesUpdateInput) {
+  const existing = await prisma.challenges.findUnique({ where: { id } });
   if (!existing) {
     throw new HttpError(404, 'Challenge not found');
   }
 
-  return prisma.challenge.update({ where: { id }, data });
+  return prisma.challenges.update({ where: { id }, data });
 }
 
 export async function deleteChallenge(id: string) {
-  const existing = await prisma.challenge.findUnique({ where: { id } });
+  const existing = await prisma.challenges.findUnique({ where: { id } });
   if (!existing) {
     throw new HttpError(404, 'Challenge not found');
   }
 
-  await prisma.challenge.delete({ where: { id } });
+  await prisma.challenges.delete({ where: { id } });
   return { deleted: true, id };
 }
 
@@ -378,11 +378,11 @@ export async function getContentStats() {
     totalChallenges,
     activeChallenges,
   ] = await Promise.all([
-    prisma.program.count(),
-    prisma.class.count(),
-    prisma.pose.count(),
-    prisma.challenge.count(),
-    prisma.challenge.count({
+    prisma.programs.count(),
+    prisma.classes.count(),
+    prisma.poses.count(),
+    prisma.challenges.count(),
+    prisma.challenges.count({
       where: {
         startAt: { lte: new Date() },
         endAt: { gte: new Date() },

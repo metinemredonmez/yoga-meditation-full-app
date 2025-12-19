@@ -183,7 +183,7 @@ export async function getForYouMeditations(userId: string, limit: number = 10) {
   // Get user's completed meditations and preferences
   const [completedSessions, favorites, onboarding] = await Promise.all([
     prisma.meditation_sessions.findMany({
-      where: { userId, completed: true },
+      where: { userId, completedAt: { not: null } },
       select: { meditation: { select: { categoryId: true, difficulty: true } } },
       orderBy: { endedAt: 'desc' },
       take: 50,
@@ -203,13 +203,17 @@ export async function getForYouMeditations(userId: string, limit: number = 10) {
   const preferredDifficulties = new Set<MeditationDifficulty>();
 
   completedSessions.forEach((s) => {
-    if (s.meditation?.categoryId) preferredCategories.add(s.meditation.categoryId);
-    if (s.meditation?.difficulty) preferredDifficulties.add(s.meditation.difficulty);
+    if (s.meditation) {
+      if (s.meditation.categoryId) preferredCategories.add(s.meditation.categoryId);
+      if (s.meditation.difficulty) preferredDifficulties.add(s.meditation.difficulty);
+    }
   });
 
   favorites.forEach((f) => {
-    if (f.meditation?.categoryId) preferredCategories.add(f.meditation.categoryId);
-    if (f.meditation?.difficulty) preferredDifficulties.add(f.meditation.difficulty);
+    if (f.meditation) {
+      if (f.meditation.categoryId) preferredCategories.add(f.meditation.categoryId);
+      if (f.meditation.difficulty) preferredDifficulties.add(f.meditation.difficulty);
+    }
   });
 
   // Add onboarding preferences - experienceLevel maps to difficulty
@@ -237,12 +241,12 @@ export async function getForYouMeditations(userId: string, limit: number = 10) {
 
   // Get recommendations excluding already completed
   const completedIds = await prisma.meditation_sessions.findMany({
-    where: { userId, completed: true },
+    where: { userId, completedAt: { not: null } },
     select: { meditationId: true },
     distinct: ['meditationId'],
   });
 
-  const completedMeditationIds = completedIds.map((c) => c.meditationId);
+  const completedMeditationIds = completedIds.map((c) => c.meditationId).filter((id): id is string => id !== null);
 
   return prisma.meditations.findMany({
     where: {
@@ -400,6 +404,8 @@ export async function startSession(userId: string, meditationId: string) {
     data: {
       meditationId,
       userId,
+      targetDuration: meditation.duration,
+      type: 'GUIDED',
       startedAt: new Date(),
     },
   });
@@ -479,8 +485,9 @@ export async function completeSession(
     where: { id: sessionId },
     data: {
       endedAt: new Date(),
-      duration: listenedSeconds,
-      completed: true,
+      actualDuration: listenedSeconds,
+      completedAt: new Date(),
+      status: 'COMPLETED',
     },
   });
 
@@ -902,10 +909,10 @@ export async function deleteCategory(id: string) {
 export async function getMeditationStats() {
   const [totalMeditations, totalSessions, totalListenTime, categoryStats] = await Promise.all([
     prisma.meditations.count({ where: { isPublished: true } }),
-    prisma.meditation_sessions.count({ where: { completed: true } }),
+    prisma.meditation_sessions.count({ where: { completedAt: { not: null } } }),
     prisma.meditation_sessions.aggregate({
-      where: { completed: true },
-      _sum: { duration: true },
+      where: { completedAt: { not: null } },
+      _sum: { actualDuration: true },
     }),
     prisma.meditation_categories.findMany({
       where: { isActive: true },
@@ -924,7 +931,7 @@ export async function getMeditationStats() {
   return {
     totalMeditations,
     totalSessions,
-    totalListenTimeMinutes: Math.floor((totalListenTime._sum.duration || 0) / 60),
+    totalListenTimeMinutes: Math.floor((totalListenTime._sum.actualDuration || 0) / 60),
     categoryStats,
   };
 }

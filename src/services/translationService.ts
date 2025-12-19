@@ -19,7 +19,7 @@ export async function createTranslationKey(data: {
   context?: string;
   maxLength?: number;
 }) {
-  return prisma.translationKey.create({
+  return prisma.translation_keys.create({
     data: {
       key: data.key,
       namespace: data.namespace || 'common',
@@ -31,11 +31,11 @@ export async function createTranslationKey(data: {
 }
 
 export async function getTranslationKeys(namespace?: string) {
-  return prisma.translationKey.findMany({
+  return prisma.translation_keys.findMany({
     where: namespace ? { namespace } : {},
     include: {
       translations: {
-        include: { language: true },
+        include: { languages: true },
       },
     },
     orderBy: [{ namespace: 'asc' }, { key: 'asc' }],
@@ -43,11 +43,11 @@ export async function getTranslationKeys(namespace?: string) {
 }
 
 export async function getTranslationKeyById(id: string) {
-  return prisma.translationKey.findUnique({
+  return prisma.translation_keys.findUnique({
     where: { id },
     include: {
       translations: {
-        include: { language: true },
+        include: { languages: true },
       },
     },
   });
@@ -63,14 +63,14 @@ export async function updateTranslationKey(
     maxLength: number;
   }>,
 ) {
-  return prisma.translationKey.update({
+  return prisma.translation_keys.update({
     where: { id },
     data,
   });
 }
 
 export async function deleteTranslationKey(id: string) {
-  return prisma.translationKey.delete({ where: { id } });
+  return prisma.translation_keys.delete({ where: { id } });
 }
 
 // ============================================
@@ -91,7 +91,7 @@ export async function setTranslation(
     isMachineTranslated?: boolean;
   },
 ) {
-  const translation = await prisma.translation.upsert({
+  const translation = await prisma.translations.upsert({
     where: {
       keyId_languageId: { keyId, languageId },
     },
@@ -105,7 +105,7 @@ export async function setTranslation(
       value,
       ...options,
     },
-    include: { key: true, language: true },
+    include: { translation_keys: true, languages: true },
   });
 
   // Invalidate cache
@@ -115,16 +115,16 @@ export async function setTranslation(
 }
 
 export async function getTranslation(keyId: string, languageId: string) {
-  return prisma.translation.findUnique({
+  return prisma.translations.findUnique({
     where: {
       keyId_languageId: { keyId, languageId },
     },
-    include: { key: true, language: true },
+    include: { translation_keys: true, languages: true },
   });
 }
 
 export async function deleteTranslation(keyId: string, languageId: string) {
-  await prisma.translation.delete({
+  await prisma.translations.delete({
     where: {
       keyId_languageId: { keyId, languageId },
     },
@@ -137,7 +137,7 @@ export async function verifyTranslation(
   languageId: string,
   verifiedById: string,
 ) {
-  return prisma.translation.update({
+  return prisma.translations.update({
     where: {
       keyId_languageId: { keyId, languageId },
     },
@@ -155,7 +155,7 @@ export async function updateTranslationStatus(
   languageId: string,
   status: TranslationStatus,
 ) {
-  return prisma.translation.update({
+  return prisma.translations.update({
     where: {
       keyId_languageId: { keyId, languageId },
     },
@@ -173,22 +173,22 @@ export async function loadTranslationsToCache() {
     return; // Cache is still fresh
   }
 
-  const translations = await prisma.translation.findMany({
+  const translations = await prisma.translations.findMany({
     where: { status: 'PUBLISHED' },
     include: {
-      key: true,
-      language: true,
+      translation_keys: true,
+      languages: true,
     },
   });
 
   translationCache.clear();
 
   for (const t of translations) {
-    const langCode = t.language.code;
+    const langCode = t.languages.code;
     if (!translationCache.has(langCode)) {
       translationCache.set(langCode, new Map());
     }
-    translationCache.get(langCode)!.set(t.key.key, t.value);
+    translationCache.get(langCode)!.set(t.translation_keys.key, t.value);
   }
 
   lastCacheUpdate = now;
@@ -237,13 +237,13 @@ async function getPluralForm(
   languageCode: string,
   count: number,
 ): Promise<string | null> {
-  const keyRecord = await prisma.translationKey.findUnique({ where: { key } });
+  const keyRecord = await prisma.translation_keys.findUnique({ where: { key } });
   if (!keyRecord) return null;
 
   const language = await languageService.getLanguageByCode(languageCode);
   if (!language) return null;
 
-  const translation = await prisma.translation.findUnique({
+  const translation = await prisma.translations.findUnique({
     where: {
       keyId_languageId: { keyId: keyRecord.id, languageId: language.id },
     },
@@ -283,18 +283,18 @@ export async function getTranslationsForLanguage(
     return {};
   }
 
-  const translations = await prisma.translation.findMany({
+  const translations = await prisma.translations.findMany({
     where: {
       languageId: language.id,
       status: 'PUBLISHED',
-      ...(namespace && { key: { namespace } }),
+      ...(namespace && { translation_keys: { namespace } }),
     },
-    include: { key: true },
+    include: { translation_keys: true },
   });
 
   const result: Record<string, string> = {};
   for (const t of translations) {
-    result[t.key.key] = t.value;
+    result[t.translation_keys.key] = t.value;
   }
 
   return result;
@@ -306,21 +306,21 @@ export async function getTranslationsByNamespace(languageCode: string) {
     return {};
   }
 
-  const translations = await prisma.translation.findMany({
+  const translations = await prisma.translations.findMany({
     where: {
       languageId: language.id,
       status: 'PUBLISHED',
     },
-    include: { key: true },
+    include: { translation_keys: true },
   });
 
   const result: Record<string, Record<string, string>> = {};
   for (const t of translations) {
-    const namespace = t.key.namespace || 'common';
+    const namespace = t.translation_keys.namespace || 'common';
     if (!result[namespace]) {
       result[namespace] = {};
     }
-    result[namespace][t.key.key] = t.value;
+    result[namespace][t.translation_keys.key] = t.value;
   }
 
   return result;
@@ -332,17 +332,17 @@ export async function getTranslationsByNamespace(languageCode: string) {
 
 export async function getTranslationProgress() {
   const languages = await languageService.getLanguages();
-  const totalKeys = await prisma.translationKey.count();
+  const totalKeys = await prisma.translation_keys.count();
 
   const progress = await Promise.all(
     languages.map(async (lang) => {
-      const translated = await prisma.translation.count({
+      const translated = await prisma.translations.count({
         where: { languageId: lang.id, status: 'PUBLISHED' },
       });
-      const pending = await prisma.translation.count({
+      const pending = await prisma.translations.count({
         where: { languageId: lang.id, status: 'PENDING_REVIEW' },
       });
-      const draft = await prisma.translation.count({
+      const draft = await prisma.translations.count({
         where: { languageId: lang.id, status: 'DRAFT' },
       });
 
@@ -362,8 +362,8 @@ export async function getTranslationProgress() {
 }
 
 export async function getMissingTranslations(languageId: string) {
-  const allKeys = await prisma.translationKey.findMany();
-  const existingTranslations = await prisma.translation.findMany({
+  const allKeys = await prisma.translation_keys.findMany();
+  const existingTranslations = await prisma.translations.findMany({
     where: { languageId },
     select: { keyId: true },
   });
@@ -391,28 +391,28 @@ export async function importTranslations(
   for (const [key, value] of Object.entries(translations)) {
     try {
       // Ensure key exists
-      let keyRecord = await prisma.translationKey.findUnique({ where: { key } });
+      let keyRecord = await prisma.translation_keys.findUnique({ where: { key } });
       if (!keyRecord) {
-        keyRecord = await prisma.translationKey.create({
+        keyRecord = await prisma.translation_keys.create({
           data: { key, namespace },
         });
       }
 
       // Upsert translation
-      const existing = await prisma.translation.findUnique({
+      const existing = await prisma.translations.findUnique({
         where: {
           keyId_languageId: { keyId: keyRecord.id, languageId: language.id },
         },
       });
 
       if (existing) {
-        await prisma.translation.update({
+        await prisma.translations.update({
           where: { id: existing.id },
           data: { value, status: 'PENDING_REVIEW' },
         });
         results.updated++;
       } else {
-        await prisma.translation.create({
+        await prisma.translations.create({
           data: {
             keyId: keyRecord.id,
             languageId: language.id,
@@ -440,7 +440,7 @@ export async function exportTranslations(languageCode: string, namespace?: strin
 }
 
 export async function publishAllPendingTranslations(languageId: string) {
-  const result = await prisma.translation.updateMany({
+  const result = await prisma.translations.updateMany({
     where: {
       languageId,
       status: { in: ['DRAFT', 'PENDING_REVIEW', 'APPROVED'] },

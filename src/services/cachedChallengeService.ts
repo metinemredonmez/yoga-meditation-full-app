@@ -6,7 +6,8 @@ import {
   buildChallengeListKey,
   buildStatsKey,
 } from './cacheService';
-import { listChallenges, getChallengeById } from './challengeService';
+// TODO: Restore when challengeService is created
+// import { listChallenges, getChallengeById } from './challengeService';
 import { CACHE_TTL } from '../constants/cacheTTL';
 import { prisma } from '../utils/database';
 
@@ -15,17 +16,19 @@ import { prisma } from '../utils/database';
  * Note: User-specific data (enrolled, completedDays) is NOT cached
  */
 export async function getCachedChallenge(challengeId: string, userId?: string) {
+  // TODO: Restore when challengeService is created
   // If user-specific data is needed, we can't cache as easily
   // So we only cache the base challenge data
-  if (userId) {
-    return getChallengeById(challengeId, userId);
-  }
+  // if (userId) {
+  //   return getChallengeById(challengeId, userId);
+  // }
 
-  return getOrSet(
-    buildChallengeKey(challengeId),
-    () => getChallengeById(challengeId),
-    CACHE_TTL.CHALLENGES
-  );
+  // return getOrSet(
+  //   buildChallengeKey(challengeId),
+  //   () => getChallengeById(challengeId),
+  //   CACHE_TTL.CHALLENGES
+  // );
+  throw new Error('getCachedChallenge not implemented - challengeService missing');
 }
 
 /**
@@ -33,16 +36,18 @@ export async function getCachedChallenge(challengeId: string, userId?: string) {
  * Note: User-specific enrollment status is NOT cached
  */
 export async function getCachedChallengeList(userId?: string) {
+  // TODO: Restore when challengeService is created
   // If user-specific data is needed, we can't use shared cache
-  if (userId) {
-    return listChallenges(userId);
-  }
+  // if (userId) {
+  //   return listChallenges(userId);
+  // }
 
-  return getOrSet(
-    buildChallengeListKey({}),
-    () => listChallenges(),
-    CACHE_TTL.CHALLENGE_LIST
-  );
+  // return getOrSet(
+  //   buildChallengeListKey({}),
+  //   () => listChallenges(),
+  //   CACHE_TTL.CHALLENGE_LIST
+  // );
+  throw new Error('getCachedChallengeList not implemented - challengeService missing');
 }
 
 /**
@@ -52,21 +57,21 @@ export async function getCachedActiveChallenge() {
   const cacheKey = buildStatsKey('active-challenge');
 
   // Try cache first
-  const cached = await get<Awaited<ReturnType<typeof getChallengeById>>>(cacheKey);
+  const cached = await get<any>(cacheKey);
   if (cached !== null) {
     return cached;
   }
 
   // Find active challenge
   const now = new Date();
-  const challenge = await prisma.challenge.findFirst({
+  const challenge = await prisma.challenges.findFirst({
     where: {
       startAt: { lte: now },
       endAt: { gte: now },
     },
     orderBy: { startAt: 'desc' },
     include: {
-      _count: { select: { enrollments: true, checks: true } },
+      _count: { select: { challenge_enrollments: true, daily_checks: true } },
     },
   });
 
@@ -84,8 +89,8 @@ export async function getCachedActiveChallenge() {
     endAt: challenge.endAt,
     targetDays: challenge.targetDays,
     coverUrl: challenge.coverUrl,
-    enrollmentCount: challenge._count.enrollments,
-    totalCompletions: challenge._count.checks,
+    enrollmentCount: challenge._count.challenge_enrollments,
+    totalCompletions: challenge._count.daily_checks,
     enrolled: false,
   };
 
@@ -102,7 +107,7 @@ export async function getCachedLeaderboard(challengeId: string, limit: number = 
   return getOrSet(
     cacheKey,
     async () => {
-      const results = await prisma.dailyCheck.groupBy({
+      const results = await prisma.daily_checks.groupBy({
         by: ['userId'],
         where: { challengeId },
         _count: { id: true },
@@ -112,7 +117,7 @@ export async function getCachedLeaderboard(challengeId: string, limit: number = 
 
       // Get user details
       const userIds = results.map((r) => r.userId);
-      const users = await prisma.user.findMany({
+      const users = await prisma.users.findMany({
         where: { id: { in: userIds } },
         select: { id: true, firstName: true, lastName: true },
       });

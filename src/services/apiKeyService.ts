@@ -53,7 +53,7 @@ export async function createApiKey(input: CreateApiKeyInput): Promise<{
   const hashedKey = hashApiKey(plainKey);
 
   try {
-    const apiKey = await prisma.apiKey.create({
+    const apiKey = await prisma.api_keys.create({
       data: {
         userId: input.userId,
         name: input.name,
@@ -94,7 +94,7 @@ export async function validateApiKey(plainKey: string): Promise<ApiKeyValidation
   const hashedKey = hashApiKey(plainKey);
 
   try {
-    const apiKey = await prisma.apiKey.findUnique({
+    const apiKey = await prisma.api_keys.findUnique({
       where: { key: hashedKey },
       select: {
         id: true,
@@ -138,7 +138,7 @@ export async function validateApiKey(plainKey: string): Promise<ApiKeyValidation
 
 export async function revokeApiKey(keyId: string, userId: string): Promise<boolean> {
   try {
-    const apiKey = await prisma.apiKey.findFirst({
+    const apiKey = await prisma.api_keys.findFirst({
       where: {
         id: keyId,
         userId, // Ensure user owns this key
@@ -149,7 +149,7 @@ export async function revokeApiKey(keyId: string, userId: string): Promise<boole
       return false;
     }
 
-    await prisma.apiKey.update({
+    await prisma.api_keys.update({
       where: { id: keyId },
       data: { isActive: false },
     });
@@ -175,7 +175,7 @@ export async function listUserApiKeys(userId: string): Promise<{
   createdAt: Date;
 }[]> {
   try {
-    const keys = await prisma.apiKey.findMany({
+    const keys = await prisma.api_keys.findMany({
       where: { userId },
       select: {
         id: true,
@@ -213,7 +213,7 @@ export async function listUserApiKeys(userId: string): Promise<{
 
 export async function updateApiKeyUsage(keyId: string): Promise<void> {
   try {
-    await prisma.apiKey.update({
+    await prisma.api_keys.update({
       where: { id: keyId },
       data: {
         lastUsedAt: new Date(),
@@ -232,7 +232,7 @@ export async function rotateApiKey(
 ): Promise<{ key: string; keyId: string; prefix: string } | null> {
   try {
     // Get the old key
-    const oldKey = await prisma.apiKey.findFirst({
+    const oldKey = await prisma.api_keys.findFirst({
       where: {
         id: keyId,
         userId,
@@ -254,7 +254,7 @@ export async function rotateApiKey(
     });
 
     // Revoke old key
-    await prisma.apiKey.update({
+    await prisma.api_keys.update({
       where: { id: keyId },
       data: { isActive: false },
     });
@@ -281,7 +281,7 @@ export async function getApiKeyUsage(
   isActive: boolean;
 } | null> {
   try {
-    const key = await prisma.apiKey.findFirst({
+    const key = await prisma.api_keys.findFirst({
       where: {
         id: keyId,
         userId,

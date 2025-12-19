@@ -200,7 +200,7 @@ export const integrationSettingsService = {
     const lastUpdated = settings.length > 0
       ? settings.reduce((latest, s) =>
           s.updatedAt > latest ? s.updatedAt : latest,
-          settings[0].updatedAt
+          settings[0]?.updatedAt || new Date()
         )
       : null;
 
@@ -315,7 +315,7 @@ export const integrationSettingsService = {
             providerSettings.length > 0
               ? providerSettings.reduce(
                   (latest, s) => (s.updatedAt > latest ? s.updatedAt : latest),
-                  providerSettings[0].updatedAt
+                  providerSettings[0]?.updatedAt || new Date()
                 )
               : null,
           configuredKeys,
@@ -367,6 +367,18 @@ export const integrationSettingsService = {
 
         case 'elasticsearch':
           result = await testElasticsearchConnection(config);
+          break;
+
+        case 'openai':
+          result = await testOpenAIConnection(config);
+          break;
+
+        case 'elevenlabs':
+          result = await testElevenLabsConnection(config);
+          break;
+
+        case 'anthropic':
+          result = await testAnthropicConnection(config);
           break;
 
         default:
@@ -496,7 +508,7 @@ async function testStripeConnection(
 
   try {
     const Stripe = (await import('stripe')).default;
-    const stripe = new Stripe(config.secret_key);
+    const stripe = new Stripe(config.secret_key, { apiVersion: '2024-12-18.acacia' } as any);
     await stripe.balance.retrieve();
     return { success: true, message: 'Stripe bağlantısı başarılı' };
   } catch (error) {
@@ -621,5 +633,88 @@ async function testElasticsearchConnection(
   } catch (error) {
     const msg = error instanceof Error ? error.message : 'Unknown error';
     return { success: false, message: `Elasticsearch hatası: ${msg}` };
+  }
+}
+
+async function testOpenAIConnection(
+  config: ProviderConfig
+): Promise<{ success: boolean; message: string }> {
+  if (!config.api_key) {
+    return { success: false, message: 'Missing OpenAI API key' };
+  }
+
+  try {
+    const OpenAI = (await import('openai')).default;
+    const openai = new OpenAI({
+      apiKey: config.api_key,
+      organization: config.organization_id || undefined,
+    });
+
+    // Simple models list check
+    await openai.models.list();
+    return { success: true, message: 'OpenAI bağlantısı başarılı' };
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : 'Unknown error';
+    return { success: false, message: `OpenAI hatası: ${msg}` };
+  }
+}
+
+async function testElevenLabsConnection(
+  config: ProviderConfig
+): Promise<{ success: boolean; message: string }> {
+  if (!config.api_key) {
+    return { success: false, message: 'Missing ElevenLabs API key' };
+  }
+
+  try {
+    const response = await fetch('https://api.elevenlabs.io/v1/user', {
+      headers: {
+        'xi-api-key': config.api_key,
+      },
+    });
+
+    if (response.ok) {
+      return { success: true, message: 'ElevenLabs bağlantısı başarılı' };
+    } else {
+      return { success: false, message: `ElevenLabs hatası: ${response.statusText}` };
+    }
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : 'Unknown error';
+    return { success: false, message: `ElevenLabs hatası: ${msg}` };
+  }
+}
+
+async function testAnthropicConnection(
+  config: ProviderConfig
+): Promise<{ success: boolean; message: string }> {
+  if (!config.api_key) {
+    return { success: false, message: 'Missing Anthropic API key' };
+  }
+
+  try {
+    // Simple API check with minimal message
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': config.api_key,
+        'anthropic-version': '2023-06-01',
+      },
+      body: JSON.stringify({
+        model: config.model || 'claude-3-5-sonnet-20241022',
+        max_tokens: 1,
+        messages: [{ role: 'user', content: 'Hi' }],
+      }),
+    });
+
+    if (response.ok) {
+      return { success: true, message: 'Anthropic bağlantısı başarılı' };
+    } else {
+      const error = await response.json().catch(() => ({}));
+      return { success: false, message: `Anthropic hatası: ${(error as any).error?.message || response.statusText}` };
+    }
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : 'Unknown error';
+    return { success: false, message: `Anthropic hatası: ${msg}` };
   }
 }

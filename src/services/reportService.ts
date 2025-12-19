@@ -33,7 +33,7 @@ export async function generateRevenueReport(
   const { startDate, endDate, provider } = filters;
 
   // Fetch payments
-  const payments = await prisma.payment.findMany({
+  const payments = await prisma.payments.findMany({
     where: {
       status: PaymentStatus.COMPLETED,
       paidAt: {
@@ -43,7 +43,7 @@ export async function generateRevenueReport(
       ...(provider ? { provider } : {}),
     },
     include: {
-      user: {
+      users: {
         select: {
           id: true,
           email: true,
@@ -51,7 +51,7 @@ export async function generateRevenueReport(
           lastName: true,
         },
       },
-      subscription: {
+      subscriptions: {
         include: {
           plan: true,
         },
@@ -61,7 +61,7 @@ export async function generateRevenueReport(
   });
 
   // Fetch refunds
-  const refunds = await prisma.refund.findMany({
+  const refunds = await prisma.refunds.findMany({
     where: {
       status: 'SUCCEEDED',
       createdAt: {
@@ -71,9 +71,9 @@ export async function generateRevenueReport(
       ...(provider ? { provider } : {}),
     },
     include: {
-      payment: {
+      payments: {
         include: {
-          user: {
+          users: {
             select: {
               id: true,
               email: true,
@@ -142,8 +142,8 @@ export async function generateRevenueReport(
             amount: Number(p.amount),
             currency: p.currency,
             provider: p.provider,
-            user: p.user.email,
-            plan: p.subscription?.plan.name || 'One-time',
+            users: p.users.email,
+            plan: p.subscriptions?.plan.name || 'One-time',
           })),
         }
       : {}),
@@ -168,7 +168,7 @@ export async function generateSubscriptionReport(
   const { startDate, endDate, tier } = filters;
 
   // Active subscriptions at end date
-  const activeSubscriptions = await prisma.subscription.findMany({
+  const activeSubscriptions = await prisma.subscriptions.findMany({
     where: {
       status: {
         in: [SubscriptionStatus.ACTIVE, SubscriptionStatus.TRIALING],
@@ -181,7 +181,7 @@ export async function generateSubscriptionReport(
         : {}),
     },
     include: {
-      user: {
+      users: {
         select: {
           id: true,
           email: true,
@@ -194,7 +194,7 @@ export async function generateSubscriptionReport(
   });
 
   // New subscriptions in period
-  const newSubscriptions = await prisma.subscription.findMany({
+  const newSubscriptions = await prisma.subscriptions.findMany({
     where: {
       createdAt: {
         gte: startDate,
@@ -207,7 +207,7 @@ export async function generateSubscriptionReport(
         : {}),
     },
     include: {
-      user: {
+      users: {
         select: {
           id: true,
           email: true,
@@ -218,7 +218,7 @@ export async function generateSubscriptionReport(
   });
 
   // Cancelled subscriptions in period
-  const cancelledSubscriptions = await prisma.subscription.findMany({
+  const cancelledSubscriptions = await prisma.subscriptions.findMany({
     where: {
       cancelledAt: {
         gte: startDate,
@@ -231,7 +231,7 @@ export async function generateSubscriptionReport(
         : {}),
     },
     include: {
-      user: {
+      users: {
         select: {
           id: true,
           email: true,
@@ -297,7 +297,7 @@ export async function generateSubscriptionReport(
       ? {
           subscriptions: activeSubscriptions.map((s) => ({
             id: s.id,
-            user: s.user.email,
+            users: s.users.email,
             plan: s.plan.name,
             tier: s.plan.tier,
             interval: s.interval,
@@ -328,7 +328,7 @@ export async function generateInvoiceReport(
 ): Promise<Buffer | object> {
   const { startDate, endDate } = filters;
 
-  const invoices = await prisma.invoice.findMany({
+  const invoices = await prisma.invoices.findMany({
     where: {
       createdAt: {
         gte: startDate,
@@ -336,7 +336,7 @@ export async function generateInvoiceReport(
       },
     },
     include: {
-      user: {
+      users: {
         select: {
           id: true,
           email: true,
@@ -344,7 +344,7 @@ export async function generateInvoiceReport(
           lastName: true,
         },
       },
-      items: true,
+      invoice_items: true,
     },
     orderBy: { createdAt: 'desc' },
   });
@@ -390,7 +390,7 @@ export async function generateInvoiceReport(
             id: inv.id,
             number: inv.invoiceNumber,
             date: inv.createdAt,
-            user: inv.user.email,
+            users: inv.users.email,
             amount: Number(inv.amountDue),
             paid: Number(inv.amountPaid),
             status: inv.status,
@@ -458,7 +458,7 @@ async function generateRevenueExcel(
     amount: { toString: () => string };
     currency: string;
     provider: string;
-    user: { email: string };
+    users: { email: string };
     subscription?: { plan: { name: string } } | null;
   }>,
   refunds: Array<{
@@ -466,7 +466,7 @@ async function generateRevenueExcel(
     createdAt: Date;
     amount: { toString: () => string };
     reason?: string | null;
-    payment: { user: { email: string } };
+    payments: { users: { email: string } };
   }>
 ): Promise<Buffer> {
   const workbook = new ExcelJS.Workbook();
@@ -512,7 +512,7 @@ async function generateRevenueExcel(
       amount: Number(p.amount),
       currency: p.currency,
       provider: p.provider,
-      user: p.user.email,
+      users: p.users.email,
       plan: p.subscription?.plan.name || 'One-time',
     });
   }
@@ -533,7 +533,7 @@ async function generateRevenueExcel(
       date: r.createdAt,
       amount: Number(r.amount),
       reason: r.reason || '',
-      user: r.payment.user.email,
+      users: r.payments.users.email,
     });
   }
 
@@ -545,7 +545,7 @@ async function generateSubscriptionExcel(
   reportData: Record<string, unknown>,
   subscriptions: Array<{
     id: string;
-    user: { email: string };
+    users: { email: string };
     plan: { name: string; tier: string };
     interval: string;
     provider: string;
@@ -597,7 +597,7 @@ async function generateSubscriptionExcel(
   for (const s of subscriptions) {
     subsSheet.addRow({
       id: s.id,
-      user: s.user.email,
+      users: s.users.email,
       plan: s.plan.name,
       tier: s.plan.tier,
       interval: s.interval,
@@ -618,7 +618,7 @@ async function generateInvoiceExcel(
     id: string;
     invoiceNumber: string;
     createdAt: Date;
-    user: { email: string };
+    users: { email: string };
     amountDue: { toString: () => string };
     amountPaid: { toString: () => string };
     status: string;
@@ -665,7 +665,7 @@ async function generateInvoiceExcel(
     invoicesSheet.addRow({
       number: inv.invoiceNumber,
       date: inv.createdAt,
-      user: inv.user.email,
+      users: inv.users.email,
       amount: Number(inv.amountDue),
       paid: Number(inv.amountPaid),
       status: inv.status,
@@ -1011,7 +1011,7 @@ export async function generateScheduledReports() {
 
     return {
       revenue: revenueReport,
-      subscription: subscriptionReport,
+      subscriptions: subscriptionReport,
       invoice: invoiceReport,
     };
   } catch (error) {

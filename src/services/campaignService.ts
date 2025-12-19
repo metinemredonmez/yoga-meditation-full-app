@@ -59,7 +59,7 @@ export interface CampaignStats {
  */
 export async function createCampaign(input: CreateCampaignInput) {
   // Validate template exists
-  const template = await prisma.messageTemplate.findUnique({
+  const template = await prisma.message_templates.findUnique({
     where: { id: input.templateId },
   });
 
@@ -70,7 +70,7 @@ export async function createCampaign(input: CreateCampaignInput) {
   // Get target audience count
   const audienceCount = await getTargetAudienceCount(input.targetAudience);
 
-  const campaign = await prisma.communicationCampaign.create({
+  const campaign = await prisma.communication_campaigns.create({
     data: {
       name: input.name,
       description: input.description,
@@ -83,8 +83,8 @@ export async function createCampaign(input: CreateCampaignInput) {
       createdById: input.createdById,
     },
     include: {
-      template: true,
-      createdBy: {
+      message_templates: true,
+      users: {
         select: { id: true, firstName: true, lastName: true, email: true },
       },
     },
@@ -102,7 +102,7 @@ export async function updateCampaign(
   id: string,
   input: Partial<CreateCampaignInput>,
 ) {
-  const campaign = await prisma.communicationCampaign.findUnique({
+  const campaign = await prisma.communication_campaigns.findUnique({
     where: { id },
   });
 
@@ -120,22 +120,22 @@ export async function updateCampaign(
     totalRecipients = await getTargetAudienceCount(input.targetAudience);
   }
 
-  const updateData: Prisma.CommunicationCampaignUpdateInput = {
+  const updateData: Prisma.communication_campaignsUpdateInput = {
     totalRecipients,
   };
 
   if (input.name) updateData.name = input.name;
   if (input.description !== undefined) updateData.description = input.description;
-  if (input.templateId) updateData.template = { connect: { id: input.templateId } };
+  if (input.templateId) updateData.message_templates = { connect: { id: input.templateId } };
   if (input.targetAudience) updateData.targetAudience = input.targetAudience as Prisma.InputJsonValue;
   if (input.channel) updateData.channel = input.channel;
   if (input.scheduledAt !== undefined) updateData.scheduledAt = input.scheduledAt;
 
-  return prisma.communicationCampaign.update({
+  return prisma.communication_campaigns.update({
     where: { id },
     data: updateData,
     include: {
-      template: true,
+      message_templates: true,
     },
   });
 }
@@ -144,7 +144,7 @@ export async function updateCampaign(
  * Delete a campaign
  */
 export async function deleteCampaign(id: string): Promise<void> {
-  const campaign = await prisma.communicationCampaign.findUnique({
+  const campaign = await prisma.communication_campaigns.findUnique({
     where: { id },
   });
 
@@ -156,7 +156,7 @@ export async function deleteCampaign(id: string): Promise<void> {
     throw new Error('Cannot delete campaign in progress');
   }
 
-  await prisma.communicationCampaign.delete({
+  await prisma.communication_campaigns.delete({
     where: { id },
   });
 
@@ -167,11 +167,11 @@ export async function deleteCampaign(id: string): Promise<void> {
  * Get campaign by ID
  */
 export async function getCampaignById(id: string) {
-  return prisma.communicationCampaign.findUnique({
+  return prisma.communication_campaigns.findUnique({
     where: { id },
     include: {
-      template: true,
-      createdBy: {
+      message_templates: true,
+      users: {
         select: { id: true, firstName: true, lastName: true, email: true },
       },
     },
@@ -192,19 +192,19 @@ export async function listCampaigns(filters?: {
   const limit = filters?.limit || 20;
   const skip = (page - 1) * limit;
 
-  const where: Prisma.CommunicationCampaignWhereInput = {};
+  const where: Prisma.communication_campaignsWhereInput = {};
   if (filters?.status) where.status = filters.status;
   if (filters?.channel) where.channel = filters.channel;
   if (filters?.createdById) where.createdById = filters.createdById;
 
   const [campaigns, total] = await Promise.all([
-    prisma.communicationCampaign.findMany({
+    prisma.communication_campaigns.findMany({
       where,
       include: {
-        template: {
+        message_templates: {
           select: { id: true, name: true, slug: true },
         },
-        createdBy: {
+        users: {
           select: { id: true, firstName: true, lastName: true },
         },
       },
@@ -212,7 +212,7 @@ export async function listCampaigns(filters?: {
       skip,
       take: limit,
     }),
-    prisma.communicationCampaign.count({ where }),
+    prisma.communication_campaigns.count({ where }),
   ]);
 
   return {
@@ -232,7 +232,7 @@ export async function listCampaigns(filters?: {
  * Schedule a campaign
  */
 export async function scheduleCampaign(id: string, scheduledAt: Date) {
-  const campaign = await prisma.communicationCampaign.findUnique({
+  const campaign = await prisma.communication_campaigns.findUnique({
     where: { id },
   });
 
@@ -248,7 +248,7 @@ export async function scheduleCampaign(id: string, scheduledAt: Date) {
     throw new Error('Scheduled time must be in the future');
   }
 
-  return prisma.communicationCampaign.update({
+  return prisma.communication_campaigns.update({
     where: { id },
     data: {
       scheduledAt,
@@ -261,9 +261,9 @@ export async function scheduleCampaign(id: string, scheduledAt: Date) {
  * Execute a campaign immediately
  */
 export async function executeCampaign(id: string): Promise<CampaignStats> {
-  const campaign = await prisma.communicationCampaign.findUnique({
+  const campaign = await prisma.communication_campaigns.findUnique({
     where: { id },
-    include: { template: true },
+    include: { message_templates: true },
   });
 
   if (!campaign) {
@@ -275,7 +275,7 @@ export async function executeCampaign(id: string): Promise<CampaignStats> {
   }
 
   // Update status to in progress
-  await prisma.communicationCampaign.update({
+  await prisma.communication_campaigns.update({
     where: { id },
     data: {
       status: 'IN_PROGRESS',
@@ -303,7 +303,7 @@ export async function executeCampaign(id: string): Promise<CampaignStats> {
             // Check user preferences
             const canSend = await unifiedMessagingService.checkUserPreference(
               userId,
-              campaign.template.category.toLowerCase(),
+              campaign.message_templates.category.toLowerCase(),
             );
 
             if (!canSend) {
@@ -318,7 +318,7 @@ export async function executeCampaign(id: string): Promise<CampaignStats> {
             }
 
             // Get user data
-            const user = await prisma.user.findUnique({
+            const user = await prisma.users.findUnique({
               where: { id: userId },
               select: { firstName: true, email: true },
             });
@@ -334,7 +334,7 @@ export async function executeCampaign(id: string): Promise<CampaignStats> {
             };
 
             const rendered = await messageTemplateService.renderTemplate(
-              campaign.template.slug,
+              campaign.message_templates.slug,
               variables,
             );
 
@@ -367,14 +367,14 @@ export async function executeCampaign(id: string): Promise<CampaignStats> {
       }
 
       // Update progress
-      await prisma.communicationCampaign.update({
+      await prisma.communication_campaigns.update({
         where: { id },
         data: { sentCount, failedCount },
       });
     }
 
     // Mark as completed
-    await prisma.communicationCampaign.update({
+    await prisma.communication_campaigns.update({
       where: { id },
       data: {
         status: 'COMPLETED',
@@ -392,7 +392,7 @@ export async function executeCampaign(id: string): Promise<CampaignStats> {
     return getCampaignStats(id);
   } catch (error) {
     // Mark as failed
-    await prisma.communicationCampaign.update({
+    await prisma.communication_campaigns.update({
       where: { id },
       data: { status: 'CANCELLED' },
     });
@@ -406,7 +406,7 @@ export async function executeCampaign(id: string): Promise<CampaignStats> {
  * Pause a campaign
  */
 export async function pauseCampaign(id: string) {
-  const campaign = await prisma.communicationCampaign.findUnique({
+  const campaign = await prisma.communication_campaigns.findUnique({
     where: { id },
   });
 
@@ -418,7 +418,7 @@ export async function pauseCampaign(id: string) {
     throw new Error('Can only pause campaigns in progress');
   }
 
-  return prisma.communicationCampaign.update({
+  return prisma.communication_campaigns.update({
     where: { id },
     data: { status: 'PAUSED' },
   });
@@ -428,7 +428,7 @@ export async function pauseCampaign(id: string) {
  * Resume a campaign
  */
 export async function resumeCampaign(id: string) {
-  const campaign = await prisma.communicationCampaign.findUnique({
+  const campaign = await prisma.communication_campaigns.findUnique({
     where: { id },
   });
 
@@ -440,7 +440,7 @@ export async function resumeCampaign(id: string) {
     throw new Error('Can only resume paused campaigns');
   }
 
-  return prisma.communicationCampaign.update({
+  return prisma.communication_campaigns.update({
     where: { id },
     data: { status: 'IN_PROGRESS' },
   });
@@ -450,7 +450,7 @@ export async function resumeCampaign(id: string) {
  * Cancel a campaign
  */
 export async function cancelCampaign(id: string) {
-  const campaign = await prisma.communicationCampaign.findUnique({
+  const campaign = await prisma.communication_campaigns.findUnique({
     where: { id },
   });
 
@@ -462,7 +462,7 @@ export async function cancelCampaign(id: string) {
     throw new Error('Campaign already completed or cancelled');
   }
 
-  return prisma.communicationCampaign.update({
+  return prisma.communication_campaigns.update({
     where: { id },
     data: { status: 'CANCELLED' },
   });
@@ -480,7 +480,7 @@ export async function getTargetAudience(
 ): Promise<string[]> {
   if (!filters) {
     // Return all users
-    const users = await prisma.user.findMany({
+    const users = await prisma.users.findMany({
       select: { id: true },
     });
     return users.map((u) => u.id);
@@ -492,7 +492,7 @@ export async function getTargetAudience(
   }
 
   // Build user query
-  const userWhere: Prisma.UserWhereInput = {};
+  const userWhere: Prisma.usersWhereInput = {};
 
   // Registration date filter
   if (filters.registeredFrom || filters.registeredTo) {
@@ -513,7 +513,7 @@ export async function getTargetAudience(
 
   // Get initial user list
   let userIds = (
-    await prisma.user.findMany({
+    await prisma.users.findMany({
       where: userWhere,
       select: { id: true },
     })
@@ -521,7 +521,7 @@ export async function getTargetAudience(
 
   // Filter by subscription status
   if (filters.subscriptionStatus && filters.subscriptionStatus.length > 0) {
-    const subscriptions = await prisma.subscription.findMany({
+    const subscriptions = await prisma.subscriptions.findMany({
       where: {
         userId: { in: userIds },
         status: { in: filters.subscriptionStatus },
@@ -534,7 +534,7 @@ export async function getTargetAudience(
 
   // Filter by last active date
   if (filters.lastActiveFrom || filters.lastActiveTo) {
-    const engagementWhere: Prisma.UserEngagementStatsWhereInput = {
+    const engagementWhere: Prisma.user_engagement_statsWhereInput = {
       userId: { in: userIds },
     };
 
@@ -544,7 +544,7 @@ export async function getTargetAudience(
       if (filters.lastActiveTo) engagementWhere.lastActiveAt.lte = filters.lastActiveTo;
     }
 
-    const engagementStats = await prisma.userEngagementStats.findMany({
+    const engagementStats = await prisma.user_engagement_stats.findMany({
       where: engagementWhere,
       select: { userId: true },
     });
@@ -554,7 +554,7 @@ export async function getTargetAudience(
 
   // Filter by engagement score
   if (filters.engagementScoreMin !== undefined || filters.engagementScoreMax !== undefined) {
-    const engagementWhere: Prisma.UserEngagementStatsWhereInput = {
+    const engagementWhere: Prisma.user_engagement_statsWhereInput = {
       userId: { in: userIds },
     };
 
@@ -567,7 +567,7 @@ export async function getTargetAudience(
     }
     engagementWhere.engagementScore = scoreFilter;
 
-    const engagementStats = await prisma.userEngagementStats.findMany({
+    const engagementStats = await prisma.user_engagement_stats.findMany({
       where: engagementWhere,
       select: { userId: true },
     });
@@ -577,7 +577,7 @@ export async function getTargetAudience(
 
   // Filter by completed programs
   if (filters.completedPrograms && filters.completedPrograms.length > 0) {
-    const completedProgress = await prisma.videoProgress.findMany({
+    const completedProgress = await prisma.video_progress.findMany({
       where: {
         userId: { in: userIds },
         lessonType: 'PROGRAM_SESSION',
@@ -610,7 +610,7 @@ export async function getTargetAudienceCount(
  * Get campaign statistics
  */
 export async function getCampaignStats(id: string): Promise<CampaignStats> {
-  const campaign = await prisma.communicationCampaign.findUnique({
+  const campaign = await prisma.communication_campaigns.findUnique({
     where: { id },
   });
 
@@ -658,7 +658,7 @@ export async function getCampaignStats(id: string): Promise<CampaignStats> {
 export async function processScheduledCampaigns(): Promise<number> {
   const now = new Date();
 
-  const dueCampaigns = await prisma.communicationCampaign.findMany({
+  const dueCampaigns = await prisma.communication_campaigns.findMany({
     where: {
       status: 'SCHEDULED',
       scheduledAt: { lte: now },

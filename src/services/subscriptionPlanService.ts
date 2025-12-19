@@ -50,7 +50,7 @@ export interface UpdatePlanInput {
 export async function getPlans(includeInactive = false) {
   const where = includeInactive ? {} : { isActive: true };
 
-  return prisma.subscriptionPlan.findMany({
+  return prisma.subscription_plans.findMany({
     where,
     orderBy: { sortOrder: 'asc' },
   });
@@ -60,7 +60,7 @@ export async function getPlans(includeInactive = false) {
  * Get subscription plan by ID
  */
 export async function getPlanById(planId: string) {
-  return prisma.subscriptionPlan.findUnique({
+  return prisma.subscription_plans.findUnique({
     where: { id: planId },
   });
 }
@@ -69,7 +69,7 @@ export async function getPlanById(planId: string) {
  * Get subscription plan by tier
  */
 export async function getPlanByTier(tier: SubscriptionTier) {
-  return prisma.subscriptionPlan.findFirst({
+  return prisma.subscription_plans.findFirst({
     where: { tier, isActive: true },
   });
 }
@@ -78,7 +78,7 @@ export async function getPlanByTier(tier: SubscriptionTier) {
  * Create a new subscription plan
  */
 export async function createPlan(input: CreatePlanInput) {
-  const plan = await prisma.subscriptionPlan.create({
+  const plan = await prisma.subscription_plans.create({
     data: {
       name: input.name,
       description: input.description,
@@ -108,7 +108,7 @@ export async function createPlan(input: CreatePlanInput) {
  * Update a subscription plan
  */
 export async function updatePlan(planId: string, input: UpdatePlanInput) {
-  const updateData: Prisma.SubscriptionPlanUpdateInput = {};
+  const updateData: Prisma.subscription_plansUpdateInput = {};
 
   if (input.name !== undefined) updateData.name = input.name;
   if (input.description !== undefined) updateData.description = input.description;
@@ -128,7 +128,7 @@ export async function updatePlan(planId: string, input: UpdatePlanInput) {
   if (input.googleProductIdMonthly !== undefined) updateData.googleProductIdMonthly = input.googleProductIdMonthly;
   if (input.googleProductIdYearly !== undefined) updateData.googleProductIdYearly = input.googleProductIdYearly;
 
-  const plan = await prisma.subscriptionPlan.update({
+  const plan = await prisma.subscription_plans.update({
     where: { id: planId },
     data: updateData,
   });
@@ -142,7 +142,7 @@ export async function updatePlan(planId: string, input: UpdatePlanInput) {
  */
 export async function deletePlan(planId: string) {
   // Check if any active subscriptions use this plan
-  const activeSubscriptions = await prisma.subscription.count({
+  const activeSubscriptions = await prisma.subscriptions.count({
     where: {
       planId,
       status: { in: ['ACTIVE', 'TRIALING', 'GRACE_PERIOD'] },
@@ -153,7 +153,7 @@ export async function deletePlan(planId: string) {
     throw new Error(`Cannot delete plan with ${activeSubscriptions} active subscriptions`);
   }
 
-  const plan = await prisma.subscriptionPlan.update({
+  const plan = await prisma.subscription_plans.update({
     where: { id: planId },
     data: { isActive: false },
   });
@@ -166,7 +166,7 @@ export async function deletePlan(planId: string) {
  * Hard delete a subscription plan (use with caution)
  */
 export async function hardDeletePlan(planId: string) {
-  const subscriptionCount = await prisma.subscription.count({
+  const subscriptionCount = await prisma.subscriptions.count({
     where: { planId },
   });
 
@@ -174,7 +174,7 @@ export async function hardDeletePlan(planId: string) {
     throw new Error(`Cannot hard delete plan with ${subscriptionCount} subscriptions`);
   }
 
-  await prisma.subscriptionPlan.delete({
+  await prisma.subscription_plans.delete({
     where: { id: planId },
   });
 
@@ -248,7 +248,7 @@ export async function syncPlanWithStripe(planId: string) {
   }
 
   // Update plan with Stripe IDs
-  const updatedPlan = await prisma.subscriptionPlan.update({
+  const updatedPlan = await prisma.subscription_plans.update({
     where: { id: planId },
     data: {
       stripePriceIdMonthly: monthlyPriceId,

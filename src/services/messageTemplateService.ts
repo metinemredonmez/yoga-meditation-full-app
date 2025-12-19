@@ -53,7 +53,7 @@ export interface RenderedMessage {
  * Create a new message template
  */
 export async function createTemplate(input: CreateTemplateInput) {
-  return prisma.messageTemplate.create({
+  return prisma.message_templates.create({
     data: {
       name: input.name,
       slug: input.slug,
@@ -74,7 +74,7 @@ export async function createTemplate(input: CreateTemplateInput) {
  * Update an existing template
  */
 export async function updateTemplate(id: string, input: UpdateTemplateInput) {
-  return prisma.messageTemplate.update({
+  return prisma.message_templates.update({
     where: { id },
     data: input,
   });
@@ -84,7 +84,7 @@ export async function updateTemplate(id: string, input: UpdateTemplateInput) {
  * Delete a template
  */
 export async function deleteTemplate(id: string) {
-  return prisma.messageTemplate.delete({
+  return prisma.message_templates.delete({
     where: { id },
   });
 }
@@ -93,7 +93,7 @@ export async function deleteTemplate(id: string) {
  * Get template by slug
  */
 export async function getTemplateBySlug(slug: string) {
-  return prisma.messageTemplate.findUnique({
+  return prisma.message_templates.findUnique({
     where: { slug },
   });
 }
@@ -102,7 +102,7 @@ export async function getTemplateBySlug(slug: string) {
  * Get template by ID
  */
 export async function getTemplateById(id: string) {
-  return prisma.messageTemplate.findUnique({
+  return prisma.message_templates.findUnique({
     where: { id },
   });
 }
@@ -115,13 +115,13 @@ export async function getAllTemplates(filters?: {
   category?: MessageCategory;
   isActive?: boolean;
 }) {
-  const where: Prisma.MessageTemplateWhereInput = {};
+  const where: Prisma.message_templatesWhereInput = {};
 
   if (filters?.channel) where.channel = filters.channel;
   if (filters?.category) where.category = filters.category;
   if (filters?.isActive !== undefined) where.isActive = filters.isActive;
 
-  return prisma.messageTemplate.findMany({
+  return prisma.message_templates.findMany({
     where,
     orderBy: { createdAt: 'desc' },
   });
@@ -135,12 +135,12 @@ export async function renderTemplate(
   variables: Record<string, unknown>
 ): Promise<RenderedMessage> {
   // Try to find by ID first, then by slug
-  let template = await prisma.messageTemplate.findUnique({
+  let template = await prisma.message_templates.findUnique({
     where: { id: templateIdOrSlug },
   });
 
   if (!template) {
-    template = await prisma.messageTemplate.findUnique({
+    template = await prisma.message_templates.findUnique({
       where: { slug: templateIdOrSlug },
     });
   }
@@ -195,12 +195,12 @@ export async function validateTemplateVariables(
   templateIdOrSlug: string,
   variables: Record<string, unknown>
 ): Promise<{ valid: boolean; missingVariables: string[] }> {
-  let template = await prisma.messageTemplate.findUnique({
+  let template = await prisma.message_templates.findUnique({
     where: { id: templateIdOrSlug },
   });
 
   if (!template) {
-    template = await prisma.messageTemplate.findUnique({
+    template = await prisma.message_templates.findUnique({
       where: { slug: templateIdOrSlug },
     });
   }
@@ -654,15 +654,15 @@ export async function initializeDefaultTemplates() {
     },
   ];
 
-  // Check if messageTemplate model exists in prisma client
-  if (!prisma.messageTemplate) {
+  // Check if message_templates model exists in prisma client
+  if (!prisma.message_templates) {
     logger.warn('MessageTemplate model not found in Prisma client - skipping template initialization');
     return;
   }
 
   for (const template of defaultTemplates) {
     try {
-      const existing = await prisma.messageTemplate.findUnique({
+      const existing = await prisma.message_templates.findUnique({
         where: { slug: template.slug },
       });
 

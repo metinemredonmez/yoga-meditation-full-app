@@ -78,7 +78,7 @@ export async function createTokenPair(
   await enforceMaxSessions(payload.userId, familyId);
 
   // Store the refresh token
-  await prisma.refreshToken.create({
+  await prisma.refresh_tokens.create({
     data: {
       userId: payload.userId,
       token: hashedToken,
@@ -108,7 +108,7 @@ async function enforceMaxSessions(
   const maxSessions = config.refreshToken.maxSessions;
 
   // Count active sessions (unique families)
-  const activeFamilies = await prisma.refreshToken.groupBy({
+  const activeFamilies = await prisma.refresh_tokens.groupBy({
     by: ['familyId'],
     where: {
       userId,
@@ -130,7 +130,7 @@ async function enforceMaxSessions(
       .map((f) => f.familyId);
 
     if (familiesToRevoke.length > 0) {
-      await prisma.refreshToken.updateMany({
+      await prisma.refresh_tokens.updateMany({
         where: {
           userId,
           familyId: { in: familiesToRevoke },
@@ -161,9 +161,9 @@ export async function refreshTokens(
     const hashedToken = hashToken(refreshToken);
 
     // Find the token in database
-    const storedToken = await prisma.refreshToken.findUnique({
+    const storedToken = await prisma.refresh_tokens.findUnique({
       where: { token: hashedToken },
-      include: { user: true },
+      include: { users: true },
     });
 
     if (!storedToken) {
@@ -201,7 +201,7 @@ export async function refreshTokens(
     // TOKEN ROTATION
     if (config.refreshToken.rotationEnabled) {
       // Revoke current token
-      await prisma.refreshToken.update({
+      await prisma.refresh_tokens.update({
         where: { id: storedToken.id },
         data: {
           revokedAt: new Date(),
@@ -213,8 +213,8 @@ export async function refreshTokens(
       const newPayload: JWTPayload = {
         id: storedToken.userId,
         userId: storedToken.userId,
-        email: storedToken.user.email,
-        role: storedToken.user.role,
+        email: storedToken.users.email,
+        role: storedToken.users.role,
       };
 
       const tokens = await createTokenPair(
@@ -226,7 +226,7 @@ export async function refreshTokens(
 
       // Link the new token to old one
       const newHashedToken = hashToken(tokens.refreshToken);
-      await prisma.refreshToken.update({
+      await prisma.refresh_tokens.update({
         where: { token: hashedToken },
         data: { replacedByToken: newHashedToken },
       });
@@ -243,8 +243,8 @@ export async function refreshTokens(
     const newPayload: JWTPayload = {
       id: storedToken.userId,
       userId: storedToken.userId,
-      email: storedToken.user.email,
-      role: storedToken.user.role,
+      email: storedToken.users.email,
+      role: storedToken.users.role,
     };
 
     const accessToken = generateAccessToken(newPayload);
@@ -268,7 +268,7 @@ export async function revokeToken(refreshToken: string): Promise<boolean> {
   try {
     const hashedToken = hashToken(refreshToken);
 
-    const result = await prisma.refreshToken.updateMany({
+    const result = await prisma.refresh_tokens.updateMany({
       where: {
         token: hashedToken,
         revokedAt: null,
@@ -290,7 +290,7 @@ export async function revokeTokenFamily(
   familyId: string,
   reason: string,
 ): Promise<number> {
-  const result = await prisma.refreshToken.updateMany({
+  const result = await prisma.refresh_tokens.updateMany({
     where: {
       familyId,
       revokedAt: null,
@@ -310,7 +310,7 @@ export async function revokeAllUserTokens(
   userId: string,
   reason = 'user_revoke_all',
 ): Promise<number> {
-  const result = await prisma.refreshToken.updateMany({
+  const result = await prisma.refresh_tokens.updateMany({
     where: {
       userId,
       revokedAt: null,
@@ -330,7 +330,7 @@ export async function revokeSession(
   userId: string,
   familyId: string,
 ): Promise<boolean> {
-  const result = await prisma.refreshToken.updateMany({
+  const result = await prisma.refresh_tokens.updateMany({
     where: {
       userId,
       familyId,
@@ -350,7 +350,7 @@ export async function getUserSessions(
   currentTokenHash?: string,
 ): Promise<SessionInfo[]> {
   // Get all active token families
-  const tokens = await prisma.refreshToken.findMany({
+  const tokens = await prisma.refresh_tokens.findMany({
     where: {
       userId,
       revokedAt: null,
@@ -382,7 +382,7 @@ export async function cleanupExpiredTokens(): Promise<number> {
   const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
 
   // Delete tokens that are both expired and revoked more than 30 days ago
-  const result = await prisma.refreshToken.deleteMany({
+  const result = await prisma.refresh_tokens.deleteMany({
     where: {
       OR: [
         { expiresAt: { lt: thirtyDaysAgo } },
