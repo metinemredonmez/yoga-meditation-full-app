@@ -4,7 +4,7 @@ WORKDIR /app
 
 COPY package*.json ./
 COPY tsconfig.json ./
-RUN npm ci
+RUN npm ci --legacy-peer-deps
 
 # prisma
 COPY prisma ./prisma
@@ -20,7 +20,7 @@ WORKDIR /app
 
 # yalnız prod deps
 COPY package*.json ./
-RUN npm ci --omit=dev
+RUN npm ci --omit=dev --legacy-peer-deps
 
 # çıktılar
 COPY --from=build /app/dist ./dist
