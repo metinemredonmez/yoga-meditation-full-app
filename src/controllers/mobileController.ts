@@ -190,27 +190,17 @@ export async function getHomeScreen(req: Request, res: Response) {
     let streak = null;
 
     if (userId) {
-      const [gamificationProfile, todaySession] = await Promise.all([
-        prisma.user_levels.findUnique({
-          where: { userId },
-          select: {
-            currentXP: true,
-            level: true,
-            currentStreak: true,
-            longestStreak: true
-          }
-        }),
-        prisma.user_activities.findFirst({
-          where: {
-            userId,
-            createdAt: { gte: new Date(new Date().setHours(0, 0, 0, 0)) }
-          }
-        })
-      ]);
+      const todaySession = await prisma.user_activities.findFirst({
+        where: {
+          userId,
+          createdAt: { gte: new Date(new Date().setHours(0, 0, 0, 0)) }
+        }
+      });
 
-      userProgress = gamificationProfile;
+      // Simple progress without gamification
+      userProgress = null;
       streak = {
-        current: gamificationProfile?.currentStreak || 0,
+        current: 0,
         completedToday: !!todaySession
       };
     }
@@ -355,13 +345,11 @@ export async function getUserDashboard(req: Request, res: Response) {
 
     const [
       userProfile,
-      gamification,
       activeSubscription,
       enrolledPrograms,
       activeChallenges,
       recentActivity,
-      achievements,
-      dailyQuests
+      achievements
     ] = await Promise.all([
       // User profile
       prisma.users.findUnique({
@@ -374,18 +362,6 @@ export async function getUserDashboard(req: Request, res: Response) {
           avatarUrl: true,
           role: true,
           createdAt: true
-        }
-      }),
-
-      // Gamification stats
-      prisma.user_levels.findUnique({
-        where: { userId },
-        select: {
-          currentXP: true,
-          totalXP: true,
-          level: true,
-          currentStreak: true,
-          longestStreak: true
         }
       }),
 
@@ -440,56 +416,31 @@ export async function getUserDashboard(req: Request, res: Response) {
             select: { name: true, description: true, icon: true, xpReward: true }
           }
         }
-      }),
-
-      // Today's quests
-      prisma.user_quests.findMany({
-        where: {
-          userId,
-          quests: { isActive: true, type: 'DAILY' }
-        },
-        include: {
-          quests: { select: { name: true, description: true, xpReward: true, requirementValue: true } }
-        }
       })
     ]);
-
-    // Calculate XP for next level
-    const currentLevel = gamification?.level || 1;
-    const xpForNextLevel = currentLevel * 1000;
-    const xpProgress = gamification ? (gamification.currentXP / xpForNextLevel) * 100 : 0;
 
     return res.json({
       success: true,
       data: {
         users: userProfile,
-        stats: {
-          ...gamification,
-          xpForNextLevel,
-          xpProgress: Math.min(xpProgress, 100)
-        },
+        stats: null,
         subscriptions: activeSubscription ? {
           plan: activeSubscription.plan.name,
           tier: activeSubscription.plan.tier,
           expiresAt: activeSubscription.currentPeriodEnd
         } : null,
         programs: enrolledPrograms,
-        challenges: activeChallenges.map(cp => ({
+        challenges: activeChallenges.map((cp: any) => ({
           ...cp.challenges,
           joinedAt: cp.joinedAt,
           daysLeft: Math.ceil((new Date(cp.challenges.endAt).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
         })),
         recentActivity,
-        achievements: achievements.map(ua => ({
+        achievements: achievements.map((ua: any) => ({
           ...ua.achievements,
           unlockedAt: ua.completedAt
         })),
-        dailyQuests: dailyQuests.map(uq => ({
-          ...uq.quests,
-          currentProgress: uq.currentValue,
-          targetProgress: uq.targetValue,
-          completed: uq.completedAt !== null
-        }))
+        dailyQuests: []
       }
     });
   } catch (error) {
@@ -583,7 +534,6 @@ export async function syncUserData(req: Request, res: Response) {
       updatedProgress,
       updatedFavorites,
       newAchievements,
-      questProgress,
       notifications
     ] = await Promise.all([
       prisma.video_progress.findMany({
@@ -595,10 +545,6 @@ export async function syncUserData(req: Request, res: Response) {
       prisma.user_achievements.findMany({
         where: { userId, completedAt: { gt: lastSync } },
         include: { achievements: true }
-      }),
-      prisma.user_quests.findMany({
-        where: { userId, updatedAt: { gt: lastSync } },
-        include: { quests: true }
       }),
       prisma.notification_logs.findMany({
         where: { userId, createdAt: { gt: lastSync } },
@@ -614,7 +560,7 @@ export async function syncUserData(req: Request, res: Response) {
         progress: updatedProgress,
         favorites: updatedFavorites,
         achievements: newAchievements,
-        quests: questProgress,
+        quests: [],
         notifications
       }
     });

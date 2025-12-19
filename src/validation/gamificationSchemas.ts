@@ -391,35 +391,9 @@ export const grantFrameBodySchema = z.object({
 });
 
 // ============================================
-// Daily Reward Schemas
+// Daily Reward Schemas - REMOVED
 // ============================================
-
-export const dailyRewardHistoryQuerySchema = z.object({
-  page: z.string().regex(/^\d+$/).optional(),
-  limit: z.string().regex(/^\d+$/).optional(),
-});
-
-export const createDailyRewardBodySchema = z.object({
-  day: z.number().int().min(1).max(30),
-  xpReward: z.number().int().min(0),
-  bonusType: z
-    .enum(['XP_MULTIPLIER', 'STREAK_FREEZE', 'BADGE', 'TITLE', 'FRAME', 'SHOP_DISCOUNT'])
-    .optional(),
-  bonusValue: z.string().optional(),
-  description: z.string().optional(),
-  isActive: z.boolean().default(true),
-});
-
-export const updateDailyRewardBodySchema = z.object({
-  day: z.number().int().min(1).max(30).optional(),
-  xpReward: z.number().int().min(0).optional(),
-  bonusType: z
-    .enum(['XP_MULTIPLIER', 'STREAK_FREEZE', 'BADGE', 'TITLE', 'FRAME', 'SHOP_DISCOUNT'])
-    .optional(),
-  bonusValue: z.string().optional(),
-  description: z.string().optional(),
-  isActive: z.boolean().optional(),
-});
+// Daily rewards feature has been removed along with the daily_rewards and user_daily_rewards models
 
 // ============================================
 // Milestone Schemas

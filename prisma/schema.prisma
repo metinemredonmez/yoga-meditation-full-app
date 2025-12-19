@@ -811,26 +811,6 @@ model communication_campaigns {
   @@index([templateId])
 }
 
-model community_groups {
-  id            String          @id @default(cuid())
-  name          String
-  slug          String          @unique
-  description   String?
-  coverImage    String?
-  isPrivate     Boolean         @default(false)
-  isOfficial    Boolean         @default(false)
-  createdById   String
-  createdAt     DateTime        @default(now())
-  updatedAt     DateTime        @updatedAt
-  users         users           @relation(fields: [createdById], references: [id])
-  group_members group_members[]
-  group_posts   group_posts[]
-
-  @@index([createdById])
-  @@index([isOfficial])
-  @@index([isPrivate])
-}
-
 model content_categories {
   id                       String               @id @default(cuid())
   name                     String
@@ -880,10 +860,8 @@ model content_reports {
   createdAt                                 DateTime         @default(now())
   updatedAt                                 DateTime         @updatedAt
   comments                                  comments?        @relation(fields: [commentId], references: [id])
-  forum_posts                               forum_posts?     @relation(fields: [postId], references: [id])
   users_content_reports_reporterIdTousers   users            @relation("content_reports_reporterIdTousers", fields: [reporterId], references: [id])
   users_content_reports_reviewedByIdTousers users?           @relation("content_reports_reviewedByIdTousers", fields: [reviewedById], references: [id])
-  forum_topics                              forum_topics?    @relation(fields: [topicId], references: [id])
   users_content_reports_userIdTousers       users?           @relation("content_reports_userIdTousers", fields: [userId], references: [id])
 
   @@index([createdAt])
@@ -995,25 +973,6 @@ model contents {
   @@index([type])
 }
 
-model conversations {
-  id                                        String    @id @default(cuid())
-  participant1Id                            String
-  participant2Id                            String
-  lastMessageAt                             DateTime?
-  lastMessage                               String?
-  unreadCount1                              Int       @default(0)
-  unreadCount2                              Int       @default(0)
-  createdAt                                 DateTime  @default(now())
-  updatedAt                                 DateTime  @updatedAt
-  users_conversations_participant1IdTousers users     @relation("conversations_participant1IdTousers", fields: [participant1Id], references: [id])
-  users_conversations_participant2IdTousers users     @relation("conversations_participant2IdTousers", fields: [participant2Id], references: [id])
-
-  @@unique([participant1Id, participant2Id])
-  @@index([lastMessageAt])
-  @@index([participant1Id])
-  @@index([participant2Id])
-}
-
 model coupon_usages {
   id             String   @id @default(cuid())
   couponId       String
@@ -1103,16 +1062,6 @@ model daily_insights {
   @@unique([userId, date])
 }
 
-model daily_rewards {
-  id         String          @id @default(cuid())
-  day        Int             @unique
-  xpReward   Int
-  bonusType  DailyBonusType?
-  bonusValue String?
-  isSpecial  Boolean         @default(false)
-  createdAt  DateTime        @default(now())
-}
-
 model dashboard_widgets {
   id                     String                   @id @default(cuid())
   name                   String
@@ -1145,24 +1094,6 @@ model device_tokens {
 
   @@index([token])
   @@index([userId])
-}
-
-model direct_messages {
-  id                                      String    @id @default(cuid())
-  senderId                                String
-  receiverId                              String
-  content                                 String
-  isRead                                  Boolean   @default(false)
-  readAt                                  DateTime?
-  isDeleted                               Boolean   @default(false)
-  deletedAt                               DateTime?
-  createdAt                               DateTime  @default(now())
-  users_direct_messages_receiverIdTousers users     @relation("direct_messages_receiverIdTousers", fields: [receiverId], references: [id])
-  users_direct_messages_senderIdTousers   users     @relation("direct_messages_senderIdTousers", fields: [senderId], references: [id])
-
-  @@index([createdAt])
-  @@index([receiverId, senderId])
-  @@index([senderId, receiverId])
 }
 
 model elevenlabs_jobs {
@@ -1295,121 +1226,6 @@ model feature_flags {
   users             users?   @relation(fields: [updatedById], references: [id])
 }
 
-model forum_categories {
-  id                     String             @id @default(cuid())
-  name                   String
-  slug                   String             @unique
-  description            String?
-  icon                   String?
-  color                  String?
-  sortOrder              Int                @default(0)
-  isActive               Boolean            @default(true)
-  parentId               String?
-  createdAt              DateTime           @default(now())
-  updatedAt              DateTime           @updatedAt
-  forum_categories       forum_categories?  @relation("forum_categoriesToforum_categories", fields: [parentId], references: [id])
-  other_forum_categories forum_categories[] @relation("forum_categoriesToforum_categories")
-  forum_topics           forum_topics[]
-
-  @@index([isActive])
-  @@index([parentId])
-}
-
-model forum_post_likes {
-  id          String      @id @default(cuid())
-  postId      String
-  userId      String
-  createdAt   DateTime    @default(now())
-  forum_posts forum_posts @relation(fields: [postId], references: [id], onDelete: Cascade)
-  users       users       @relation(fields: [userId], references: [id])
-
-  @@unique([postId, userId])
-}
-
-model forum_posts {
-  id                String             @id @default(cuid())
-  content           String
-  topicId           String
-  authorId          String
-  parentId          String?
-  isAccepted        Boolean            @default(false)
-  isEdited          Boolean            @default(false)
-  editedAt          DateTime?
-  createdAt         DateTime           @default(now())
-  updatedAt         DateTime           @updatedAt
-  content_reports   content_reports[]
-  forum_post_likes  forum_post_likes[]
-  users             users              @relation(fields: [authorId], references: [id])
-  forum_posts       forum_posts?       @relation("forum_postsToforum_posts", fields: [parentId], references: [id])
-  other_forum_posts forum_posts[]      @relation("forum_postsToforum_posts")
-  forum_topics      forum_topics       @relation(fields: [topicId], references: [id], onDelete: Cascade)
-
-  @@index([authorId])
-  @@index([parentId])
-  @@index([topicId])
-}
-
-model forum_tags {
-  id               String             @id @default(cuid())
-  name             String             @unique
-  slug             String             @unique
-  color            String?
-  createdAt        DateTime           @default(now())
-  forum_topic_tags forum_topic_tags[]
-}
-
-model forum_topic_followers {
-  id           String       @id @default(cuid())
-  topicId      String
-  userId       String
-  createdAt    DateTime     @default(now())
-  forum_topics forum_topics @relation(fields: [topicId], references: [id], onDelete: Cascade)
-  users        users        @relation(fields: [userId], references: [id])
-
-  @@unique([topicId, userId])
-}
-
-model forum_topic_tags {
-  id           String       @id @default(cuid())
-  topicId      String
-  tagId        String
-  forum_tags   forum_tags   @relation(fields: [tagId], references: [id])
-  forum_topics forum_topics @relation(fields: [topicId], references: [id], onDelete: Cascade)
-
-  @@unique([topicId, tagId])
-}
-
-model forum_topics {
-  id                                      String                  @id @default(cuid())
-  title                                   String
-  slug                                    String                  @unique
-  content                                 String
-  categoryId                              String
-  authorId                                String
-  isPinned                                Boolean                 @default(false)
-  isLocked                                Boolean                 @default(false)
-  isFeatured                              Boolean                 @default(false)
-  viewCount                               Int                     @default(0)
-  replyCount                              Int                     @default(0)
-  lastReplyAt                             DateTime?
-  lastReplyById                           String?
-  createdAt                               DateTime                @default(now())
-  updatedAt                               DateTime                @updatedAt
-  content_reports                         content_reports[]
-  forum_posts                             forum_posts[]
-  forum_topic_followers                   forum_topic_followers[]
-  forum_topic_tags                        forum_topic_tags[]
-  users_forum_topics_authorIdTousers      users                   @relation("forum_topics_authorIdTousers", fields: [authorId], references: [id])
-  forum_categories                        forum_categories        @relation(fields: [categoryId], references: [id])
-  users_forum_topics_lastReplyByIdTousers users?                  @relation("forum_topics_lastReplyByIdTousers", fields: [lastReplyById], references: [id])
-
-  @@index([authorId])
-  @@index([categoryId])
-  @@index([createdAt])
-  @@index([isFeatured])
-  @@index([isPinned])
-}
-
 model gamification_config {
   id          String   @id @default(cuid())
   key         String   @unique
@@ -1453,67 +1269,6 @@ model grounding_documents {
 
   @@index([isActive])
   @@index([sourceType])
-}
-
-model group_members {
-  id               String           @id @default(cuid())
-  groupId          String
-  userId           String
-  role             GroupRole        @default(MEMBER)
-  joinedAt         DateTime         @default(now())
-  community_groups community_groups @relation(fields: [groupId], references: [id], onDelete: Cascade)
-  users            users            @relation(fields: [userId], references: [id])
-
-  @@unique([groupId, userId])
-  @@index([groupId])
-  @@index([userId])
-}
-
-model group_post_comments {
-  id                        String                @id @default(cuid())
-  postId                    String
-  authorId                  String
-  content                   String
-  parentId                  String?
-  createdAt                 DateTime              @default(now())
-  updatedAt                 DateTime              @updatedAt
-  users                     users                 @relation(fields: [authorId], references: [id])
-  group_post_comments       group_post_comments?  @relation("group_post_commentsTogroup_post_comments", fields: [parentId], references: [id])
-  other_group_post_comments group_post_comments[] @relation("group_post_commentsTogroup_post_comments")
-  group_posts               group_posts           @relation(fields: [postId], references: [id], onDelete: Cascade)
-
-  @@index([authorId])
-  @@index([postId])
-}
-
-model group_post_likes {
-  id          String      @id @default(cuid())
-  postId      String
-  userId      String
-  createdAt   DateTime    @default(now())
-  group_posts group_posts @relation(fields: [postId], references: [id], onDelete: Cascade)
-  users       users       @relation(fields: [userId], references: [id])
-
-  @@unique([postId, userId])
-}
-
-model group_posts {
-  id                  String                @id @default(cuid())
-  groupId             String
-  authorId            String
-  content             String
-  mediaUrls           String[]
-  isPinned            Boolean               @default(false)
-  createdAt           DateTime              @default(now())
-  updatedAt           DateTime              @updatedAt
-  group_post_comments group_post_comments[]
-  group_post_likes    group_post_likes[]
-  users               users                 @relation(fields: [authorId], references: [id])
-  community_groups    community_groups      @relation(fields: [groupId], references: [id], onDelete: Cascade)
-
-  @@index([authorId])
-  @@index([groupId])
-  @@index([isPinned])
 }
 
 model hallucination_checks {
@@ -1819,28 +1574,6 @@ model languages {
   other_languages           languages[]                 @relation("languagesTolanguages")
   translations              translations[]
   user_language_preferences user_language_preferences[]
-}
-
-model leaderboard_entries {
-  id            String            @id @default(cuid())
-  userId        String
-  period        LeaderboardPeriod
-  periodStart   DateTime
-  periodEnd     DateTime
-  totalMinutes  Int               @default(0)
-  totalSessions Int               @default(0)
-  totalClasses  Int               @default(0)
-  streakDays    Int               @default(0)
-  points        Int               @default(0)
-  rank          Int?
-  previousRank  Int?
-  createdAt     DateTime          @default(now())
-  updatedAt     DateTime          @updatedAt
-  users         users             @relation(fields: [userId], references: [id])
-
-  @@unique([userId, period, periodStart])
-  @@index([period, periodStart, points])
-  @@index([userId])
 }
 
 model live_stream_chats {
@@ -2579,30 +2312,6 @@ model purchase_receipts {
   @@index([validationStatus])
 }
 
-model quests {
-  id               String               @id @default(cuid())
-  name             String
-  description      String
-  icon             String
-  color            String?
-  type             QuestType
-  resetPeriod      QuestResetPeriod
-  requirementType  QuestRequirementType
-  requirementValue Int
-  requirementMeta  Json?
-  xpReward         Int
-  bonusReward      Json?
-  isActive         Boolean              @default(true)
-  startDate        DateTime?
-  endDate          DateTime?
-  createdAt        DateTime             @default(now())
-  updatedAt        DateTime             @updatedAt
-  user_quests      user_quests[]
-
-  @@index([isActive])
-  @@index([type])
-}
-
 model rate_limit_logs {
   id            String   @id @default(cuid())
   identifier    String
@@ -3044,23 +2753,6 @@ model sms_logs {
   @@index([userId])
 }
 
-model social_shares {
-  id         String         @id @default(cuid())
-  userId     String
-  platform   SocialPlatform
-  shareType  ShareType
-  targetId   String
-  targetType String
-  shareUrl   String?
-  metadata   Json?
-  createdAt  DateTime       @default(now())
-  users      users          @relation(fields: [userId], references: [id])
-
-  @@index([platform])
-  @@index([shareType])
-  @@index([userId])
-}
-
 model streak_freezes {
   id        String             @id @default(cuid())
   userId    String
@@ -3479,17 +3171,6 @@ model user_blocks {
   @@unique([blockerId, blockedId])
 }
 
-model user_daily_rewards {
-  id          String    @id @default(cuid())
-  userId      String    @unique
-  currentDay  Int       @default(1)
-  lastClaimAt DateTime?
-  cycleStart  DateTime  @default(now())
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  users       users     @relation(fields: [userId], references: [id], onDelete: Cascade)
-}
-
 model user_dashboard_widgets {
   id                String            @id @default(cuid())
   userId            String
@@ -3541,19 +3222,6 @@ model user_engagement_stats {
   @@index([userId])
 }
 
-model user_follows {
-  id                                    String   @id @default(cuid())
-  followerId                            String
-  followingId                           String
-  createdAt                             DateTime @default(now())
-  users_user_follows_followerIdTousers  users    @relation("user_follows_followerIdTousers", fields: [followerId], references: [id])
-  users_user_follows_followingIdTousers users    @relation("user_follows_followingIdTousers", fields: [followingId], references: [id])
-
-  @@unique([followerId, followingId])
-  @@index([followerId])
-  @@index([followingId])
-}
-
 model user_language_preferences {
   id                  String    @id @default(cuid())
   userId              String    @unique
@@ -3565,24 +3233,6 @@ model user_language_preferences {
   updatedAt           DateTime  @updatedAt
   languages           languages @relation(fields: [preferredLanguageId], references: [id])
   users               users     @relation(fields: [userId], references: [id], onDelete: Cascade)
-}
-
-model user_levels {
-  id                String    @id @default(cuid())
-  userId            String    @unique
-  currentXP         Int       @default(0)
-  totalXP           Int       @default(0)
-  level             Int       @default(1)
-  levelUpAt         DateTime?
-  previousLevel     Int?
-  currentStreak     Int       @default(0)
-  longestStreak     Int       @default(0)
-  lastActivityDate  DateTime?
-  streakFreezeCount Int       @default(0)
-  streakFreezeUsed  DateTime?
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
-  users             users     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model user_message_preferences {
@@ -3625,27 +3275,6 @@ model user_notes {
   users      users    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, entityId])
-}
-
-model user_quests {
-  id           String    @id @default(cuid())
-  userId       String
-  questId      String
-  periodStart  DateTime
-  periodEnd    DateTime
-  currentValue Int       @default(0)
-  targetValue  Int
-  isCompleted  Boolean   @default(false)
-  completedAt  DateTime?
-  isClaimed    Boolean   @default(false)
-  claimedAt    DateTime?
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
-  quests       quests    @relation(fields: [questId], references: [id], onDelete: Cascade)
-  users        users     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@unique([userId, questId, periodStart])
-  @@index([userId, isCompleted, isClaimed])
 }
 
 model user_titles {
@@ -3718,37 +3347,22 @@ model users {
   comment_likes                                                   comment_likes[]
   comments                                                        comments[]
   communication_campaigns                                         communication_campaigns[]
-  community_groups                                                community_groups[]
   content_reports_content_reports_reporterIdTousers               content_reports[]             @relation("content_reports_reporterIdTousers")
   content_reports_content_reports_reviewedByIdTousers             content_reports[]             @relation("content_reports_reviewedByIdTousers")
   content_reports_content_reports_userIdTousers                   content_reports[]             @relation("content_reports_userIdTousers")
-  conversations_conversations_participant1IdTousers               conversations[]               @relation("conversations_participant1IdTousers")
-  conversations_conversations_participant2IdTousers               conversations[]               @relation("conversations_participant2IdTousers")
   coupon_usages                                                   coupon_usages[]
   coupons                                                         coupons[]
   custom_queries                                                  custom_queries[]
   daily_checks                                                    daily_checks[]
   daily_insights                                                  daily_insights[]
   device_tokens                                                   device_tokens[]
-  direct_messages_direct_messages_receiverIdTousers               direct_messages[]             @relation("direct_messages_receiverIdTousers")
-  direct_messages_direct_messages_senderIdTousers                 direct_messages[]             @relation("direct_messages_senderIdTousers")
   export_jobs                                                     export_jobs[]
   favorites                                                       favorites[]
   feature_flags                                                   feature_flags[]
-  forum_post_likes                                                forum_post_likes[]
-  forum_posts                                                     forum_posts[]
-  forum_topic_followers                                           forum_topic_followers[]
-  forum_topics_forum_topics_authorIdTousers                       forum_topics[]                @relation("forum_topics_authorIdTousers")
-  forum_topics_forum_topics_lastReplyByIdTousers                  forum_topics[]                @relation("forum_topics_lastReplyByIdTousers")
-  group_members                                                   group_members[]
-  group_post_comments                                             group_post_comments[]
-  group_post_likes                                                group_post_likes[]
-  group_posts                                                     group_posts[]
   instructor_followers                                            instructor_followers[]
   instructor_profiles                                             instructor_profiles?
   instructor_reviews                                              instructor_reviews[]
   invoices                                                        invoices[]
-  leaderboard_entries                                             leaderboard_entries[]
   live_stream_chats                                               live_stream_chats[]
   live_stream_participants                                        live_stream_participants[]
   live_stream_reactions                                           live_stream_reactions[]
@@ -3782,7 +3396,6 @@ model users {
   seasonal_event_participants                                     seasonal_event_participants[]
   shop_purchases                                                  shop_purchases[]
   sms_logs                                                        sms_logs[]
-  social_shares                                                   social_shares[]
   streak_freezes                                                  streak_freezes[]
   subscriptions                                                   subscriptions[]
   sync_changes                                                    sync_changes[]
@@ -3801,24 +3414,18 @@ model users {
   user_behaviors                                                  user_behaviors[]
   user_blocks_user_blocks_blockedIdTousers                        user_blocks[]                 @relation("user_blocks_blockedIdTousers")
   user_blocks_user_blocks_blockerIdTousers                        user_blocks[]                 @relation("user_blocks_blockerIdTousers")
-  user_daily_rewards                                              user_daily_rewards?
   user_dashboard_widgets                                          user_dashboard_widgets[]
   user_embeddings                                                 user_embeddings?
   user_engagement_stats                                           user_engagement_stats?
-  user_follows_user_follows_followerIdTousers                     user_follows[]                @relation("user_follows_followerIdTousers")
-  user_follows_user_follows_followingIdTousers                    user_follows[]                @relation("user_follows_followingIdTousers")
   user_language_preferences                                       user_language_preferences?
-  user_levels                                                     user_levels?
   user_message_preferences                                        user_message_preferences?
   user_notes                                                      user_notes[]
-  user_quests                                                     user_quests[]
   user_titles                                                     user_titles[]
   user_warnings_user_warnings_userIdTousers                       user_warnings[]               @relation("user_warnings_userIdTousers")
   user_warnings_user_warnings_warnedByIdTousers                   user_warnings[]               @relation("user_warnings_warnedByIdTousers")
   video_progress                                                  video_progress[]
   voice_over_jobs                                                 voice_over_jobs[]
   webhook_endpoints                                               webhook_endpoints[]
-  xp_transactions                                                 xp_transactions[]
   instructorPrograms                                              programs[]                    @relation("ProgramInstructor")
 
   // Sprint 1: Meditation & Breathwork relations
@@ -3965,25 +3572,6 @@ model webhook_endpoints {
   users                    users                      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([isActive])
-  @@index([userId])
-}
-
-model xp_transactions {
-  id            String            @id @default(cuid())
-  userId        String
-  amount        Int
-  type          XPTransactionType
-  source        XPSource
-  sourceId      String?
-  description   String?
-  balanceBefore Int
-  balanceAfter  Int
-  metadata      Json?
-  createdAt     DateTime          @default(now())
-  users         users             @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([createdAt])
-  @@index([source, sourceId])
   @@index([userId])
 }
 
@@ -4301,14 +3889,6 @@ enum CouponType {
   FIXED
 }
 
-enum DailyBonusType {
-  STREAK_FREEZE
-  BADGE
-  TITLE
-  AVATAR_FRAME
-  DISCOUNT
-}
-
 enum DateRangeType {
   TODAY
   YESTERDAY
@@ -4435,13 +4015,6 @@ enum GeneratedContentType {
   SUMMARY
 }
 
-enum GroupRole {
-  OWNER
-  ADMIN
-  MODERATOR
-  MEMBER
-}
-
 enum HallucinationCheckType {
   FACT_CHECK
   CONSISTENCY_CHECK
@@ -4491,13 +4064,6 @@ enum InvoiceType {
 enum LanguageDirection {
   LTR
   RTL
-}
-
-enum LeaderboardPeriod {
-  DAILY
-  WEEKLY
-  MONTHLY
-  ALL_TIME
 }
 
 enum LessonType {
@@ -4739,35 +4305,6 @@ enum QueryType {
   AGGREGATION
 }
 
-enum QuestRequirementType {
-  COMPLETE_CLASSES
-  COMPLETE_MINUTES
-  COMPLETE_PROGRAM_DAY
-  MAINTAIN_STREAK
-  TRY_NEW_CATEGORY
-  ATTEND_LIVE_SESSION
-  POST_IN_FORUM
-  SHARE_PROGRESS
-  INVITE_FRIEND
-  COMPLETE_CHALLENGE_DAY
-  CUSTOM
-}
-
-enum QuestResetPeriod {
-  DAILY
-  WEEKLY
-  MONTHLY
-  NEVER
-}
-
-enum QuestType {
-  DAILY
-  WEEKLY
-  MONTHLY
-  SPECIAL_EVENT
-  SEASONAL
-}
-
 enum ReactionType {
   LIKE
   HEART
@@ -4947,16 +4484,6 @@ enum SettingType {
   ARRAY
 }
 
-enum ShareType {
-  PROGRESS
-  ACHIEVEMENT
-  BADGE
-  PROGRAM
-  CLASS
-  CHALLENGE
-  PROFILE
-}
-
 enum ShopItemType {
   STREAK_FREEZE
   AVATAR_FRAME
@@ -4997,15 +4524,6 @@ enum SnapshotType {
   ENGAGEMENT
   CONTENT
   INSTRUCTORS
-}
-
-enum SocialPlatform {
-  FACEBOOK
-  TWITTER
-  INSTAGRAM
-  WHATSAPP
-  LINKEDIN
-  COPY_LINK
 }
 
 enum StreakFreezeSource {
@@ -5184,39 +4702,6 @@ enum WorkflowStatus {
   ACTIVE
   PAUSED
   ARCHIVED
-}
-
-enum XPSource {
-  CLASS_COMPLETE
-  PROGRAM_COMPLETE
-  CHALLENGE_COMPLETE
-  CHALLENGE_MILESTONE
-  DAILY_LOGIN
-  STREAK_MILESTONE
-  ACHIEVEMENT_UNLOCK
-  BADGE_EARN
-  FORUM_POST
-  FORUM_REPLY
-  HELPFUL_ANSWER
-  REFERRAL
-  PROFILE_COMPLETE
-  FIRST_CLASS
-  FIRST_PROGRAM
-  REVIEW_SUBMIT
-  SOCIAL_SHARE
-  LIVE_SESSION_ATTEND
-  LIVE_SESSION_HOST
-  ADMIN
-}
-
-enum XPTransactionType {
-  EARN
-  BONUS
-  STREAK_BONUS
-  ACHIEVEMENT_BONUS
-  REFERRAL_BONUS
-  ADMIN_ADJUSTMENT
-  EXPIRED
 }
 
 enum ChallengeDifficulty {

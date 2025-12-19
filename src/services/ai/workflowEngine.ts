@@ -1062,14 +1062,11 @@ const getUserProgressTool = async (
 ) => {
   if (!userId) return null;
 
-  const [classes, challenges, level] = await Promise.all([
+  const [classes, challenges] = await Promise.all([
     prisma.video_progress.count({
       where: { userId, completed: true },
     }),
     prisma.challenge_enrollments.count({
-      where: { userId },
-    }),
-    prisma.user_levels.findUnique({
       where: { userId },
     }),
   ]);
@@ -1077,9 +1074,9 @@ const getUserProgressTool = async (
   return {
     completedClasses: classes,
     completedChallenges: challenges,
-    level: level?.level || 1,
-    xp: level?.totalXP || 0,
-    streak: level?.currentStreak || 0,
+    level: 1,
+    xp: 0,
+    streak: 0,
   };
 };
 

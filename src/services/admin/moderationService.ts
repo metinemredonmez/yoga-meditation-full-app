@@ -77,59 +77,14 @@ export async function bulkDeleteComments(commentIds: string[]) {
   return { deleted: result.count };
 }
 
-// Get forum posts
-export async function getForumPosts(filters: {
-  search?: string;
-  userId?: string;
-  flagged?: boolean;
-  page?: number;
-  limit?: number;
-}) {
-  const { page = 1, limit = 20 } = filters;
-
-  const [posts, total] = await Promise.all([
-    prisma.forum_posts.findMany({
-      skip: (page - 1) * limit,
-      take: limit,
-      orderBy: { createdAt: 'desc' },
-    }),
-    prisma.forum_posts.count(),
-  ]);
-
-  return {
-    posts,
-    pagination: { page, limit, total, totalPages: Math.ceil(total / limit) },
-  };
-}
-
-// Delete forum post
-export async function deleteForumPost(postId: string) {
-  await prisma.forum_posts.delete({ where: { id: postId } });
-}
-
-// Lock forum post - stub (no status field in ForumPost schema)
-export async function lockForumPost(_postId: string) {
-  // ForumPost model doesn't have status field
-  return { success: true };
-}
-
-// Pin forum post - stub (no status/isPinned field in ForumPost schema)
-export async function pinForumPost(_postId: string, _isPinned: boolean) {
-  // ForumPost model doesn't have isPinned field
-  return { success: true };
-}
 
 // Get moderation stats
 export async function getModerationStats() {
-  const [totalComments, totalPosts] = await Promise.all([
-    prisma.comments.count(),
-    prisma.forum_posts.count(),
-  ]);
+  const totalComments = await prisma.comments.count();
 
   return {
     reports: { total: 0, pending: 0, resolved: 0 },
     comments: { total: totalComments, hidden: 0 },
-    forumPosts: { total: totalPosts, flagged: 0 },
   };
 }
 

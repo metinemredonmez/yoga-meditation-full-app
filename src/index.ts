@@ -82,7 +82,6 @@ import achievementRoutes from './routes/achievement';
 import eventRoutes from './routes/event';
 import referralRoutes from './routes/referral';
 import customizationRoutes from './routes/customization';
-import dailyRewardRoutes from './routes/dailyReward';
 
 // Sprint 22: Multi-language (i18n) System Routes
 import i18nRoutes from './routes/i18n';
@@ -265,7 +264,6 @@ app.use('/api/achievements', achievementRoutes);
 app.use('/api/events', eventRoutes);
 app.use('/api/referrals', referralRoutes);
 app.use('/api/customization', customizationRoutes);
-app.use('/api/daily-rewards', dailyRewardRoutes);
 
 // Sprint 22: Multi-language (i18n) System
 app.use('/api/i18n', i18nRoutes);

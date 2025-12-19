@@ -37,12 +37,14 @@ export async function getShopItems(
 
   // If userId provided, check if user can purchase each item
   if (userId) {
-    const userLevel = await xpService.getOrCreateUserLevel(userId);
     const userBadges = await prisma.user_badges.findMany({
       where: { userId },
       select: { badgeId: true },
     });
     const userBadgeIds = new Set(userBadges.map((b) => b.badgeId));
+
+    // Placeholder for user level (user_levels removed)
+    const userLevel = { level: 1, currentXP: 0 };
 
     return items.map((item) => ({
       ...item,
@@ -61,8 +63,8 @@ export async function getShopItemById(id: string) {
 }
 
 function checkItemRequirements(
-  item: any,
-  userLevel: any,
+  item: { minLevel: number | null; requiredBadgeId: string | null; stock: number | null; priceXP: number },
+  userLevel: { level: number; currentXP: number },
   userBadgeIds: Set<string>,
 ): boolean {
   // Check level requirement
@@ -89,8 +91,8 @@ function checkItemRequirements(
 }
 
 function getRequirementReason(
-  item: any,
-  userLevel: any,
+  item: { minLevel: number | null; requiredBadgeId: string | null; stock: number | null; priceXP: number },
+  userLevel: { level: number; currentXP: number },
   userBadgeIds: Set<string>,
 ): string | null {
   if (item.minLevel && userLevel.level < item.minLevel) {
@@ -144,7 +146,8 @@ export async function purchaseItem(userId: string, itemId: string) {
   }
 
   // Check requirements
-  const userLevel = await xpService.getOrCreateUserLevel(userId);
+  // Placeholder for user level (user_levels removed)
+  const userLevel = { level: 1, currentXP: 0 };
 
   if (item.minLevel && userLevel.level < item.minLevel) {
     return { success: false, message: `Requires level ${item.minLevel}` };
@@ -165,7 +168,7 @@ export async function purchaseItem(userId: string, itemId: string) {
   }
 
   // Process purchase
-  const [purchase] = await prisma.$transaction([
+  const transactions: any[] = [
     // Create purchase record
     prisma.shop_purchases.create({
       data: {
@@ -175,26 +178,22 @@ export async function purchaseItem(userId: string, itemId: string) {
         currency: 'XP',
       },
     }),
-    // Deduct XP
-    prisma.user_levels.update({
-      where: { userId },
-      data: {
-        currentXP: { decrement: item.priceXP },
-      },
-    }),
-    // Update stock if applicable
-    ...(item.stock !== null
-      ? [
-          prisma.shop_items.update({
-            where: { id: itemId },
-            data: {
-              stock: { decrement: 1 },
-              soldCount: { increment: 1 },
-            },
-          }),
-        ]
-      : []),
-  ]);
+  ];
+
+  // Update stock if applicable
+  if (item.stock !== null) {
+    transactions.push(
+      prisma.shop_items.update({
+        where: { id: itemId },
+        data: {
+          stock: { decrement: 1 },
+          soldCount: { increment: 1 },
+        },
+      })
+    );
+  }
+
+  const [purchase] = await prisma.$transaction(transactions);
 
   // Auto-use certain item types
   if (item.type === 'STREAK_FREEZE') {

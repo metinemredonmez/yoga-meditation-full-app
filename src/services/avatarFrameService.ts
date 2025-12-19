@@ -137,8 +137,7 @@ export async function checkFrameUnlocks(userId: string) {
   const ownedFrameIds = new Set(userFrames.map((uf) => uf.frameId));
 
   // Get user stats
-  const [userLevel, achievements, user] = await Promise.all([
-    prisma.user_levels.findUnique({ where: { userId } }),
+  const [achievements, user] = await Promise.all([
     prisma.user_achievements.findMany({
       where: { userId, isCompleted: true },
       select: { achievementId: true },
@@ -152,6 +151,9 @@ export async function checkFrameUnlocks(userId: string) {
   const completedAchievementIds = new Set(
     achievements.map((a) => a.achievementId),
   );
+
+  // Placeholder for user level (user_levels removed)
+  const userLevel = { level: 1 };
 
   for (const frame of frames) {
     if (ownedFrameIds.has(frame.id)) continue;

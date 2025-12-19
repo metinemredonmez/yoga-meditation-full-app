@@ -2,15 +2,23 @@ import cron from 'node-cron';
 import { prisma } from '../utils/database';
 import { logger } from '../utils/logger';
 
-let dailyResetJob: ReturnType<typeof cron.schedule> | null = null;
-let weeklyResetJob: ReturnType<typeof cron.schedule> | null = null;
-let monthlyResetJob: ReturnType<typeof cron.schedule> | null = null;
-let streakCheckJob: ReturnType<typeof cron.schedule> | null = null;
+// NOTE: Most gamification jobs have been disabled because the following models were removed from the schema:
+// - user_quests (used in daily/weekly/monthly resets)
+// - user_levels (used in daily reset and streak check)
+// - user_daily_rewards (used in monthly reset)
+// Only the event check job remains active as it uses the seasonal_events model which still exists.
+
+// let dailyResetJob: ReturnType<typeof cron.schedule> | null = null;
+// let weeklyResetJob: ReturnType<typeof cron.schedule> | null = null;
+// let monthlyResetJob: ReturnType<typeof cron.schedule> | null = null;
+// let streakCheckJob: ReturnType<typeof cron.schedule> | null = null;
 let eventCheckJob: ReturnType<typeof cron.schedule> | null = null;
 
 // ============================================
-// Daily Reset Job - Runs at midnight
+// DISABLED - Daily Reset Job - Runs at midnight
 // ============================================
+// DISABLED: References deleted models: user_quests, user_levels
+/*
 async function runDailyReset() {
   const startTime = Date.now();
   logger.info('Starting daily gamification reset...');
@@ -92,10 +100,13 @@ async function runDailyReset() {
     logger.error({ err: error }, 'Daily gamification reset failed');
   }
 }
+*/
 
 // ============================================
-// Weekly Reset Job - Runs at midnight on Monday
+// DISABLED - Weekly Reset Job - Runs at midnight on Monday
 // ============================================
+// DISABLED: References deleted model: user_quests
+/*
 async function runWeeklyReset() {
   const startTime = Date.now();
   logger.info('Starting weekly gamification reset...');
@@ -128,10 +139,13 @@ async function runWeeklyReset() {
     logger.error({ err: error }, 'Weekly gamification reset failed');
   }
 }
+*/
 
 // ============================================
-// Monthly Reset Job - Runs at midnight on 1st
+// DISABLED - Monthly Reset Job - Runs at midnight on 1st
 // ============================================
+// DISABLED: References deleted models: user_quests, user_daily_rewards
+/*
 async function runMonthlyReset() {
   const startTime = Date.now();
   logger.info('Starting monthly gamification reset...');
@@ -182,10 +196,13 @@ async function runMonthlyReset() {
     logger.error({ err: error }, 'Monthly gamification reset failed');
   }
 }
+*/
 
 // ============================================
-// Streak Check Job - Runs every hour
+// DISABLED - Streak Check Job - Runs every hour
 // ============================================
+// DISABLED: References deleted model: user_levels
+/*
 async function runStreakCheck() {
   logger.debug('Running hourly streak check...');
 
@@ -217,6 +234,7 @@ async function runStreakCheck() {
     logger.error({ err: error }, 'Streak check job failed');
   }
 }
+*/
 
 // ============================================
 // Event Check Job - Runs every 5 minutes
@@ -273,41 +291,41 @@ async function runEventCheck() {
 // ============================================
 
 export function initializeGamificationJobs() {
-  // Daily reset at midnight
-  dailyResetJob = cron.schedule('0 0 * * *', runDailyReset);
+  // DISABLED: Daily reset at midnight (references deleted models)
+  // dailyResetJob = cron.schedule('0 0 * * *', runDailyReset);
 
-  // Weekly reset at midnight on Monday
-  weeklyResetJob = cron.schedule('0 0 * * 1', runWeeklyReset);
+  // DISABLED: Weekly reset at midnight on Monday (references deleted models)
+  // weeklyResetJob = cron.schedule('0 0 * * 1', runWeeklyReset);
 
-  // Monthly reset at midnight on 1st
-  monthlyResetJob = cron.schedule('0 0 1 * *', runMonthlyReset);
+  // DISABLED: Monthly reset at midnight on 1st (references deleted models)
+  // monthlyResetJob = cron.schedule('0 0 1 * *', runMonthlyReset);
 
-  // Streak check every hour
-  streakCheckJob = cron.schedule('0 * * * *', runStreakCheck);
+  // DISABLED: Streak check every hour (references deleted models)
+  // streakCheckJob = cron.schedule('0 * * * *', runStreakCheck);
 
-  // Event check every 5 minutes
+  // Event check every 5 minutes (still active - uses seasonal_events model)
   eventCheckJob = cron.schedule('*/5 * * * *', runEventCheck);
 
-  logger.info('Gamification cron jobs initialized');
+  logger.info('Gamification cron jobs initialized (only event check active)');
 }
 
 export function stopGamificationJobs() {
-  if (dailyResetJob) {
-    dailyResetJob.stop();
-    dailyResetJob = null;
-  }
-  if (weeklyResetJob) {
-    weeklyResetJob.stop();
-    weeklyResetJob = null;
-  }
-  if (monthlyResetJob) {
-    monthlyResetJob.stop();
-    monthlyResetJob = null;
-  }
-  if (streakCheckJob) {
-    streakCheckJob.stop();
-    streakCheckJob = null;
-  }
+  // if (dailyResetJob) {
+  //   dailyResetJob.stop();
+  //   dailyResetJob = null;
+  // }
+  // if (weeklyResetJob) {
+  //   weeklyResetJob.stop();
+  //   weeklyResetJob = null;
+  // }
+  // if (monthlyResetJob) {
+  //   monthlyResetJob.stop();
+  //   monthlyResetJob = null;
+  // }
+  // if (streakCheckJob) {
+  //   streakCheckJob.stop();
+  //   streakCheckJob = null;
+  // }
   if (eventCheckJob) {
     eventCheckJob.stop();
     eventCheckJob = null;
@@ -317,4 +335,6 @@ export function stopGamificationJobs() {
 }
 
 // Manual trigger functions for testing/admin
-export { runDailyReset, runWeeklyReset, runMonthlyReset, runStreakCheck, runEventCheck };
+// DISABLED: Most functions reference deleted models
+// export { runDailyReset, runWeeklyReset, runMonthlyReset, runStreakCheck, runEventCheck };
+export { runEventCheck };

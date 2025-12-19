@@ -144,13 +144,8 @@ const collectUserMetrics = async (userId: string) => {
       },
     }),
 
-    // Current streak (from user level if exists)
-    prisma.user_levels
-      .findUnique({
-        where: { userId },
-        select: { currentStreak: true },
-      })
-      .then((ul) => ul?.currentStreak || 0),
+    // Current streak (placeholder - user_levels removed)
+    Promise.resolve(0),
 
     // Active challenge progress
     prisma.challenge_enrollments.findMany({
@@ -183,8 +178,8 @@ const collectUserMetrics = async (userId: string) => {
     classesCompletedYesterday,
     totalClassesCompleted,
     currentStreak,
-    activeChallenges: challengeProgress.map((cp: any) => ({
-      title: cp.challenge.title,
+    activeChallenges: challengeProgress.map((cp: { challenges: { title: string } }) => ({
+      title: cp.challenges.title,
       recentActivity: true,
     })),
     recentActivityCount: recentActivity.length,
@@ -208,7 +203,7 @@ Generate a personalized daily insight for ${user?.firstName || 'this user'} base
 - Classes completed yesterday: ${metrics.classesCompletedYesterday}
 - Total classes completed: ${metrics.totalClassesCompleted}
 - Current streak: ${metrics.currentStreak} days
-- Active challenges: ${metrics.activeChallenges.map((c: any) => c.title).join(', ') || 'None'}
+- Active challenges: ${metrics.activeChallenges.map((c: { title: string }) => c.title).join(', ') || 'None'}
 - Recent activity: ${metrics.recentActivityCount > 0 ? 'Active' : 'Inactive'}
 
 Please provide:

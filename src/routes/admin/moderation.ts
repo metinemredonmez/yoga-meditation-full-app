@@ -19,10 +19,10 @@ router.delete('/comments/:id', moderationController.deleteComment);
 router.post('/comments/:id/hide', moderationController.hideComment);
 router.post('/comments/bulk-delete', moderationController.bulkDeleteComments);
 
-// Forum Posts
-router.get('/forum-posts', moderationController.getForumPosts);
-router.delete('/forum-posts/:id', moderationController.deleteForumPost);
-router.post('/forum-posts/:id/lock', moderationController.lockForumPost);
-router.post('/forum-posts/:id/pin', moderationController.pinForumPost);
+// Forum Posts - DISABLED (Forum models removed)
+// router.get('/forum-posts', moderationController.getForumPosts);
+// router.delete('/forum-posts/:id', moderationController.deleteForumPost);
+// router.post('/forum-posts/:id/lock', moderationController.lockForumPost);
+// router.post('/forum-posts/:id/pin', moderationController.pinForumPost);
 
 export default router;

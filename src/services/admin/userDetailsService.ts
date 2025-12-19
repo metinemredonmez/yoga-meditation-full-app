@@ -8,7 +8,6 @@ export async function getUserOverview(userId: string) {
   const user = await prisma.users.findUnique({
     where: { id: userId },
     include: {
-      user_levels: true,
       user_engagement_stats: true,
       subscriptions: {
         where: { status: 'ACTIVE' },
@@ -104,10 +103,10 @@ export async function getUserOverview(userId: string) {
     },
     quickStats: {
       classesCompleted: user._count.video_progress,
-      totalXP: user.user_levels?.totalXP || 0,
-      level: user.user_levels?.level || 1,
+      totalXP: 0,
+      level: 1,
       badgesEarned: user._count.user_badges,
-      currentStreak: user.user_levels?.currentStreak || 0,
+      currentStreak: 0,
       totalPracticeMinutes: practiceStats?.totalPracticeMinutes || 0,
       programsCompleted: programsCompleted.length,
       challengesJoined: user._count.challenge_enrollments,
@@ -167,7 +166,7 @@ export async function getUserActivity(
   ]);
 
   return {
-    activities: activities.map((a) => ({
+    activities: activities.map((a: any) => ({
       id: a.id,
       type: a.activityType,
       targetId: a.targetId,
@@ -260,18 +259,12 @@ export async function revokeAllUserSessions(userId: string) {
 
 export async function getUserProgress(userId: string) {
   const [
-    userLevel,
     badges,
     achievements,
     recentClasses,
     favorites,
     activeChallenges,
   ] = await Promise.all([
-    // Level & XP
-    prisma.user_levels.findUnique({
-      where: { userId },
-    }),
-
     // Badges
     prisma.user_badges.findMany({
       where: { userId },
@@ -317,24 +310,24 @@ export async function getUserProgress(userId: string) {
     }),
   ]);
 
-  // Calculate XP needed for next level
-  const currentLevel = userLevel?.level || 1;
+  // Use placeholder values for level/XP
+  const currentLevel = 1;
+  const currentXP = 0;
   const xpForNextLevel = calculateXPForLevel(currentLevel + 1);
-  const currentXP = userLevel?.currentXP || 0;
 
   return {
     level: {
       current: currentLevel,
       currentXP,
       xpForNextLevel,
-      progressPercent: Math.round((currentXP / xpForNextLevel) * 100),
-      totalXP: userLevel?.totalXP || 0,
-      currentStreak: userLevel?.currentStreak || 0,
-      longestStreak: userLevel?.longestStreak || 0,
-      streakFreezeCount: userLevel?.streakFreezeCount || 0,
+      progressPercent: 0,
+      totalXP: 0,
+      currentStreak: 0,
+      longestStreak: 0,
+      streakFreezeCount: 0,
     },
     badges: {
-      earned: badges.map((b) => ({
+      earned: badges.map((b: any) => ({
         id: b.badges?.id,
         name: b.badges?.name,
         description: b.badges?.description,
@@ -343,7 +336,7 @@ export async function getUserProgress(userId: string) {
       })),
       totalAvailable: await prisma.badges.count(),
     },
-    achievements: achievements.map((a) => ({
+    achievements: achievements.map((a: any) => ({
       id: a.achievements?.id,
       name: a.achievements?.name,
       description: a.achievements?.description,
@@ -354,18 +347,18 @@ export async function getUserProgress(userId: string) {
       completedAt: a.completedAt,
       xpReward: a.achievements?.xpReward,
     })),
-    recentClasses: recentClasses.map((v) => ({
+    recentClasses: recentClasses.map((v: any) => ({
       id: v.lessonId,
       lessonType: v.lessonType,
       completedAt: v.lastWatchedAt,
     })),
-    favorites: favorites.map((f) => ({
+    favorites: favorites.map((f: any) => ({
       id: f.id,
       itemId: f.itemId,
       itemType: f.itemType,
       createdAt: f.createdAt,
     })),
-    challenges: activeChallenges.map((c) => ({
+    challenges: activeChallenges.map((c: any) => ({
       id: c.challenges?.id,
       title: c.challenges?.title,
       startDate: c.challenges?.startAt,
@@ -668,7 +661,7 @@ export async function getUserSupport(userId: string) {
         ? `${w.users_user_warnings_warnedByIdTousers.firstName} ${w.users_user_warnings_warnedByIdTousers.lastName}`
         : null,
     })),
-    bans: bans.map((b) => ({
+    bans: bans.map((b: any) => ({
       id: b.id,
       reason: b.reason,
       duration: b.duration,
@@ -769,56 +762,16 @@ export async function addXP(
   reason: string,
   adminId: string
 ) {
-  const userLevel = await prisma.user_levels.findUnique({
-    where: { userId },
-  });
-
-  const currentXP = userLevel?.currentXP || 0;
-  const totalXP = userLevel?.totalXP || 0;
-  const currentLevel = userLevel?.level || 1;
-
-  const newCurrentXP = currentXP + amount;
-  const newTotalXP = totalXP + amount;
-  const newLevel = calculateLevelFromXP(newTotalXP);
-
-  await prisma.user_levels.upsert({
-    where: { userId },
-    create: {
-      userId,
-      currentXP: newCurrentXP,
-      totalXP: newTotalXP,
-      level: newLevel,
-    },
-    update: {
-      currentXP: newCurrentXP,
-      totalXP: newTotalXP,
-      level: newLevel,
-    },
-  });
-
-  // Create XP transaction
-  await prisma.xp_transactions.create({
-    data: {
-      userId,
-      amount,
-      type: 'ADMIN_ADJUSTMENT',
-      source: 'ADMIN',
-      description: reason,
-      balanceBefore: totalXP,
-      balanceAfter: newTotalXP,
-    },
-  });
-
-  // Log the action
+  // XP system removed - log the action only
   await prisma.audit_logs.create({
     data: {
       userId: adminId,
       action: 'GRANT_XP',
-      metadata: { targetUserId: userId, amount, reason, newLevel, newTotalXP } as any,
+      metadata: { targetUserId: userId, amount, reason, note: 'XP system removed' } as any,
     },
   });
 
-  return { newLevel, newTotalXP, newCurrentXP, leveledUp: newLevel > currentLevel };
+  return { newLevel: 1, newTotalXP: 0, newCurrentXP: 0, leveledUp: false };
 }
 
 export async function grantBadge(
@@ -890,27 +843,16 @@ export async function grantTitle(
 }
 
 export async function addStreakFreeze(userId: string, adminId: string) {
-  const userLevel = await prisma.user_levels.upsert({
-    where: { userId },
-    create: {
-      userId,
-      streakFreezeCount: 1,
-    },
-    update: {
-      streakFreezeCount: { increment: 1 },
-    },
-  });
-
-  // Log the action
+  // Streak system removed - log the action only
   await prisma.audit_logs.create({
     data: {
       userId: adminId,
       action: 'ADD_STREAK_FREEZE',
-      metadata: { targetUserId: userId, newCount: userLevel.streakFreezeCount } as any,
+      metadata: { targetUserId: userId, note: 'Streak system removed' } as any,
     },
   });
 
-  return userLevel;
+  return { streakFreezeCount: 0 };
 }
 
 export async function verifyUserEmail(userId: string, adminId: string) {
@@ -954,7 +896,6 @@ export async function exportUserData(userId: string) {
       subscriptions: true,
       payments: true,
       bookings: { include: { classes: true } },
-      user_levels: true,
       user_badges: { include: { badges: true } },
       user_achievements: { include: { achievements: true } },
       challenge_enrollments: { include: { challenges: true } },
@@ -1089,7 +1030,7 @@ export async function getTeacherProfile(userId: string) {
       commissionRate: instructorProfile.commissionRate,
       minimumPayout: instructorProfile.minimumPayout,
     },
-    classes: classes.map((c) => ({
+    classes: classes.map((c: any) => ({
       id: c.id,
       title: c.title,
       status: c.status,
@@ -1100,7 +1041,7 @@ export async function getTeacherProfile(userId: string) {
       ratingCount: c.ratingCount,
       createdAt: c.createdAt,
     })),
-    programs: programs.map((p) => ({
+    programs: programs.map((p: any) => ({
       id: p.id,
       title: p.title,
       status: p.status,
@@ -1109,14 +1050,14 @@ export async function getTeacherProfile(userId: string) {
       thumbnailUrl: p.thumbnailUrl,
       createdAt: p.createdAt,
     })),
-    earnings: earnings.map((e) => ({
+    earnings: earnings.map((e: any) => ({
       id: e.id,
       type: e.type,
       netAmount: e.netAmount,
       status: e.status,
       createdAt: e.createdAt,
     })),
-    payouts: payouts.map((p) => ({
+    payouts: payouts.map((p: any) => ({
       id: p.id,
       amount: p.amount,
       method: p.method,
@@ -1124,7 +1065,7 @@ export async function getTeacherProfile(userId: string) {
       completedAt: p.completedAt,
       createdAt: p.createdAt,
     })),
-    reviews: reviews.map((r) => ({
+    reviews: reviews.map((r: any) => ({
       id: r.id,
       rating: r.rating,
       content: r.content,

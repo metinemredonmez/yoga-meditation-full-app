@@ -39,12 +39,12 @@ export async function getReports(
         users_content_reports_reviewedByIdTousers: {
           select: { id: true, firstName: true, lastName: true },
         },
-        forum_topics: {
-          select: { id: true, title: true, slug: true },
-        },
-        forum_posts: {
-          select: { id: true, content: true },
-        },
+        // forum_topics: {
+        //   select: { id: true, title: true, slug: true },
+        // },
+        // forum_posts: {
+        //   select: { id: true, content: true },
+        // },
         comments: {
           select: { id: true, content: true },
         },
@@ -80,12 +80,12 @@ export async function getReportById(id: string) {
       users_content_reports_reviewedByIdTousers: {
         select: { id: true, firstName: true, lastName: true },
       },
-      forum_topics: {
-        select: { id: true, title: true, slug: true, authorId: true },
-      },
-      forum_posts: {
-        select: { id: true, content: true, authorId: true },
-      },
+      // forum_topics: {
+      //   select: { id: true, title: true, slug: true, authorId: true },
+      // },
+      // forum_posts: {
+      //   select: { id: true, content: true, authorId: true },
+      // },
       comments: {
         select: { id: true, content: true, authorId: true },
       },
@@ -174,24 +174,24 @@ export async function resolveReport(
   // Take action based on report type
   if (action && action !== 'none') {
     switch (report.targetType) {
-      case 'TOPIC':
-        if (report.topicId) {
-          if (action === 'delete') {
-            await prisma.forum_topics.delete({ where: { id: report.topicId } });
-          } else if (action === 'hide') {
-            await prisma.forum_topics.update({
-              where: { id: report.topicId },
-              data: { isLocked: true },
-            });
-          }
-        }
-        break;
+      // case 'TOPIC':
+      //   if (report.topicId) {
+      //     if (action === 'delete') {
+      //       await prisma.forum_topics.delete({ where: { id: report.topicId } });
+      //     } else if (action === 'hide') {
+      //       await prisma.forum_topics.update({
+      //         where: { id: report.topicId },
+      //         data: { isLocked: true },
+      //       });
+      //     }
+      //   }
+      //   break;
 
-      case 'POST':
-        if (report.postId && action === 'delete') {
-          await prisma.forum_posts.delete({ where: { id: report.postId } });
-        }
-        break;
+      // case 'POST':
+      //   if (report.postId && action === 'delete') {
+      //     await prisma.forum_posts.delete({ where: { id: report.postId } });
+      //   }
+      //   break;
 
       case 'COMMENT':
         if (report.commentId) {
@@ -292,8 +292,8 @@ export async function getUserReportHistory(userId: string) {
       where: {
         OR: [
           { userId },
-          { forum_topics: { authorId: userId } },
-          { forum_posts: { authorId: userId } },
+          // { forum_topics: { authorId: userId } },
+          // { forum_posts: { authorId: userId } },
           { comments: { authorId: userId } },
         ],
       },

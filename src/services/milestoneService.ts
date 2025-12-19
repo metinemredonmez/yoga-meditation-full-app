@@ -94,9 +94,8 @@ export async function checkMilestones(userId: string) {
   const newMilestones: any[] = [];
 
   // Get user stats
-  const [userLevel, videoProgress, challengeEnrollments] =
+  const [videoProgress, challengeEnrollments] =
     await Promise.all([
-      prisma.user_levels.findUnique({ where: { userId } }),
       prisma.video_progress.findMany({
         where: { userId, completed: true },
       }),
@@ -104,6 +103,9 @@ export async function checkMilestones(userId: string) {
         where: { userId },
       }),
     ]);
+
+  // Placeholder for user level (user_levels removed)
+  const userLevel = { level: 1, longestStreak: 0 };
 
   // Check class milestones
   const classCount = videoProgress.length;
@@ -275,10 +277,12 @@ export async function checkMilestones(userId: string) {
 // ============================================
 
 export async function getUpcomingMilestones(userId: string) {
-  const [userLevel, videoProgress] = await Promise.all([
-    prisma.user_levels.findUnique({ where: { userId } }),
-    prisma.video_progress.count({ where: { userId, completed: true } }),
-  ]);
+  const videoProgress = await prisma.video_progress.count({
+    where: { userId, completed: true }
+  });
+
+  // Placeholder for user level (user_levels removed)
+  const userLevel = { level: 1, currentStreak: 0 };
 
   const upcoming: {
     type: string;

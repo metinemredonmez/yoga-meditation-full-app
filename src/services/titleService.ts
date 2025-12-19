@@ -144,7 +144,7 @@ export async function checkTitleUnlocks(userId: string) {
 
   // Get user stats
   const [userLevel, badgeCount, achievements] = await Promise.all([
-    prisma.user_levels.findUnique({ where: { userId } }),
+    Promise.resolve({ level: 1, longestStreak: 0 }), // Placeholder: user_levels table removed
     prisma.user_badges.count({ where: { userId } }),
     prisma.user_achievements.findMany({
       where: { userId, isCompleted: true },
@@ -153,7 +153,7 @@ export async function checkTitleUnlocks(userId: string) {
   ]);
 
   const completedAchievementIds = new Set(
-    achievements.map((a) => a.achievementId),
+    achievements.map((a: any) => a.achievementId),
   );
 
   for (const title of titles) {

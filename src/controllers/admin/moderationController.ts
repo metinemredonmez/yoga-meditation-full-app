@@ -161,77 +161,77 @@ export async function bulkDeleteComments(req: Request, res: Response, next: Next
 }
 
 // ============================================
-// Forum Posts
+// Forum Posts - DISABLED (Forum models removed)
 // ============================================
 
-export async function getForumPosts(req: Request, res: Response, next: NextFunction) {
-  try {
-    const filters = {
-      search: req.query.search as string,
-      userId: req.query.userId as string,
-      flagged: req.query.flagged === 'true',
-      page: parseInt(req.query.page as string) || 1,
-      limit: parseInt(req.query.limit as string) || 20,
-    };
+// export async function getForumPosts(req: Request, res: Response, next: NextFunction) {
+//   try {
+//     const filters = {
+//       search: req.query.search as string,
+//       userId: req.query.userId as string,
+//       flagged: req.query.flagged === 'true',
+//       page: parseInt(req.query.page as string) || 1,
+//       limit: parseInt(req.query.limit as string) || 20,
+//     };
+//
+//     const result = await moderationService.getForumPosts(filters);
+//     res.json({ success: true, ...result });
+//   } catch (error) {
+//     next(error);
+//   }
+// }
 
-    const result = await moderationService.getForumPosts(filters);
-    res.json({ success: true, ...result });
-  } catch (error) {
-    next(error);
-  }
-}
+// export async function deleteForumPost(req: Request, res: Response, next: NextFunction) {
+//   try {
+//     const adminId = req.user!.id;
+//     const postId = req.params.id!;
+//
+//     await moderationService.deleteForumPost(postId);
+//
+//     await auditService.logAdminAction(
+//       adminId,
+//       AdminAction.FORUM_POST_DELETE,
+//       'forum_post',
+//       postId
+//     );
+//
+//     res.json({ success: true, message: 'Forum post deleted' });
+//   } catch (error) {
+//     next(error);
+//   }
+// }
 
-export async function deleteForumPost(req: Request, res: Response, next: NextFunction) {
-  try {
-    const adminId = req.user!.id;
-    const postId = req.params.id!;
+// export async function lockForumPost(req: Request, res: Response, next: NextFunction) {
+//   try {
+//     const adminId = req.user!.id;
+//     const postId = req.params.id!;
+//
+//     const post = await moderationService.lockForumPost(postId);
+//
+//     await auditService.logAdminAction(
+//       adminId,
+//       AdminAction.CONTENT_REJECT,
+//       'forum_post',
+//       postId
+//     );
+//
+//     res.json({ success: true, post });
+//   } catch (error) {
+//     next(error);
+//   }
+// }
 
-    await moderationService.deleteForumPost(postId);
-
-    await auditService.logAdminAction(
-      adminId,
-      AdminAction.FORUM_POST_DELETE,
-      'forum_post',
-      postId
-    );
-
-    res.json({ success: true, message: 'Forum post deleted' });
-  } catch (error) {
-    next(error);
-  }
-}
-
-export async function lockForumPost(req: Request, res: Response, next: NextFunction) {
-  try {
-    const adminId = req.user!.id;
-    const postId = req.params.id!;
-
-    const post = await moderationService.lockForumPost(postId);
-
-    await auditService.logAdminAction(
-      adminId,
-      AdminAction.CONTENT_REJECT,
-      'forum_post',
-      postId
-    );
-
-    res.json({ success: true, post });
-  } catch (error) {
-    next(error);
-  }
-}
-
-export async function pinForumPost(req: Request, res: Response, next: NextFunction) {
-  try {
-    const postId = req.params.id!;
-    const { isPinned } = req.body;
-
-    const post = await moderationService.pinForumPost(postId, isPinned);
-    res.json({ success: true, post });
-  } catch (error) {
-    next(error);
-  }
-}
+// export async function pinForumPost(req: Request, res: Response, next: NextFunction) {
+//   try {
+//     const postId = req.params.id!;
+//     const { isPinned } = req.body;
+//
+//     const post = await moderationService.pinForumPost(postId, isPinned);
+//     res.json({ success: true, post });
+//   } catch (error) {
+//     next(error);
+//   }
+// }
 
 // ============================================
 // Stats & Queue

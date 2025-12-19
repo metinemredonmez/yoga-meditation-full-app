@@ -9,89 +9,19 @@ import * as milestoneService from './milestoneService';
 // ============================================
 
 export async function updateStreak(userId: string) {
-  const userLevel = await xpService.getOrCreateUserLevel(userId);
-  const now = new Date();
-  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-
-  // Check if already logged today
-  if (userLevel.lastActivityDate) {
-    const lastActivity = new Date(userLevel.lastActivityDate);
-    const lastActivityDay = new Date(
-      lastActivity.getFullYear(),
-      lastActivity.getMonth(),
-      lastActivity.getDate(),
-    );
-
-    if (lastActivityDay.getTime() === today.getTime()) {
-      // Already logged today
-      return {
-        currentStreak: userLevel.currentStreak,
-        longestStreak: userLevel.longestStreak,
-        streakMaintained: true,
-        isNewDay: false,
-      };
-    }
-
-    // Check if streak is still valid (yesterday or freeze used)
-    const yesterday = new Date(today);
-    yesterday.setDate(yesterday.getDate() - 1);
-
-    if (lastActivityDay.getTime() < yesterday.getTime()) {
-      // Streak broken - check for freeze
-      const freeze = await useAvailableFreeze(userId);
-      if (!freeze) {
-        // Reset streak
-        await prisma.user_levels.update({
-          where: { userId },
-          data: {
-            currentStreak: 1,
-            lastActivityDate: now,
-          },
-        });
-
-        logger.info({ userId }, 'Streak broken and reset');
-
-        return {
-          currentStreak: 1,
-          longestStreak: userLevel.longestStreak,
-          streakMaintained: false,
-          streakBroken: true,
-          isNewDay: true,
-        };
-      }
-    }
-  }
-
-  // Increment streak
-  const newStreak = userLevel.currentStreak + 1;
-  const newLongestStreak = Math.max(newStreak, userLevel.longestStreak);
-
-  await prisma.user_levels.update({
-    where: { userId },
-    data: {
-      currentStreak: newStreak,
-      longestStreak: newLongestStreak,
-      lastActivityDate: now,
-    },
-  });
-
-  // Check streak milestones
-  await checkStreakMilestones(userId, newStreak);
-
-  logger.info({ userId, newStreak }, 'Streak updated');
+  // Placeholder implementation - user_levels removed
+  logger.info({ userId }, 'Streak update skipped - user_levels removed');
 
   return {
-    currentStreak: newStreak,
-    longestStreak: newLongestStreak,
+    currentStreak: 0,
+    longestStreak: 0,
     streakMaintained: true,
     isNewDay: true,
-    previousStreak: userLevel.currentStreak,
+    previousStreak: 0,
   };
 }
 
 export async function getStreakInfo(userId: string) {
-  const userLevel = await xpService.getOrCreateUserLevel(userId);
-
   // Get available freezes
   const freezeCount = await prisma.streak_freezes.count({
     where: {
@@ -101,36 +31,25 @@ export async function getStreakInfo(userId: string) {
     },
   });
 
-  // Check if activity needed today
-  const now = new Date();
-  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  let activityNeededToday = true;
-
-  if (userLevel.lastActivityDate) {
-    const lastActivity = new Date(userLevel.lastActivityDate);
-    const lastActivityDay = new Date(
-      lastActivity.getFullYear(),
-      lastActivity.getMonth(),
-      lastActivity.getDate(),
-    );
-    activityNeededToday = lastActivityDay.getTime() < today.getTime();
-  }
+  // Placeholder values - user_levels removed
+  const currentStreak = 0;
+  const longestStreak = 0;
 
   // Calculate next milestone
   const streakMilestones = [7, 14, 30, 60, 100, 200, 365];
   const nextMilestone =
-    streakMilestones.find((m) => m > userLevel.currentStreak) || null;
+    streakMilestones.find((m) => m > currentStreak) || null;
 
   return {
-    currentStreak: userLevel.currentStreak,
-    longestStreak: userLevel.longestStreak,
-    lastActivityDate: userLevel.lastActivityDate,
-    activityNeededToday,
+    currentStreak,
+    longestStreak,
+    lastActivityDate: null,
+    activityNeededToday: true,
     availableFreezes: freezeCount,
-    streakFreezeUsed: userLevel.streakFreezeUsed,
+    streakFreezeUsed: null,
     nextMilestone,
     daysToNextMilestone: nextMilestone
-      ? nextMilestone - userLevel.currentStreak
+      ? nextMilestone - currentStreak
       : null,
   };
 }
@@ -149,14 +68,6 @@ export async function grantStreakFreeze(
       userId,
       source,
       expiresAt,
-    },
-  });
-
-  // Update user freeze count
-  await prisma.user_levels.update({
-    where: { userId },
-    data: {
-      streakFreezeCount: { increment: 1 },
     },
   });
 
@@ -184,14 +95,6 @@ export async function useStreakFreeze(userId: string) {
   await prisma.streak_freezes.update({
     where: { id: freeze.id },
     data: { usedAt: new Date() },
-  });
-
-  await prisma.user_levels.update({
-    where: { userId },
-    data: {
-      streakFreezeUsed: new Date(),
-      streakFreezeCount: { decrement: 1 },
-    },
   });
 
   logger.info({ userId, freezeId: freeze.id }, 'Streak freeze used');
@@ -258,37 +161,10 @@ async function checkStreakMilestones(userId: string, streak: number) {
 // ============================================
 
 export async function checkExpiredStreaks() {
-  const now = new Date();
-  const yesterday = new Date(now);
-  yesterday.setDate(yesterday.getDate() - 1);
-  yesterday.setHours(0, 0, 0, 0);
+  // Placeholder implementation - user_levels removed
+  logger.info('Streak expiration check skipped - user_levels removed');
 
-  // Find users who haven't been active since yesterday and don't have freeze used
-  const usersToReset = await prisma.user_levels.findMany({
-    where: {
-      currentStreak: { gt: 0 },
-      lastActivityDate: { lt: yesterday },
-      streakFreezeUsed: null,
-    },
-  });
-
-  for (const user of usersToReset) {
-    // Check for auto-use freeze
-    const hasFreeze = await useAvailableFreeze(user.userId);
-
-    if (!hasFreeze) {
-      await prisma.user_levels.update({
-        where: { userId: user.userId },
-        data: {
-          currentStreak: 0,
-        },
-      });
-
-      logger.info({ userId: user.userId }, 'Streak reset due to inactivity');
-    }
-  }
-
-  return { processed: usersToReset.length };
+  return { processed: 0 };
 }
 
 // ============================================
@@ -299,44 +175,15 @@ export async function getStreakLeaderboard(
   pagination: { page?: number; limit?: number } = {},
 ) {
   const { page = 1, limit = 50 } = pagination;
-  const skip = (page - 1) * limit;
 
-  const [entries, total] = await Promise.all([
-    prisma.user_levels.findMany({
-      where: { currentStreak: { gt: 0 } },
-      orderBy: { currentStreak: 'desc' },
-      skip,
-      take: limit,
-      include: {
-        users: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-          },
-        },
-      },
-    }),
-    prisma.user_levels.count({ where: { currentStreak: { gt: 0 } } }),
-  ]);
-
-  const leaderboard = entries.map((entry, index) => ({
-    rank: skip + index + 1,
-    userId: entry.userId,
-    userName:
-      `${entry.users.firstName || ''} ${entry.users.lastName || ''}`.trim() ||
-      'Yogi',
-    currentStreak: entry.currentStreak,
-    longestStreak: entry.longestStreak,
-  }));
-
+  // Placeholder implementation - user_levels removed
   return {
-    leaderboard,
+    leaderboard: [],
     pagination: {
       page,
       limit,
-      total,
-      totalPages: Math.ceil(total / limit),
+      total: 0,
+      totalPages: 0,
     },
   };
 }

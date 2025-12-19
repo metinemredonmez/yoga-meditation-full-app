@@ -1,5 +1,5 @@
 import { logger } from '../utils/logger';
-import { AchievementRequirementType, QuestRequirementType } from '@prisma/client';
+import { AchievementRequirementType } from '@prisma/client';
 import * as xpService from './xpService';
 import * as streakService from './streakService';
 import * as achievementService from './achievementService';
