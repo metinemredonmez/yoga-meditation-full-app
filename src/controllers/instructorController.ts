@@ -633,7 +633,7 @@ export async function getMyReviews(req: AuthRequest, res: Response) {
       return res.status(404).json({ success: false, error: 'Instructor profile not found' });
     }
 
-    const reviews = await instructorReviewService.getInstructorReviews(instructor.id, { hasReply }, { page, limit });
+    const reviews = await instructorReviewService.getInstructorReviews(instructor.id, { hasReply, includeAll: true }, { page, limit });
     res.json({ success: true, data: reviews });
   } catch (error) {
     logger.error({ error }, 'Failed to get reviews');
@@ -847,7 +847,7 @@ export async function createMyClass(req: AuthRequest, res: Response) {
       return res.status(404).json({ success: false, error: 'Instructor profile not found' });
     }
 
-    const { title, description, duration, level, videoUrl, thumbnailUrl, programId, poseIds } = req.body;
+    const { title, description, duration, level, videoUrl, thumbnailUrl, programId, poseIds, schedule } = req.body;
 
     const { prisma } = await import('../utils/database');
     const newClass = await prisma.classes.create({
@@ -860,8 +860,9 @@ export async function createMyClass(req: AuthRequest, res: Response) {
         thumbnailUrl,
         instructorId: userId,
         programId,
-        status: 'DRAFT',
+        status: 'PENDING',
         poseIds: poseIds || [],
+        schedule: schedule ? new Date(schedule) : new Date(),
       },
     });
 
@@ -1092,7 +1093,7 @@ export async function createMyProgram(req: AuthRequest, res: Response) {
       return res.status(404).json({ success: false, error: 'Instructor profile not found' });
     }
 
-    const { title, description, level, durationWeeks, thumbnailUrl, coverImageUrl, tagIds } = req.body;
+    const { title, description, level, durationWeeks, durationMin, thumbnailUrl, coverImageUrl, categories } = req.body;
 
     const { prisma } = await import('../utils/database');
     const newProgram = await prisma.programs.create({
@@ -1101,11 +1102,12 @@ export async function createMyProgram(req: AuthRequest, res: Response) {
         description,
         level: level || 'BEGINNER',
         durationWeeks: durationWeeks || 4,
+        durationMin: durationMin || (durationWeeks || 4) * 7 * 30, // Estimated minutes
         thumbnailUrl,
         imageUrl: coverImageUrl,
         instructorId: userId,
-        status: 'DRAFT',
-        tagIds: tagIds || [],
+        status: 'PENDING',
+        categories: categories || [],
       },
     });
 
@@ -1140,7 +1142,7 @@ export async function updateMyProgram(req: AuthRequest, res: Response) {
       return res.status(404).json({ success: false, error: 'Program not found or access denied' });
     }
 
-    const { title, description, level, durationWeeks, thumbnailUrl, coverImageUrl, tagIds } = req.body;
+    const { title, description, level, durationWeeks, thumbnailUrl, coverImageUrl, categories } = req.body;
 
     const updatedProgram = await prisma.programs.update({
       where: { id: programId },
@@ -1151,7 +1153,7 @@ export async function updateMyProgram(req: AuthRequest, res: Response) {
         ...(durationWeeks && { durationWeeks }),
         ...(thumbnailUrl !== undefined && { thumbnailUrl }),
         ...(coverImageUrl !== undefined && { imageUrl: coverImageUrl }),
-        ...(tagIds && { tagIds }),
+        ...(categories && { categories }),
       },
     });
 

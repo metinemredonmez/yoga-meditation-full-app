@@ -86,7 +86,7 @@ router.post('/daily-rewards', async (req: Request, res: Response) => {
 // PUT /api/admin/gamification/daily-rewards/:id - Update specific day reward
 router.put('/daily-rewards/:id', async (req: Request, res: Response) => {
   try {
-    const day = parseInt(req.params.id);
+    const day = parseInt(req.params.id || '0');
     const { xp, coins, bonusItem, description } = req.body;
 
     const config = await prisma.gamification_config.findUnique({
@@ -128,7 +128,7 @@ router.put('/daily-rewards/:id', async (req: Request, res: Response) => {
 // DELETE /api/admin/gamification/daily-rewards/:id - Delete specific day reward
 router.delete('/daily-rewards/:id', async (req: Request, res: Response) => {
   try {
-    const day = parseInt(req.params.id);
+    const day = parseInt(req.params.id || '0');
 
     const config = await prisma.gamification_config.findUnique({
       where: { key: DAILY_REWARDS_KEY },
@@ -188,7 +188,6 @@ router.post('/users/:userId/daily-rewards/reset', async (req: Request, res: Resp
       where: { id: userId },
       data: {
         streak: 0,
-        lastActivityAt: null,
       },
     });
 
@@ -219,16 +218,24 @@ router.post('/achievements', async (req: Request, res: Response) => {
   try {
     const { key, name, description, iconUrl, xpReward, coinReward, requirement, category, isActive } = req.body;
 
+    // Generate slug from name
+    const slug = name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '') + '-' + Date.now();
+
     const achievement = await prisma.achievements.create({
       data: {
         key,
         name,
+        slug,
         description,
+        icon: iconUrl || 'default-icon',
         iconUrl,
         xpReward: xpReward || 0,
         coinReward: coinReward || 0,
-        requirement: requirement || {},
-        category: category || 'general',
+        requirement,
+        category: (category as any) || 'GENERAL',
+        difficulty: 'EASY',
+        requirementType: 'COUNT',
+        requirementValue: 1,
         isActive: isActive ?? true,
       },
     });
@@ -249,15 +256,15 @@ router.put('/achievements/:id', async (req: Request, res: Response) => {
     const achievement = await prisma.achievements.update({
       where: { id },
       data: {
-        key,
-        name,
-        description,
-        iconUrl,
-        xpReward,
-        coinReward,
-        requirement,
-        category,
-        isActive,
+        ...(key && { key }),
+        ...(name && { name }),
+        ...(description && { description }),
+        ...(iconUrl !== undefined && { iconUrl }),
+        ...(xpReward !== undefined && { xpReward }),
+        ...(coinReward !== undefined && { coinReward }),
+        ...(requirement !== undefined && { requirement }),
+        ...(category && { category: category as any }),
+        ...(isActive !== undefined && { isActive }),
       },
     });
 
@@ -301,10 +308,29 @@ router.post('/achievements/seed', async (_req: Request, res: Response) => {
     ];
 
     for (const achievement of defaultAchievements) {
+      const slug = achievement.key;
       await prisma.achievements.upsert({
-        where: { key: achievement.key },
-        update: achievement,
-        create: { ...achievement, requirement: {}, isActive: true },
+        where: { slug },
+        update: {
+          name: achievement.name,
+          description: achievement.description,
+          xpReward: achievement.xpReward,
+          coinReward: achievement.coinReward,
+        },
+        create: {
+          key: achievement.key,
+          slug,
+          name: achievement.name,
+          description: achievement.description,
+          icon: 'default-icon',
+          xpReward: achievement.xpReward,
+          coinReward: achievement.coinReward,
+          category: 'GENERAL',
+          difficulty: 'EASY',
+          requirementType: 'COUNT',
+          requirementValue: 1,
+          isActive: true,
+        },
       });
     }
 
@@ -380,13 +406,13 @@ router.get('/config', async (_req: Request, res: Response) => {
 // PUT /api/admin/gamification/config/:key - Update a gamification config
 router.put('/config/:key', async (req: Request, res: Response) => {
   try {
-    const { key } = req.params;
+    const configKey = req.params.key || '';
     const { value, description } = req.body;
 
     const config = await prisma.gamification_config.upsert({
-      where: { key },
+      where: { key: configKey },
       update: { value, description },
-      create: { key, value, description },
+      create: { key: configKey, value, description: description || '' },
     });
 
     res.json({ success: true, config });

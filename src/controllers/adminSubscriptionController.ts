@@ -124,11 +124,11 @@ export const grantSubscription = async (req: Request, res: Response) => {
     // Log the action
     await prisma.admin_audit_logs.create({
       data: {
-        userId: adminId,
+        adminId: adminId,
         action: 'SUBSCRIPTION_GRANTED',
-        resourceType: 'subscription',
-        resourceId: subscription.id,
-        details: {
+        entityType: 'subscription',
+        entityId: subscription.id,
+        metadata: {
           targetUserId: userId,
           tier,
           durationMonths: months,
@@ -226,11 +226,11 @@ export const revokeSubscription = async (req: Request, res: Response) => {
     // Log the action
     await prisma.admin_audit_logs.create({
       data: {
-        userId: adminId,
+        adminId: adminId,
         action: 'SUBSCRIPTION_REVOKED',
-        resourceType: 'subscription',
-        resourceId: subscription.id,
-        details: {
+        entityType: 'subscription',
+        entityId: subscription.id,
+        metadata: {
           targetUserId: userId,
           previousTier: subscription.plan.tier,
           reason,
@@ -318,11 +318,11 @@ export const extendSubscription = async (req: Request, res: Response) => {
     // Log the action
     await prisma.admin_audit_logs.create({
       data: {
-        userId: adminId,
+        adminId: adminId,
         action: 'SUBSCRIPTION_EXTENDED',
-        resourceType: 'subscription',
-        resourceId: subscription.id,
-        details: {
+        entityType: 'subscription',
+        entityId: subscription.id,
+        metadata: {
           targetUserId: userId,
           additionalMonths,
           previousEnd: currentEnd.toISOString(),

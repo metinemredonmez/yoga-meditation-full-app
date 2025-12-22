@@ -103,8 +103,55 @@ interface OneSignalResponse {
   error?: string;
 }
 
+// Cache for DB provider settings
+let cachedProviderSettings: any = null;
+let cacheTime = 0;
+const CACHE_TTL = 60000; // 1 minute
+
+async function getDbProviderSettings() {
+  const now = Date.now();
+  if (cachedProviderSettings && (now - cacheTime) < CACHE_TTL) {
+    return cachedProviderSettings;
+  }
+
+  try {
+    const dbConfig = await prisma.gamification_config.findUnique({
+      where: { key: 'push_provider_settings' },
+    });
+    cachedProviderSettings = dbConfig?.value || null;
+    cacheTime = now;
+    return cachedProviderSettings;
+  } catch {
+    return null;
+  }
+}
+
 export function isOneSignalConfigured(): boolean {
   return !!(config.push.onesignalAppId && config.push.onesignalRestApiKey);
+}
+
+async function getOneSignalCredentials(): Promise<{ appId: string; apiKey: string } | null> {
+  // First check .env
+  if (config.push.onesignalAppId && config.push.onesignalRestApiKey) {
+    return {
+      appId: config.push.onesignalAppId,
+      apiKey: config.push.onesignalRestApiKey,
+    };
+  }
+
+  // Then check DB (from admin UI)
+  const dbSettings = await getDbProviderSettings();
+  if (dbSettings?.providers) {
+    const onesignal = dbSettings.providers.find((p: any) => p.provider === 'ONESIGNAL' && p.isEnabled && p.isConfigured);
+    if (onesignal?.config?.appId && onesignal?.config?.apiKey) {
+      return {
+        appId: onesignal.config.appId,
+        apiKey: onesignal.config.apiKey,
+      };
+    }
+  }
+
+  return null;
 }
 
 async function sendPushViaOneSignal(
@@ -113,7 +160,9 @@ async function sendPushViaOneSignal(
   body: string,
   data?: Record<string, string>,
 ): Promise<OneSignalResponse> {
-  if (!isOneSignalConfigured()) {
+  const credentials = await getOneSignalCredentials();
+
+  if (!credentials) {
     return { success: false, error: 'OneSignal not configured' };
   }
 
@@ -122,10 +171,10 @@ async function sendPushViaOneSignal(
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Basic ${config.push.onesignalRestApiKey}`,
+        'Authorization': `Basic ${credentials.apiKey}`,
       },
       body: JSON.stringify({
-        app_id: config.push.onesignalAppId,
+        app_id: credentials.appId,
         include_external_user_ids: userIds,
         headings: { en: title },
         contents: { en: body },
@@ -194,10 +243,32 @@ function getSmsProvider(): 'twilio' | 'netgsm' | null {
 
 /**
  * Get the preferred Push provider based on config and availability
+ * Checks both .env and database (admin UI) settings
  */
-function getPushProvider(): 'firebase' | 'onesignal' | null {
+async function getPushProvider(): Promise<'firebase' | 'onesignal' | null> {
   const provider = config.push.provider;
 
+  // Check DB settings first for enabled providers
+  const dbSettings = await getDbProviderSettings();
+  if (dbSettings?.providers) {
+    const firebaseDb = dbSettings.providers.find((p: any) => p.provider === 'FIREBASE' && p.isEnabled && p.isConfigured);
+    const onesignalDb = dbSettings.providers.find((p: any) => p.provider === 'ONESIGNAL' && p.isEnabled && p.isConfigured);
+
+    if (provider === 'firebase' && (firebaseDb || isFirebaseConfigured())) {
+      return 'firebase';
+    }
+    if (provider === 'onesignal' && (onesignalDb || isOneSignalConfigured())) {
+      return 'onesignal';
+    }
+
+    // Auto mode: prefer what's enabled in DB, then .env
+    if (provider === 'auto') {
+      if (firebaseDb || isFirebaseConfigured()) return 'firebase';
+      if (onesignalDb || isOneSignalConfigured()) return 'onesignal';
+    }
+  }
+
+  // Fallback to .env only
   if (provider === 'firebase') {
     return isFirebaseConfigured() ? 'firebase' : null;
   }
@@ -329,7 +400,7 @@ async function sendPushMessage(
   data?: Record<string, string>,
   logId?: string,
 ): Promise<SendMessageResult> {
-  const provider = getPushProvider();
+  const provider = await getPushProvider();
 
   if (!provider) {
     logger.warn({ userId }, 'No push provider configured - notification simulated');

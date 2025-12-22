@@ -10,7 +10,7 @@ export const createProfileSchema = z.object({
   shortBio: z.string().max(200).optional(),
   profileImageUrl: z.string().url().optional(),
   coverImageUrl: z.string().url().optional(),
-  specialties: z.array(z.string()).optional(),
+  specializations: z.array(z.string()).optional(),
   certifications: z.array(z.string()).optional(),
   socialLinks: z
     .object({
@@ -30,7 +30,7 @@ export const updateProfileSchema = z.object({
   shortBio: z.string().max(200).optional(),
   profileImageUrl: z.string().url().or(z.literal('')).optional(),
   coverImageUrl: z.string().url().or(z.literal('')).optional(),
-  specialties: z.array(z.string()).optional(),
+  specializations: z.array(z.string()).optional(),
   certifications: z.array(z.string()).optional(),
   socialLinks: z
     .object({

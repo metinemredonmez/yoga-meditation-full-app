@@ -46,6 +46,8 @@ const TYPE_TO_PREFERENCE_MAP: Record<NotificationType, keyof notification_prefer
   COMMUNITY: 'communityUpdates',
   PAYMENT: 'paymentAlerts',
   SECURITY: 'securityAlerts',
+  PUSH: 'pushEnabled',
+  INSTRUCTOR_BROADCAST: 'pushEnabled', // Instructor broadcasts use push channel
 };
 
 // Channel to preference field mapping

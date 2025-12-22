@@ -11,6 +11,8 @@ import {
   updateClassPreferences,
   getCalendarIntegrations,
   updateCalendarIntegration,
+  getNotificationSettings,
+  updateNotificationSettings,
   deactivateAccount,
   deleteAccount,
 } from '../../controllers/instructorSettingsController';
@@ -34,6 +36,10 @@ router.put('/class-preferences', authenticateToken, updateClassPreferences);
 // Calendar integrations
 router.get('/calendar-integrations', authenticateToken, getCalendarIntegrations);
 router.post('/calendar-integrations', authenticateToken, updateCalendarIntegration);
+
+// Notification settings
+router.get('/notifications/settings', authenticateToken, getNotificationSettings);
+router.put('/notifications/settings', authenticateToken, updateNotificationSettings);
 
 // Account actions
 router.post('/account/deactivate', authenticateToken, deactivateAccount);

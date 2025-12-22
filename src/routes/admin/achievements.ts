@@ -122,20 +122,31 @@ router.post('/', async (req: Request, res: Response) => {
       isSecret,
       isActive,
       sortOrder,
+      difficulty,
+      requirementType,
+      requirementValue,
     } = req.body;
+
+    // Generate slug from name
+    const slug = name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
 
     const achievement = await prisma.achievements.create({
       data: {
         name,
         nameEn,
+        slug,
         description,
         descriptionEn,
         category: category || 'GENERAL',
+        icon: iconUrl || 'default-icon',
         iconUrl,
         badgeUrl,
         points: points || 0,
         xpReward: xpReward || 0,
         requirement,
+        difficulty: difficulty || 'EASY',
+        requirementType: requirementType || 'COUNT',
+        requirementValue: requirementValue || targetValue || 1,
         targetValue: targetValue || 1,
         isSecret: isSecret ?? false,
         isActive: isActive ?? true,

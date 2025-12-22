@@ -69,6 +69,7 @@ export function InstructorProfileForm() {
   const loadProfile = async () => {
     try {
       const data = await getInstructorProfile();
+      console.log('Loaded profile data:', data);
       // Map backend data to frontend format
       const mappedProfile: InstructorProfile = {
         id: data.id,
@@ -91,6 +92,7 @@ export function InstructorProfileForm() {
       setAvatarUrl(mappedProfile.avatarUrl || '');
       setAvatarUrlInput(mappedProfile.avatarUrl || '');
     } catch (error) {
+      console.error('Error loading profile:', error);
       // Mock data
       const mockProfile: InstructorProfile = {
         id: '1',
@@ -123,24 +125,40 @@ export function InstructorProfileForm() {
   const handleSave = async () => {
     setSaving(true);
     try {
-      await updateInstructorProfile({
+      console.log('Saving profile with data:', {
         bio,
         specialties,
         socialLinks,
         avatarUrl: avatarUrl || undefined,
       });
+      const result = await updateInstructorProfile({
+        bio,
+        specialties,
+        socialLinks,
+        avatarUrl: avatarUrl || undefined,
+      });
+      console.log('Profile update result:', result);
       toast.success('Profil güncellendi');
-    } catch (error) {
-      toast.error('Güncelleme başarısız');
+    } catch (error: any) {
+      console.error('Profile update error:', error);
+      console.error('Error response:', error?.response?.data);
+      toast.error(error?.response?.data?.error || 'Güncelleme başarısız');
     } finally {
       setSaving(false);
     }
   };
 
   const addSpecialty = () => {
-    if (newSpecialty.trim() && !specialties.includes(newSpecialty.trim())) {
-      setSpecialties([...specialties, newSpecialty.trim()]);
+    const trimmed = newSpecialty.trim();
+    console.log('Adding specialty:', trimmed, 'Current specialties:', specialties);
+    if (trimmed && !specialties.includes(trimmed)) {
+      const newList = [...specialties, trimmed];
+      console.log('New specialties list:', newList);
+      setSpecialties(newList);
       setNewSpecialty('');
+      toast.success(`"${trimmed}" eklendi`);
+    } else if (specialties.includes(trimmed)) {
+      toast.error('Bu uzmanlık alanı zaten ekli');
     }
   };
 
@@ -182,8 +200,9 @@ export function InstructorProfileForm() {
       if (result.success && result.url) {
         setAvatarUrl(result.url);
         setAvatarUrlInput(result.url);
-        setShowPhotoDialog(false);
-        toast.success('Fotoğraf yüklendi');
+        // Auto-save the profile with new image
+        await updateInstructorProfile({ avatarUrl: result.url });
+        toast.success('Fotoğraf yüklendi ve kaydedildi');
       } else {
         toast.error('Fotoğraf yüklenemedi');
       }
@@ -227,11 +246,19 @@ export function InstructorProfileForm() {
                   {profile?.firstName?.charAt(0)}{profile?.lastName?.charAt(0)}
                 </AvatarFallback>
               </Avatar>
+              <input
+                type="file"
+                id="avatar-upload"
+                accept="image/*"
+                onChange={handlePhotoUpload}
+                className="hidden"
+                disabled={uploadingPhoto}
+              />
               <Button
                 size="icon"
                 variant="outline"
                 className="absolute -bottom-2 -right-2 h-8 w-8 rounded-full"
-                onClick={() => setShowPhotoDialog(true)}
+                onClick={() => document.getElementById('avatar-upload')?.click()}
                 disabled={uploadingPhoto}
               >
                 {uploadingPhoto ? (

@@ -2,6 +2,7 @@ import { Response } from 'express';
 import { AuthRequest } from '../middleware/auth';
 import { prisma } from '../utils/database';
 import { logger } from '../utils/logger';
+import { sendPushToUsers, isOneSignalConfigured } from '../services/oneSignalService';
 
 /**
  * Get notification settings and stats for instructor
@@ -57,12 +58,58 @@ export async function getNotificationSettings(req: AuthRequest, res: Response) {
 }
 
 /**
+ * Update notification settings
+ */
+export async function updateNotificationSettings(req: AuthRequest, res: Response) {
+  try {
+    const userId = req.user!.id;
+    const { email, push } = req.body;
+
+    const user = await prisma.users.findUnique({
+      where: { id: userId },
+      select: { preferences: true },
+    });
+
+    const currentPrefs = (user?.preferences as any) || {};
+
+    await prisma.users.update({
+      where: { id: userId },
+      data: {
+        preferences: {
+          ...currentPrefs,
+          notifications: {
+            email: {
+              newStudent: email?.newStudent !== false,
+              newReview: email?.newReview !== false,
+              earnings: email?.earnings !== false,
+              classApproval: email?.classApproval !== false,
+              marketing: email?.marketing !== false,
+            },
+            push: {
+              newStudent: push?.newStudent !== false,
+              newReview: push?.newReview !== false,
+              earnings: push?.earnings !== false,
+              classApproval: push?.classApproval !== false,
+            },
+          },
+        },
+      },
+    });
+
+    res.json({ success: true, message: 'Bildirim ayarları güncellendi' });
+  } catch (error) {
+    logger.error({ error }, 'Failed to update notification settings');
+    res.status(500).json({ success: false, error: 'Failed to update notification settings' });
+  }
+}
+
+/**
  * Send push notification to students
  */
 export async function sendNotificationToStudents(req: AuthRequest, res: Response) {
   try {
     const userId = req.user!.id;
-    const { title, body, targetType, targetIds, data } = req.body;
+    const { title, body, targetType, targetIds, data, testMode } = req.body;
 
     if (!title || !body) {
       return res.status(400).json({ success: false, error: 'Title and body are required' });
@@ -88,7 +135,11 @@ export async function sendNotificationToStudents(req: AuthRequest, res: Response
     // Get students who booked these classes
     let studentIds: string[] = [];
 
-    if (targetType === 'all') {
+    // Test mode: send to instructor's own device for testing
+    if (testMode === true) {
+      studentIds = [userId]; // Send to instructor themselves
+      logger.info({ userId }, 'Test mode enabled - sending to instructor');
+    } else if (targetType === 'all') {
       // All students of this instructor
       const bookings = await prisma.bookings.findMany({
         where: {
@@ -127,12 +178,12 @@ export async function sendNotificationToStudents(req: AuthRequest, res: Response
     if (studentIds.length === 0) {
       return res.status(400).json({
         success: false,
-        error: 'No students found for the selected criteria',
+        error: 'No students found for the selected criteria. Use testMode: true to test with your own device.',
       });
     }
 
-    // Get push tokens for these students
-    const pushTokens = await prisma.push_tokens.findMany({
+    // Get device tokens for these students
+    const deviceTokens = await prisma.device_tokens.findMany({
       where: {
         userId: { in: studentIds },
         isActive: true,
@@ -140,50 +191,55 @@ export async function sendNotificationToStudents(req: AuthRequest, res: Response
       select: { token: true, userId: true, platform: true },
     });
 
-    // Create notification records
+    // Create notification log records for each student
     const notifications = await Promise.all(
       studentIds.map((studentId) =>
-        prisma.notifications.create({
+        prisma.notification_logs.create({
           data: {
             userId: studentId,
-            type: 'INSTRUCTOR_MESSAGE',
+            type: 'INSTRUCTOR_BROADCAST',
             title,
-            message: body,
+            body,
             data: {
               instructorId: instructor.id,
               instructorName: instructor.displayName,
               ...data,
             },
+            status: 'PENDING',
           },
         })
       )
     );
 
-    // Log the notification send
-    await prisma.notification_logs.create({
-      data: {
+    // Send push notifications via OneSignal
+    let pushResult: { success: boolean; id?: string; error?: string } = { success: false };
+    if (isOneSignalConfigured() && studentIds.length > 0) {
+      pushResult = await sendPushToUsers(studentIds, title, body, {
+        instructorId: instructor.id,
+        instructorName: instructor.displayName,
         type: 'INSTRUCTOR_BROADCAST',
-        status: 'SENT',
-        recipientCount: studentIds.length,
-        metadata: {
-          instructorId: instructor.id,
-          title,
-          body,
-          targetType,
-          pushTokenCount: pushTokens.length,
-        },
-      },
-    });
+        ...data,
+      });
 
-    // TODO: Actually send push notifications via Firebase/OneSignal
-    // This would integrate with your existing push notification service
+      // Update notification logs with status
+      if (pushResult.success) {
+        await prisma.notification_logs.updateMany({
+          where: { id: { in: notifications.map(n => n.id) } },
+          data: { status: 'SENT', metadata: { oneSignalId: pushResult.id } },
+        });
+      }
+
+      logger.info({ pushResult, studentCount: studentIds.length }, 'Push notification sent to students');
+    }
 
     res.json({
       success: true,
       data: {
         sentTo: studentIds.length,
-        pushTokensFound: pushTokens.length,
+        pushTokensFound: deviceTokens.length,
         notificationsCreated: notifications.length,
+        pushSent: pushResult.success,
+        oneSignalId: pushResult.id,
         message: `${studentIds.length} öğrenciye bildirim gönderildi`,
       },
     });
@@ -213,6 +269,26 @@ export async function getTierInfo(req: AuthRequest, res: Response) {
 
     if (!instructor) {
       return res.status(404).json({ success: false, error: 'Instructor not found' });
+    }
+
+    // Calculate actual student count from bookings
+    const instructorClasses = await prisma.classes.findMany({
+      where: { instructorId: userId },
+      select: { id: true },
+    });
+    const classIds = instructorClasses.map((c) => c.id);
+
+    let actualStudentCount = instructor.totalStudents || 0;
+    if (classIds.length > 0) {
+      const bookings = await prisma.bookings.findMany({
+        where: {
+          classId: { in: classIds },
+          status: 'CONFIRMED',
+        },
+        select: { userId: true },
+        distinct: ['userId'],
+      });
+      actualStudentCount = bookings.length;
     }
 
     const tierPlans = [
@@ -292,8 +368,8 @@ export async function getTierInfo(req: AuthRequest, res: Response) {
       data: {
         currentTier: instructor.tier,
         stats: {
-          totalStudents: instructor.totalStudents,
-          totalClasses: instructor.totalClasses,
+          totalStudents: actualStudentCount,
+          totalClasses: classIds.length || instructor.totalClasses || 0,
         },
         plans: tierPlans,
       },
@@ -305,7 +381,7 @@ export async function getTierInfo(req: AuthRequest, res: Response) {
 }
 
 /**
- * Upgrade instructor tier (creates payment intent)
+ * Upgrade instructor tier (creates Stripe checkout session)
  */
 export async function upgradeTier(req: AuthRequest, res: Response) {
   try {
@@ -318,31 +394,107 @@ export async function upgradeTier(req: AuthRequest, res: Response) {
 
     const instructor = await prisma.instructor_profiles.findFirst({
       where: { userId },
-      select: { id: true, tier: true },
+      include: { users: { select: { email: true } } },
     });
 
     if (!instructor) {
       return res.status(404).json({ success: false, error: 'Instructor not found' });
     }
 
-    // TODO: Create Stripe/RevenueCat subscription
-    // For now, return a mock payment URL
-
-    const prices = {
-      PRO: 299,
-      ELITE: 599,
+    // Tier prices in kuruş (for TRY)
+    const prices: Record<string, number> = {
+      PRO: 29900,   // 299 TL
+      ELITE: 59900, // 599 TL
     };
+
+    const tierNames: Record<string, string> = {
+      PRO: 'Profesyonel Plan',
+      ELITE: 'Elit Plan',
+    };
+
+    // Check if Stripe is configured
+    const stripeKey = process.env.STRIPE_SECRET_KEY;
+
+    if (stripeKey && stripeKey !== 'sk_test_demo123') {
+      // Create Stripe checkout session
+      const stripe = require('stripe')(stripeKey);
+
+      const session = await stripe.checkout.sessions.create({
+        payment_method_types: ['card'],
+        line_items: [
+          {
+            price_data: {
+              currency: process.env.PAYMENT_CURRENCY?.toLowerCase() || 'try',
+              product_data: {
+                name: tierNames[targetTier],
+                description: `Eğitmen ${tierNames[targetTier]} - Aylık Abonelik`,
+              },
+              unit_amount: prices[targetTier],
+              recurring: {
+                interval: 'month',
+              },
+            },
+            quantity: 1,
+          },
+        ],
+        mode: 'subscription',
+        success_url: `${process.env.PAYMENT_SUCCESS_URL || 'http://localhost:3000/instructor/billing'}?tier=${targetTier}&session_id={CHECKOUT_SESSION_ID}`,
+        cancel_url: process.env.PAYMENT_CANCEL_URL || 'http://localhost:3000/instructor/billing',
+        customer_email: instructor.users?.email,
+        metadata: {
+          userId,
+          instructorId: instructor.id,
+          targetTier,
+          type: 'instructor_tier_upgrade',
+        },
+      });
+
+      logger.info({ sessionId: session.id, targetTier }, 'Stripe checkout session created for tier upgrade');
+
+      return res.json({
+        success: true,
+        data: {
+          currentTier: instructor.tier,
+          targetTier,
+          price: prices[targetTier] / 100,
+          currency: 'TRY',
+          checkoutUrl: session.url,
+          sessionId: session.id,
+          message: 'Ödeme sayfasına yönlendiriliyorsunuz',
+        },
+      });
+    }
+
+    // Demo mode - direct upgrade without payment
+    logger.warn('Stripe not configured - upgrading tier directly (demo mode)');
+
+    await prisma.instructor_profiles.update({
+      where: { id: instructor.id },
+      data: { tier: targetTier as any },
+    });
+
+    await prisma.audit_logs.create({
+      data: {
+        userId,
+        action: 'INSTRUCTOR_TIER_UPGRADE',
+        entityType: 'instructors',
+        entityId: instructor.id,
+        metadata: {
+          previousTier: instructor.tier,
+          newTier: targetTier,
+          mode: 'demo',
+        },
+      },
+    });
 
     res.json({
       success: true,
       data: {
-        currentTier: instructor.tier,
+        currentTier: targetTier,
         targetTier,
-        price: prices[targetTier as keyof typeof prices],
+        price: prices[targetTier] / 100,
         currency: 'TRY',
-        // In production, this would be a Stripe checkout URL
-        checkoutUrl: `/api/instructor/billing/checkout?tier=${targetTier}`,
-        message: 'Ödeme sayfasına yönlendiriliyorsunuz',
+        message: `${tierNames[targetTier]} kademesine yükseltildiniz! (Demo mod)`,
       },
     });
   } catch (error) {

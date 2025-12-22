@@ -69,6 +69,11 @@ credentials.json
 service-account*.json
 firebase-adminsdk*.json
 
+# Mobile Firebase Config (sensitive)
+mobile/firebase-service-account.json
+mobile/google-services.json
+mobile/GoogleService-Info.plist
+
 # Docker
 docker-compose.override.yml
 .docker/

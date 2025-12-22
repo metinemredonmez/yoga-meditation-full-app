@@ -52,6 +52,7 @@ import {
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { tr } from 'date-fns/locale';
+import api from '@/lib/api';
 
 interface PayoutSettings {
   method: 'bank_transfer' | 'stripe';
@@ -162,165 +163,128 @@ export default function InstructorBillingPage() {
   const loadData = async () => {
     setLoading(true);
     try {
-      // Mock tier data - replace with actual API call
-      setCurrentTier('STARTER');
-      setTierPlans([
-        {
-          id: 'STARTER',
-          name: 'Baslangic',
-          price: 0,
-          currency: 'TRY',
-          interval: 'month',
-          features: [
-            '10 ders olusturma',
-            '2 program olusturma',
-            '50 ogrenci',
-            'Temel analitik',
-          ],
-          limits: {
-            maxClasses: 10,
-            maxPrograms: 2,
-            maxStudents: 50,
-            canSendNotifications: false,
-            canSendEmails: false,
-          },
-        },
-        {
-          id: 'PRO',
-          name: 'Profesyonel',
-          price: 299,
-          currency: 'TRY',
-          interval: 'month',
-          popular: true,
-          features: [
-            '50 ders olusturma',
-            '10 program olusturma',
-            '500 ogrenci',
-            'Gelismis analitik',
-            'Push bildirimi gonderme',
-            'E-posta gonderme',
-            'Oncelikli destek',
-          ],
-          limits: {
-            maxClasses: 50,
-            maxPrograms: 10,
-            maxStudents: 500,
-            canSendNotifications: true,
-            canSendEmails: true,
-          },
-        },
-        {
-          id: 'ELITE',
-          name: 'Elit',
-          price: 599,
-          currency: 'TRY',
-          interval: 'month',
-          features: [
-            'Sinirsiz ders',
-            'Sinirsiz program',
-            'Sinirsiz ogrenci',
-            'Tam analitik erisimi',
-            'Sinirsiz bildirim',
-            'Kampanya olusturma',
-            'API erisimi',
-            '7/24 VIP destek',
-          ],
-          limits: {
-            maxClasses: -1,
-            maxPrograms: -1,
-            maxStudents: -1,
-            canSendNotifications: true,
-            canSendEmails: true,
-            canCreateCampaigns: true,
-          },
-        },
-      ]);
+      // Load tier info from API
+      const tierResponse = await api.get('/api/instructor/tier');
+      if (tierResponse.data.success) {
+        setCurrentTier(tierResponse.data.data.currentTier || 'STARTER');
+        setTierPlans(tierResponse.data.data.plans || []);
+      }
 
-      // Mock data - replace with actual API calls
-      setSummary({
-        totalEarnings: 5250,
-        pendingEarnings: 750,
-        paidEarnings: 4500,
-        availableBalance: 750,
-        minimumPayout: 100,
-        commissionRate: 0.3,
-      });
+      // Load earnings summary
+      const earningsResponse = await api.get('/api/instructor/earnings');
+      if (earningsResponse.data.success) {
+        const data = earningsResponse.data.data;
+        setSummary({
+          totalEarnings: data.totalNet || 0,
+          pendingEarnings: data.pendingAmount || 0,
+          paidEarnings: data.paidAmount || 0,
+          availableBalance: data.confirmedAmount || 0,
+          minimumPayout: 100,
+          commissionRate: data.platformRate || 0.3,
+        });
+      }
 
-      setEarnings([
-        {
-          id: '1',
-          date: new Date().toISOString(),
-          type: 'subscription',
-          description: 'Aylik abonelik payi',
-          amount: 250,
-          status: 'pending',
-        },
-        {
-          id: '2',
-          date: new Date(Date.now() - 86400000 * 5).toISOString(),
-          type: 'purchase',
-          description: '30 Gunde Yoga programi satisi',
-          amount: 350,
-          status: 'paid',
-        },
-        {
-          id: '3',
-          date: new Date(Date.now() - 86400000 * 10).toISOString(),
-          type: 'tip',
-          description: 'Ogrenci bahsisi',
-          amount: 50,
-          status: 'paid',
-        },
-        {
-          id: '4',
-          date: new Date(Date.now() - 86400000 * 15).toISOString(),
-          type: 'subscription',
-          description: 'Aylik abonelik payi',
-          amount: 250,
-          status: 'paid',
-        },
-      ]);
+      // Load earnings history
+      const historyResponse = await api.get('/api/instructor/earnings/history');
+      if (historyResponse.data.success) {
+        const items = historyResponse.data.data.items || [];
+        setEarnings(items.map((e: any) => ({
+          id: e.id,
+          date: e.createdAt,
+          type: mapEarningType(e.type),
+          description: e.description || getEarningDescription(e.type),
+          amount: Number(e.netAmount) || 0,
+          status: e.status?.toLowerCase() || 'pending',
+        })));
+      }
 
-      setPayouts([
-        {
-          id: '1',
-          requestedAt: new Date(Date.now() - 86400000 * 30).toISOString(),
-          processedAt: new Date(Date.now() - 86400000 * 28).toISOString(),
-          amount: 1000,
-          method: 'Banka Havalesi',
-          status: 'completed',
-        },
-        {
-          id: '2',
-          requestedAt: new Date(Date.now() - 86400000 * 60).toISOString(),
-          processedAt: new Date(Date.now() - 86400000 * 58).toISOString(),
-          amount: 750,
-          method: 'Banka Havalesi',
-          status: 'completed',
-        },
-      ]);
+      // Load payouts
+      const payoutsResponse = await api.get('/api/instructor/payouts');
+      if (payoutsResponse.data.success) {
+        const items = payoutsResponse.data.data || [];
+        setPayouts(items.map((p: any) => ({
+          id: p.id,
+          requestedAt: p.createdAt,
+          processedAt: p.processedAt,
+          amount: Number(p.amount) || 0,
+          method: mapPayoutMethod(p.method),
+          status: p.status?.toLowerCase() || 'pending',
+        })));
+      }
 
-      setPayoutSettings({
-        method: 'bank_transfer',
-        bankName: 'Ziraat Bankasi',
-        iban: 'TR12 0001 0002 0003 0004 0005 00',
-        accountHolder: 'Suat Demir',
-      });
+      // Load payout settings
+      const settingsResponse = await api.get('/api/instructor/payouts/settings');
+      if (settingsResponse.data.success) {
+        const settings = settingsResponse.data.data;
+        const bankDetails = settings.bankDetails || {};
+        setPayoutSettings({
+          method: settings.preferredMethod === 'STRIPE_CONNECT' ? 'stripe' : 'bank_transfer',
+          bankName: bankDetails.bankName || '',
+          iban: bankDetails.iban || '',
+          accountHolder: bankDetails.accountName || '',
+          stripeConnected: settings.stripeConnected || false,
+        });
+      }
     } catch (error) {
+      console.error('Load data error:', error);
       toast.error('Veriler yuklenemedi');
     } finally {
       setLoading(false);
     }
   };
 
+  const mapEarningType = (type: string): 'subscription' | 'purchase' | 'tip' => {
+    const typeMap: Record<string, 'subscription' | 'purchase' | 'tip'> = {
+      'SUBSCRIPTION_SHARE': 'subscription',
+      'PROGRAM_VIEW': 'purchase',
+      'CLASS_BOOKING': 'purchase',
+      'TIP': 'tip',
+      'BONUS': 'tip',
+    };
+    return typeMap[type] || 'purchase';
+  };
+
+  const getEarningDescription = (type: string): string => {
+    const descMap: Record<string, string> = {
+      'SUBSCRIPTION_SHARE': 'Abonelik payi',
+      'PROGRAM_VIEW': 'Program satisi',
+      'CLASS_BOOKING': 'Ders rezervasyonu',
+      'TIP': 'Bahsis',
+      'BONUS': 'Bonus',
+    };
+    return descMap[type] || 'Kazanc';
+  };
+
+  const mapPayoutMethod = (method: string): string => {
+    const methodMap: Record<string, string> = {
+      'BANK_TRANSFER': 'Banka Havalesi',
+      'STRIPE_CONNECT': 'Stripe',
+      'PAYPAL': 'PayPal',
+      'WISE': 'Wise',
+    };
+    return methodMap[method] || method;
+  };
+
   const savePayoutSettings = async () => {
     setSaving(true);
     try {
-      // API call to save settings
-      await new Promise((resolve) => setTimeout(resolve, 500));
+      const payload: any = {
+        preferredMethod: payoutSettings.method === 'stripe' ? 'STRIPE_CONNECT' : 'BANK_TRANSFER',
+      };
+
+      if (payoutSettings.method === 'bank_transfer') {
+        payload.bankDetails = {
+          accountName: payoutSettings.accountHolder,
+          bankName: payoutSettings.bankName,
+          iban: payoutSettings.iban,
+        };
+      }
+
+      await api.put('/api/instructor/payouts/settings', payload);
       toast.success('Odeme bilgileri kaydedildi');
-    } catch (error) {
-      toast.error('Bilgiler kaydedilemedi');
+    } catch (error: any) {
+      console.error('Save settings error:', error);
+      toast.error(error.response?.data?.error || 'Bilgiler kaydedilemedi');
     } finally {
       setSaving(false);
     }
@@ -339,14 +303,17 @@ export default function InstructorBillingPage() {
 
     setSaving(true);
     try {
-      // API call to request payout
-      await new Promise((resolve) => setTimeout(resolve, 500));
+      await api.post('/api/instructor/payouts/request', {
+        amount,
+        method: payoutSettings.method === 'stripe' ? 'STRIPE_CONNECT' : 'BANK_TRANSFER',
+      });
       toast.success('Odeme talebi olusturuldu');
       setPayoutDialog(false);
       setPayoutAmount('');
       loadData();
-    } catch (error) {
-      toast.error('Odeme talebi olusturulamadi');
+    } catch (error: any) {
+      console.error('Request payout error:', error);
+      toast.error(error.response?.data?.error || 'Odeme talebi olusturulamadi');
     } finally {
       setSaving(false);
     }
@@ -357,16 +324,20 @@ export default function InstructorBillingPage() {
 
     setUpgrading(true);
     try {
-      // TODO: API call to initiate upgrade
-      // const response = await api.post('/api/instructor/tier/upgrade', { targetTier: tierId });
-      // window.location.href = response.data.checkoutUrl;
+      const response = await api.post('/api/instructor/tier/upgrade', { targetTier: tierId });
 
-      // Mock upgrade for demo
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      setCurrentTier(tierId);
-      toast.success(`${tierId} kademesine yukseltildiniz!`);
-    } catch (error) {
-      toast.error('Yukseltme islemi basarisiz oldu');
+      if (response.data.success && response.data.data.checkoutUrl) {
+        // Redirect to Stripe checkout
+        window.location.href = response.data.data.checkoutUrl;
+      } else {
+        // Direct upgrade (for downgrade or free tier)
+        setCurrentTier(tierId);
+        toast.success(`${tierId} kademesine guncellendi!`);
+        loadData();
+      }
+    } catch (error: any) {
+      console.error('Upgrade error:', error);
+      toast.error(error.response?.data?.error || 'Yukseltme islemi basarisiz oldu');
     } finally {
       setUpgrading(false);
     }

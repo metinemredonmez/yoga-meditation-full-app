@@ -127,8 +127,8 @@ router.get('/:id', async (req: Request, res: Response) => {
         user: {
           select: { id: true, email: true, firstName: true, lastName: true },
         },
-        goal_progress: {
-          orderBy: { recordedAt: 'desc' },
+        progress: {
+          orderBy: { date: 'desc' },
           take: 10,
         },
       },

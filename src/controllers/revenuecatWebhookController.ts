@@ -192,14 +192,14 @@ export const handleRevenueCatWebhook = async (req: Request, res: Response) => {
         console.log('Unhandled RevenueCat event type:', type);
     }
 
-    // Log the webhook event
-    await prisma.admin_audit_logs.create({
+    // Log the webhook event using audit_logs (general log, not admin-specific)
+    await prisma.audit_logs.create({
       data: {
         userId: user.id,
         action: 'REVENUECAT_WEBHOOK',
-        resourceType: 'subscription',
-        resourceId: transaction_id || 'unknown',
-        details: {
+        entityType: 'subscription',
+        entityId: transaction_id || 'unknown',
+        metadata: {
           eventType: type,
           productId: product_id,
           store,

@@ -1801,7 +1801,8 @@ export async function uploadInstructorMedia(file: File, type: 'video' | 'image' 
   const formData = new FormData();
   formData.append('file', file);
   formData.append('type', type);
-  const { data } = await api.post('/api/instructor/upload', formData, {
+  // Use the general upload endpoint
+  const { data } = await api.post('/api/upload', formData, {
     headers: { 'Content-Type': 'multipart/form-data' }
   });
   return data;

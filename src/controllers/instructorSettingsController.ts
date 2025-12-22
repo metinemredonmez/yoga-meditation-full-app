@@ -364,7 +364,27 @@ export const updateCalendarIntegration = async (req: Request, res: Response) => 
       data: { integrations },
     });
 
-    res.json({ success: true, message: 'Calendar integration updated' });
+    // Return updated integrations data
+    res.json({
+      success: true,
+      message: 'Calendar integration updated',
+      data: {
+        googleCalendar: {
+          connected: !!integrations.googleCalendar?.connected,
+          email: integrations.googleCalendar?.email || null,
+          syncEnabled: integrations.googleCalendar?.syncEnabled || false,
+        },
+        appleCalendar: {
+          connected: !!integrations.appleCalendar?.connected,
+          syncEnabled: integrations.appleCalendar?.syncEnabled || false,
+        },
+        outlook: {
+          connected: !!integrations.outlook?.connected,
+          email: integrations.outlook?.email || null,
+          syncEnabled: integrations.outlook?.syncEnabled || false,
+        },
+      },
+    });
   } catch (error) {
     console.error('Update calendar integration error:', error);
     res.status(500).json({ success: false, error: 'Failed to update calendar integration' });
@@ -409,6 +429,89 @@ export const deactivateAccount = async (req: Request, res: Response) => {
   } catch (error) {
     console.error('Deactivate account error:', error);
     res.status(500).json({ success: false, error: 'Failed to deactivate account' });
+  }
+};
+
+// Get notification settings
+export const getNotificationSettings = async (req: Request, res: Response) => {
+  try {
+    const userId = req.user!.id;
+
+    const user = await prisma.users.findUnique({
+      where: { id: userId },
+      select: {
+        preferences: true,
+      },
+    });
+
+    const prefs = (user?.preferences as any) || {};
+    const notifications = prefs.notifications || {};
+
+    res.json({
+      success: true,
+      data: {
+        email: {
+          newStudent: notifications.email?.newStudent !== false,
+          newReview: notifications.email?.newReview !== false,
+          earnings: notifications.email?.earnings !== false,
+          classApproval: notifications.email?.classApproval !== false,
+          marketing: notifications.email?.marketing !== false,
+        },
+        push: {
+          newStudent: notifications.push?.newStudent !== false,
+          newReview: notifications.push?.newReview !== false,
+          earnings: notifications.push?.earnings !== false,
+          classApproval: notifications.push?.classApproval !== false,
+        },
+      },
+    });
+  } catch (error) {
+    console.error('Get notification settings error:', error);
+    res.status(500).json({ success: false, error: 'Failed to get notification settings' });
+  }
+};
+
+// Update notification settings
+export const updateNotificationSettings = async (req: Request, res: Response) => {
+  try {
+    const userId = req.user!.id;
+    const { email, push } = req.body;
+
+    const user = await prisma.users.findUnique({
+      where: { id: userId },
+      select: { preferences: true },
+    });
+
+    const currentPrefs = (user?.preferences as any) || {};
+
+    await prisma.users.update({
+      where: { id: userId },
+      data: {
+        preferences: {
+          ...currentPrefs,
+          notifications: {
+            email: {
+              newStudent: email?.newStudent !== false,
+              newReview: email?.newReview !== false,
+              earnings: email?.earnings !== false,
+              classApproval: email?.classApproval !== false,
+              marketing: email?.marketing !== false,
+            },
+            push: {
+              newStudent: push?.newStudent !== false,
+              newReview: push?.newReview !== false,
+              earnings: push?.earnings !== false,
+              classApproval: push?.classApproval !== false,
+            },
+          },
+        },
+      },
+    });
+
+    res.json({ success: true, message: 'Notification settings updated' });
+  } catch (error) {
+    console.error('Update notification settings error:', error);
+    res.status(500).json({ success: false, error: 'Failed to update notification settings' });
   }
 };
 

@@ -10,6 +10,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { IconSearch, IconLoader2, IconStar, IconStarFilled, IconMessageCircle, IconVideo, IconHeadphones } from '@tabler/icons-react';
 import PageContainer from '@/components/layout/page-container';
+import api from '@/lib/api';
+import { toast } from 'sonner';
 
 interface MyReview {
   id: string;
@@ -24,11 +26,19 @@ interface MyReview {
   createdAt: string;
 }
 
+interface ReviewStats {
+  total: number;
+  averageRating: number;
+  replied: number;
+  pending: number;
+}
+
 const contentTypeLabels: Record<string, string> = { CLASS: 'Ders', MEDITATION: 'Meditasyon', PROGRAM: 'Program' };
 const contentTypeIcons: Record<string, React.ElementType> = { CLASS: IconVideo, MEDITATION: IconHeadphones, PROGRAM: IconVideo };
 
 export default function MyReviewsPage() {
   const [reviews, setReviews] = useState<MyReview[]>([]);
+  const [stats, setStats] = useState<ReviewStats>({ total: 0, averageRating: 0, replied: 0, pending: 0 });
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [replyDialog, setReplyDialog] = useState(false);
@@ -41,13 +51,43 @@ export default function MyReviewsPage() {
   const loadReviews = async () => {
     setLoading(true);
     try {
-      setReviews([
-        { id: '1', userId: '1', userName: 'Ayşe Yılmaz', userAvatar: '', contentType: 'CLASS', contentTitle: 'Sabah Yoga Akışı', rating: 5, comment: 'Harika bir ders! Çok faydalı ve rahatlatıcı.', createdAt: new Date(Date.now() - 86400000).toISOString() },
-        { id: '2', userId: '2', userName: 'Mehmet Kaya', userAvatar: '', contentType: 'MEDITATION', contentTitle: 'Derin Uyku Meditasyonu', rating: 4, comment: 'Güzel bir meditasyon ama biraz daha uzun olabilirdi.', reply: 'Teşekkürler! Daha uzun versiyonlar üzerinde çalışıyorum.', createdAt: new Date(Date.now() - 172800000).toISOString() },
-        { id: '3', userId: '3', userName: 'Zeynep Demir', userAvatar: '', contentType: 'PROGRAM', contentTitle: '30 Günde Yoga Temelleri', rating: 5, comment: 'Bu programı herkese tavsiye ederim! Harika bir başlangıç.', createdAt: new Date(Date.now() - 259200000).toISOString() },
-        { id: '4', userId: '4', userName: 'Ali Çelik', userAvatar: '', contentType: 'CLASS', contentTitle: 'Power Vinyasa', rating: 3, comment: 'Zorluk seviyesi benim için biraz yüksekti.', createdAt: new Date(Date.now() - 345600000).toISOString() },
-      ]);
-    } finally { setLoading(false); }
+      // Load reviews from API
+      const reviewsResponse = await api.get('/api/instructor/reviews');
+      if (reviewsResponse.data.success && reviewsResponse.data.data.items) {
+        const mappedReviews = reviewsResponse.data.data.items.map((r: any) => ({
+          id: r.id,
+          userId: r.studentId,
+          userName: r.users ? `${r.users.firstName || ''} ${r.users.lastName || ''}`.trim() || 'Anonim' : 'Anonim',
+          userAvatar: '',
+          contentType: r.classId ? 'CLASS' : r.programId ? 'PROGRAM' : 'MEDITATION',
+          contentTitle: r.classes?.title || r.programs?.title || r.title || 'Genel Yorum',
+          rating: r.rating,
+          comment: r.content || r.title || '',
+          reply: r.instructorReply,
+          createdAt: r.createdAt,
+        }));
+        setReviews(mappedReviews);
+      }
+
+      // Load stats from API
+      const statsResponse = await api.get('/api/instructor/reviews/stats');
+      if (statsResponse.data.success) {
+        const s = statsResponse.data.data;
+        // Count replied reviews from loaded reviews
+        const repliedCount = reviewsResponse.data.data.items?.filter((r: any) => r.instructorReply).length || 0;
+        setStats({
+          total: s.total || 0,
+          averageRating: s.averageRating || 0,
+          replied: repliedCount,
+          pending: (s.total || 0) - repliedCount,
+        });
+      }
+    } catch (error) {
+      console.error('Error loading reviews:', error);
+      toast.error('Yorumlar yüklenemedi');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleReply = (review: MyReview) => {
@@ -57,13 +97,22 @@ export default function MyReviewsPage() {
   };
 
   const handleSaveReply = async () => {
-    if (!replyText.trim()) return;
+    if (!replyText.trim() || !selectedReview) return;
     setSaving(true);
     try {
-      await new Promise(r => setTimeout(r, 1000));
-      setReplyDialog(false);
-      loadReviews();
-    } finally { setSaving(false); }
+      const response = await api.post(`/api/instructor/reviews/${selectedReview.id}/reply`, {
+        reply: replyText.trim()
+      });
+      if (response.data.success) {
+        toast.success('Yanıt kaydedildi');
+        setReplyDialog(false);
+        loadReviews();
+      }
+    } catch (error: any) {
+      toast.error(error?.response?.data?.error || 'Yanıt kaydedilemedi');
+    } finally {
+      setSaving(false);
+    }
   };
 
   const renderStars = (rating: number) => {
@@ -86,9 +135,9 @@ export default function MyReviewsPage() {
     return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
   };
 
-  // Calculate stats
-  const averageRating = reviews.length > 0 ? reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length : 0;
-  const repliedCount = reviews.filter(r => r.reply).length;
+  // Use stats from API instead of calculating from reviews
+  const averageRating = stats.averageRating;
+  const repliedCount = stats.replied;
 
   return (
     <PageContainer>
@@ -96,7 +145,7 @@ export default function MyReviewsPage() {
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
         <Card>
           <CardContent className="pt-6">
-            <div className="text-2xl font-bold">{reviews.length}</div>
+            <div className="text-2xl font-bold">{stats.total}</div>
             <div className="text-sm text-muted-foreground">Toplam Değerlendirme</div>
           </CardContent>
         </Card>
@@ -117,7 +166,7 @@ export default function MyReviewsPage() {
         </Card>
         <Card>
           <CardContent className="pt-6">
-            <div className="text-2xl font-bold">{reviews.length - repliedCount}</div>
+            <div className="text-2xl font-bold">{stats.pending}</div>
             <div className="text-sm text-muted-foreground">Yanıt Bekleyen</div>
           </CardContent>
         </Card>

@@ -184,6 +184,12 @@ import aiRoutes from './routes/ai';
 // Local upload routes (for development when S3 is not configured)
 import uploadRoutes from './routes/upload';
 
+// Google Calendar OAuth
+import googleCalendarRoutes from './routes/auth/googleCalendar';
+
+// Outlook Calendar OAuth
+import outlookCalendarRoutes from './routes/auth/outlookCalendar';
+
 import swaggerUi from 'swagger-ui-express';
 import { createServer } from 'http';
 import { swaggerSpec } from './config/swagger';
@@ -312,6 +318,12 @@ app.use('/api/2fa', twoFactorRoutes);
 
 // Social Authentication (Google, Apple)
 app.use('/api/auth', socialAuthRoutes);
+
+// Google Calendar OAuth
+app.use('/api/auth/google/calendar', googleCalendarRoutes);
+
+// Outlook Calendar OAuth
+app.use('/api/auth/outlook/calendar', outlookCalendarRoutes);
 
 // Sprint 23: Admin Dashboard API
 app.use('/api/admin/dashboard', adminDashboardRoutes);

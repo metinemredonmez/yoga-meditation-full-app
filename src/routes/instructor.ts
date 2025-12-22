@@ -395,6 +395,13 @@ router.get(
   instructorNotificationController.getNotificationSettings,
 );
 
+// Update notification settings
+router.put(
+  '/notifications/settings',
+  requireInstructor,
+  instructorNotificationController.updateNotificationSettings,
+);
+
 // Send notification to students (requires PRO+)
 router.post(
   '/notifications/send',

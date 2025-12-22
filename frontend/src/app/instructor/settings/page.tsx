@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -22,13 +23,11 @@ import {
   IconSchool,
   IconTrash,
   IconDevices,
-  IconBrandGoogle,
-  IconBrandApple,
-  IconMail,
   IconAlertTriangle,
   IconCheck,
   IconX,
 } from '@tabler/icons-react';
+import Image from 'next/image';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
@@ -103,6 +102,9 @@ interface CalendarIntegrations {
 }
 
 export default function InstructorSettingsPage() {
+  const searchParams = useSearchParams();
+  const router = useRouter();
+
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [editingIban, setEditingIban] = useState(false);
@@ -193,6 +195,22 @@ export default function InstructorSettingsPage() {
     loadClassPreferences();
     loadCalendarIntegrations();
   }, []);
+
+  // Handle OAuth callback from Google Calendar
+  useEffect(() => {
+    const calendarStatus = searchParams.get('calendar');
+    const tab = searchParams.get('tab');
+
+    if (calendarStatus === 'success') {
+      toast.success('Google Calendar başarıyla bağlandı!');
+      loadCalendarIntegrations();
+      // Clean URL
+      router.replace('/instructor/settings?tab=calendar', { scroll: false });
+    } else if (calendarStatus === 'error') {
+      toast.error('Google Calendar bağlantısı başarısız oldu');
+      router.replace('/instructor/settings?tab=calendar', { scroll: false });
+    }
+  }, [searchParams, router]);
 
   // Helper function to mask IBAN - show only first 4 and last 4 characters
   const maskIban = (iban: string) => {
@@ -389,37 +407,48 @@ export default function InstructorSettingsPage() {
   // Calendar integration actions
   const handleCalendarAction = async (provider: string, action: string, syncEnabled?: boolean) => {
     try {
-      await api.post('/api/instructor/settings/calendar-integrations', { provider, action, syncEnabled });
-      loadCalendarIntegrations();
-      toast.success('Takvim ayarı güncellendi');
+      const response = await api.post('/api/instructor/settings/calendar-integrations', { provider, action, syncEnabled });
+      // Update state with returned data
+      if (response.data.success && response.data.data) {
+        setCalendarIntegrations(response.data.data);
+      } else {
+        loadCalendarIntegrations();
+      }
+      toast.success(action === 'disconnect' ? 'Takvim bağlantısı kesildi' : 'Takvim ayarı güncellendi');
     } catch (error) {
       toast.error('Takvim ayarı güncellenemedi');
     }
   };
 
-  // Connect calendar - simulates OAuth flow
+  // Connect calendar - real OAuth flow for Google and Outlook
   const handleConnectCalendar = async () => {
     if (!calendarDialog.provider) return;
 
     setConnectingCalendar(true);
     try {
-      // Simulate OAuth - in production this would redirect to OAuth provider
-      await new Promise(resolve => setTimeout(resolve, 1500));
-
-      // Mock successful connection
-      await api.post('/api/instructor/settings/calendar-integrations', {
-        provider: calendarDialog.provider === 'google' ? 'googleCalendar' :
-                  calendarDialog.provider === 'apple' ? 'appleCalendar' : 'outlook',
-        action: 'connect',
-        email: calendarDialog.provider === 'apple' ? undefined : 'user@example.com',
-      });
-
-      loadCalendarIntegrations();
-      setCalendarDialog({ open: false, provider: null });
-      toast.success('Takvim bağlantısı başarılı!');
+      if (calendarDialog.provider === 'google') {
+        // Real Google OAuth flow
+        const response = await api.get('/api/auth/google/calendar');
+        if (response.data.success && response.data.authUrl) {
+          window.location.href = response.data.authUrl;
+          return;
+        }
+        throw new Error('Failed to get auth URL');
+      } else if (calendarDialog.provider === 'outlook') {
+        // Real Outlook OAuth flow
+        const response = await api.get('/api/auth/outlook/calendar');
+        if (response.data.success && response.data.authUrl) {
+          window.location.href = response.data.authUrl;
+          return;
+        }
+        throw new Error('Failed to get auth URL');
+      } else {
+        // Apple Calendar - not implemented yet
+        toast.error('Apple Calendar yakında kullanıma sunulacak');
+        setCalendarDialog({ open: false, provider: null });
+      }
     } catch (error) {
       toast.error('Takvim bağlanamadı');
-    } finally {
       setConnectingCalendar(false);
     }
   };
@@ -429,9 +458,8 @@ export default function InstructorSettingsPage() {
       case 'google':
         return {
           name: 'Google Calendar',
-          icon: IconBrandGoogle,
-          color: 'text-red-600',
-          bgColor: 'bg-red-100 dark:bg-red-900',
+          imagePath: '/logos/google-calendar.svg',
+          bgColor: 'bg-white dark:bg-gray-800',
           description: 'Google hesabınızla bağlanarak derslerinizi Google Calendar\'a otomatik ekleyin.',
           features: [
             'Dersleriniz otomatik olarak takviminize eklenir',
@@ -442,9 +470,8 @@ export default function InstructorSettingsPage() {
       case 'apple':
         return {
           name: 'Apple Calendar',
-          icon: IconBrandApple,
-          color: 'text-gray-800 dark:text-gray-200',
-          bgColor: 'bg-gray-100 dark:bg-gray-800',
+          imagePath: '/logos/apple-calendar.svg',
+          bgColor: 'bg-white dark:bg-gray-800',
           description: 'iCloud hesabınızla bağlanarak derslerinizi Apple Calendar\'a senkronize edin.',
           features: [
             'iPhone, iPad ve Mac\'te senkronizasyon',
@@ -455,9 +482,8 @@ export default function InstructorSettingsPage() {
       case 'outlook':
         return {
           name: 'Microsoft Outlook',
-          icon: IconMail,
-          color: 'text-blue-600',
-          bgColor: 'bg-blue-100 dark:bg-blue-900',
+          imagePath: '/logos/outlook-calendar.svg',
+          bgColor: 'bg-white dark:bg-gray-800',
           description: 'Microsoft hesabınızla bağlanarak derslerinizi Outlook Calendar\'a ekleyin.',
           features: [
             'Office 365 ve Outlook.com entegrasyonu',
@@ -1491,8 +1517,8 @@ export default function InstructorSettingsPage() {
               {/* Google Calendar */}
               <div className="flex items-center justify-between rounded-lg border p-4">
                 <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-lg bg-red-100 dark:bg-red-900">
-                    <IconBrandGoogle className="h-6 w-6 text-red-600" />
+                  <div className="p-2 rounded-lg bg-white dark:bg-gray-800">
+                    <Image src="/logos/google-calendar.svg" alt="Google Calendar" width={28} height={28} />
                   </div>
                   <div>
                     <Label>Google Calendar</Label>
@@ -1527,46 +1553,33 @@ export default function InstructorSettingsPage() {
               </div>
 
               {/* Apple Calendar */}
-              <div className="flex items-center justify-between rounded-lg border p-4">
+              <div className="flex items-center justify-between rounded-lg border p-4 opacity-60">
                 <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-lg bg-gray-100 dark:bg-gray-800">
-                    <IconBrandApple className="h-6 w-6" />
+                  <div className="p-2 rounded-lg bg-white dark:bg-gray-800">
+                    <Image src="/logos/apple-calendar.svg" alt="Apple Calendar" width={28} height={28} />
                   </div>
                   <div>
-                    <Label>Apple Calendar</Label>
+                    <div className="flex items-center gap-2">
+                      <Label>Apple Calendar</Label>
+                      <Badge variant="secondary" className="text-xs">Yakında</Badge>
+                    </div>
                     <p className="text-sm text-muted-foreground">
-                      {calendarIntegrations.appleCalendar.connected ? 'Bağlı' : 'Bağlı değil'}
+                      Çok yakında kullanıma sunulacak
                     </p>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  {calendarIntegrations.appleCalendar.connected ? (
-                    <>
-                      <Switch
-                        checked={calendarIntegrations.appleCalendar.syncEnabled}
-                        onCheckedChange={(c) => handleCalendarAction('appleCalendar', 'toggle-sync', c)}
-                      />
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleCalendarAction('appleCalendar', 'disconnect')}
-                      >
-                        Bağlantıyı Kes
-                      </Button>
-                    </>
-                  ) : (
-                    <Button variant="outline" size="sm" onClick={() => setCalendarDialog({ open: true, provider: 'apple' })}>
-                      Bağlan
-                    </Button>
-                  )}
+                  <Button variant="outline" size="sm" disabled>
+                    Yakında
+                  </Button>
                 </div>
               </div>
 
               {/* Outlook */}
               <div className="flex items-center justify-between rounded-lg border p-4">
                 <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-lg bg-blue-100 dark:bg-blue-900">
-                    <IconMail className="h-6 w-6 text-blue-600" />
+                  <div className="p-2 rounded-lg bg-white dark:bg-gray-800">
+                    <Image src="/logos/outlook-calendar.svg" alt="Microsoft Outlook" width={28} height={28} />
                   </div>
                   <div>
                     <Label>Microsoft Outlook</Label>
@@ -1742,13 +1755,12 @@ export default function InstructorSettingsPage() {
           {calendarDialog.provider && (() => {
             const info = getCalendarProviderInfo(calendarDialog.provider);
             if (!info) return null;
-            const Icon = info.icon;
             return (
               <>
                 <DialogHeader>
                   <div className="flex items-center gap-3 mb-2">
-                    <div className={`p-3 rounded-xl ${info.bgColor}`}>
-                      <Icon className={`h-8 w-8 ${info.color}`} />
+                    <div className={`p-3 rounded-xl ${info.bgColor} border`}>
+                      <Image src={info.imagePath} alt={info.name} width={32} height={32} />
                     </div>
                     <DialogTitle className="text-xl">{info.name}</DialogTitle>
                   </div>
@@ -1789,7 +1801,7 @@ export default function InstructorSettingsPage() {
                       </>
                     ) : (
                       <>
-                        <Icon className="mr-2 h-4 w-4" />
+                        <Image src={info.imagePath} alt={info.name} width={16} height={16} className="mr-2" />
                         {info.name} ile Bağlan
                       </>
                     )}

@@ -26,6 +26,7 @@ interface ReviewFilters {
   rating?: number;
   minRating?: number;
   hasReply?: boolean;
+  includeAll?: boolean; // For instructor dashboard to see all their reviews
 }
 
 // ============================================
@@ -381,8 +382,12 @@ export async function getInstructorReviews(
 
   const where: Prisma.instructor_reviewsWhereInput = {
     instructorId,
-    status: filters.status || 'APPROVED', // Default to approved reviews only
   };
+
+  // If not including all, filter by status (default to APPROVED for public views)
+  if (!filters.includeAll) {
+    where.status = filters.status || 'APPROVED';
+  }
 
   if (filters.rating) {
     where.rating = filters.rating;
@@ -419,8 +424,33 @@ export async function getInstructorReviews(
     prisma.instructor_reviews.count({ where }),
   ]);
 
+  // Fetch related class/program titles separately
+  const classIds = items.filter(i => i.classId).map(i => i.classId!);
+  const programIds = items.filter(i => i.programId).map(i => i.programId!);
+
+  const [classes, programs] = await Promise.all([
+    classIds.length > 0 ? prisma.classes.findMany({
+      where: { id: { in: classIds } },
+      select: { id: true, title: true },
+    }) : [],
+    programIds.length > 0 ? prisma.programs.findMany({
+      where: { id: { in: programIds } },
+      select: { id: true, title: true },
+    }) : [],
+  ]);
+
+  const classMap = new Map(classes.map(c => [c.id, c]));
+  const programMap = new Map(programs.map(p => [p.id, p]));
+
+  // Attach class/program info to items
+  const enrichedItems = items.map(item => ({
+    ...item,
+    classes: item.classId ? classMap.get(item.classId) : null,
+    programs: item.programId ? programMap.get(item.programId) : null,
+  }));
+
   return {
-    items,
+    items: enrichedItems,
     total,
     page,
     limit,
