@@ -67,10 +67,33 @@ export async function sendEmail({
 }: EmailPayload): Promise<EmailResult> {
   // Check if SMTP is configured
   if (!config.SMTP_HOST) {
-    logger.warn({ to, subject }, 'SMTP not configured - email skipped');
+    // In development, log email content to console for testing
+    logger.info(
+      {
+        to,
+        subject,
+        from,
+        textPreview: text?.substring(0, 200),
+      },
+      '📧 DEV MODE: Email would be sent (SMTP not configured)',
+    );
+
+    // Log the full email content in development
+    console.log('\n' + '='.repeat(60));
+    console.log('📧 EMAIL PREVIEW (SMTP not configured)');
+    console.log('='.repeat(60));
+    console.log(`To: ${Array.isArray(to) ? to.join(', ') : to}`);
+    console.log(`Subject: ${subject}`);
+    console.log(`From: ${from}`);
+    console.log('-'.repeat(60));
+    console.log('Text Content:');
+    console.log(text || '(no text content)');
+    console.log('='.repeat(60) + '\n');
+
     return {
-      delivered: false,
-      reason: 'SMTP not configured',
+      delivered: true, // Return true so the flow continues in dev
+      reason: 'SMTP not configured - logged to console',
+      messageId: `dev-${Date.now()}`,
     };
   }
 

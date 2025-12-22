@@ -59,14 +59,23 @@ export function BannersTable() {
 
   const loadData = async () => {
     try {
-      const [bannersData, announcementsData] = await Promise.all([
-        getBanners(),
-        getAnnouncements(),
+      const [bannersResponse, announcementsResponse] = await Promise.all([
+        getBanners().catch(() => []),
+        getAnnouncements().catch(() => []),
       ]);
+      // Handle both array and { data: [...] } response formats
+      const bannersData = Array.isArray(bannersResponse)
+        ? bannersResponse
+        : (bannersResponse?.data || bannersResponse?.banners || []);
+      const announcementsData = Array.isArray(announcementsResponse)
+        ? announcementsResponse
+        : (announcementsResponse?.data || announcementsResponse?.announcements || []);
       setBanners(bannersData);
       setAnnouncements(announcementsData);
     } catch (error) {
       console.error('Failed to load CMS data:', error);
+      setBanners([]);
+      setAnnouncements([]);
     } finally {
       setLoading(false);
     }

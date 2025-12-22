@@ -62,6 +62,7 @@ import {
   IconCode,
 } from '@tabler/icons-react';
 import { toast } from 'sonner';
+import { getNotificationTemplatesConfig, updateNotificationTemplatesConfig } from '@/lib/api';
 
 interface NotificationTemplate {
   id: string;
@@ -79,81 +80,10 @@ interface NotificationTemplate {
   updatedAt: string;
 }
 
-const defaultTemplates: NotificationTemplate[] = [
-  {
-    id: '1',
-    name: 'Hoş Geldiniz',
-    slug: 'welcome',
-    type: 'EMAIL',
-    category: 'TRANSACTIONAL',
-    subject: 'Yoga App\'e Hoş Geldiniz!',
-    title: 'Hoş Geldiniz',
-    body: 'Merhaba {{firstName}}, Yoga App ailesine hoş geldiniz!',
-    htmlBody: '<h1>Hoş Geldiniz {{firstName}}!</h1><p>Yoga yolculuğunuza başlamak için hazırsınız.</p>',
-    variables: ['firstName', 'lastName', 'email'],
-    isActive: true,
-    createdAt: '2024-01-01T00:00:00Z',
-    updatedAt: '2024-01-01T00:00:00Z',
-  },
-  {
-    id: '2',
-    name: 'Şifre Sıfırlama',
-    slug: 'password-reset',
-    type: 'EMAIL',
-    category: 'TRANSACTIONAL',
-    subject: 'Şifre Sıfırlama Talebi',
-    title: 'Şifre Sıfırlama',
-    body: 'Merhaba {{firstName}}, şifrenizi sıfırlamak için linke tıklayın: {{resetLink}}',
-    variables: ['firstName', 'resetLink', 'expiresIn'],
-    isActive: true,
-    createdAt: '2024-01-01T00:00:00Z',
-    updatedAt: '2024-01-01T00:00:00Z',
-  },
-  {
-    id: '3',
-    name: 'Ders Hatırlatıcı',
-    slug: 'class-reminder',
-    type: 'PUSH',
-    category: 'REMINDER',
-    title: 'Dersiniz Yaklaşıyor!',
-    body: '{{className}} dersiniz {{timeUntil}} sonra başlıyor.',
-    variables: ['className', 'timeUntil', 'instructorName'],
-    isActive: true,
-    createdAt: '2024-01-01T00:00:00Z',
-    updatedAt: '2024-01-01T00:00:00Z',
-  },
-  {
-    id: '4',
-    name: 'Challenge Tamamlandı',
-    slug: 'challenge-completed',
-    type: 'PUSH',
-    category: 'TRANSACTIONAL',
-    title: 'Tebrikler!',
-    body: '{{challengeName}} challenge\'ını başarıyla tamamladınız!',
-    variables: ['challengeName', 'completionDate', 'badge'],
-    isActive: true,
-    createdAt: '2024-01-01T00:00:00Z',
-    updatedAt: '2024-01-01T00:00:00Z',
-  },
-  {
-    id: '5',
-    name: 'Yeni Program',
-    slug: 'new-program',
-    type: 'EMAIL',
-    category: 'MARKETING',
-    subject: 'Yeni Program: {{programName}}',
-    title: 'Yeni Program Eklendi',
-    body: 'Heyecan verici bir program daha! {{programName}} artık mevcut.',
-    variables: ['programName', 'programDescription', 'instructorName'],
-    isActive: true,
-    createdAt: '2024-01-01T00:00:00Z',
-    updatedAt: '2024-01-01T00:00:00Z',
-  },
-];
-
 export function NotificationTemplates() {
-  const [templates, setTemplates] = useState<NotificationTemplate[]>(defaultTemplates);
-  const [loading, setLoading] = useState(false);
+  const [mounted, setMounted] = useState(false);
+  const [templates, setTemplates] = useState<NotificationTemplate[]>([]);
+  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [editDialog, setEditDialog] = useState(false);
   const [deleteDialog, setDeleteDialog] = useState(false);
@@ -173,6 +103,23 @@ export function NotificationTemplates() {
     htmlBody: '',
     variables: '',
   });
+
+  useEffect(() => {
+    setMounted(true);
+    loadTemplates();
+  }, []);
+
+  const loadTemplates = async () => {
+    setLoading(true);
+    try {
+      const { templates: data } = await getNotificationTemplatesConfig();
+      setTemplates(data || []);
+    } catch (error) {
+      toast.error('Şablonlar yüklenemedi');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const filteredTemplates = templates.filter(t => {
     if (filter !== 'all' && t.category !== filter) return false;
@@ -214,10 +161,8 @@ export function NotificationTemplates() {
   const handleSave = async () => {
     setSaving(true);
     try {
-      await new Promise(resolve => setTimeout(resolve, 500));
-
       const newTemplate: NotificationTemplate = {
-        id: selectedTemplate?.id || Date.now().toString(),
+        id: selectedTemplate?.id || `template-${Date.now()}`,
         name: formData.name,
         slug: formData.slug || formData.name.toLowerCase().replace(/\s+/g, '-'),
         type: formData.type,
@@ -232,13 +177,16 @@ export function NotificationTemplates() {
         updatedAt: new Date().toISOString(),
       };
 
+      let updatedTemplates: NotificationTemplate[];
       if (selectedTemplate) {
-        setTemplates(prev => prev.map(t => t.id === selectedTemplate.id ? newTemplate : t));
-        toast.success('Şablon güncellendi');
+        updatedTemplates = templates.map(t => t.id === selectedTemplate.id ? newTemplate : t);
       } else {
-        setTemplates(prev => [...prev, newTemplate]);
-        toast.success('Şablon oluşturuldu');
+        updatedTemplates = [...templates, newTemplate];
       }
+
+      await updateNotificationTemplatesConfig(updatedTemplates);
+      setTemplates(updatedTemplates);
+      toast.success(selectedTemplate ? 'Şablon güncellendi' : 'Şablon oluşturuldu');
       setEditDialog(false);
     } catch (error) {
       toast.error('İşlem başarısız');
@@ -250,7 +198,9 @@ export function NotificationTemplates() {
   const handleDelete = async () => {
     if (!selectedTemplate) return;
     try {
-      setTemplates(prev => prev.filter(t => t.id !== selectedTemplate.id));
+      const updatedTemplates = templates.filter(t => t.id !== selectedTemplate.id);
+      await updateNotificationTemplatesConfig(updatedTemplates);
+      setTemplates(updatedTemplates);
       toast.success('Şablon silindi');
       setDeleteDialog(false);
     } catch (error) {
@@ -258,17 +208,23 @@ export function NotificationTemplates() {
     }
   };
 
-  const handleDuplicate = (template: NotificationTemplate) => {
-    const duplicate: NotificationTemplate = {
-      ...template,
-      id: Date.now().toString(),
-      name: `${template.name} (Kopya)`,
-      slug: `${template.slug}-copy`,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-    setTemplates(prev => [...prev, duplicate]);
-    toast.success('Şablon kopyalandı');
+  const handleDuplicate = async (template: NotificationTemplate) => {
+    try {
+      const duplicate: NotificationTemplate = {
+        ...template,
+        id: `template-${Date.now()}`,
+        name: `${template.name} (Kopya)`,
+        slug: `${template.slug}-copy`,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+      const updatedTemplates = [...templates, duplicate];
+      await updateNotificationTemplatesConfig(updatedTemplates);
+      setTemplates(updatedTemplates);
+      toast.success('Şablon kopyalandı');
+    } catch (error) {
+      toast.error('Şablon kopyalanamadı');
+    }
   };
 
   const getTypeIcon = (type: string) => {
@@ -300,6 +256,19 @@ export function NotificationTemplates() {
         return <Badge variant="outline">{category}</Badge>;
     }
   };
+
+  // SSR hydration fix - render nothing until mounted
+  if (!mounted) {
+    return null;
+  }
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <IconLoader2 className="h-8 w-8 animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

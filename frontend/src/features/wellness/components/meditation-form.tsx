@@ -91,27 +91,23 @@ export function MeditationForm({ meditationId }: MeditationFormProps) {
 
   const [formData, setFormData] = useState({
     title: '',
-    titleTr: '',
+    titleEn: '',
     slug: '',
     description: '',
-    descriptionTr: '',
+    descriptionEn: '',
     categoryId: '',
     instructorId: '',
     difficulty: 'BEGINNER',
-    durationSeconds: 600,
+    duration: 600,
     audioUrl: '',
-    audioUrlTr: '',
-    imageUrl: '',
-    thumbnailUrl: '',
-    backgroundMusicUrl: '',
+    audioUrlEn: '',
+    coverImage: '',
+    backgroundSoundId: '',
     tags: [] as string[],
     benefits: [] as string[],
-    benefitsTr: [] as string[],
-    isFree: false,
     isPremium: false,
     isFeatured: false,
-    isActive: false,
-    sortOrder: 0,
+    isPublished: false,
   });
 
   const [newTag, setNewTag] = useState('');
@@ -131,27 +127,23 @@ export function MeditationForm({ meditationId }: MeditationFormProps) {
         if (meditation) {
           setFormData({
             title: meditation.title || '',
-            titleTr: meditation.titleTr || '',
+            titleEn: meditation.titleEn || '',
             slug: meditation.slug || '',
             description: meditation.description || '',
-            descriptionTr: meditation.descriptionTr || '',
+            descriptionEn: meditation.descriptionEn || '',
             categoryId: meditation.categoryId || '',
             instructorId: meditation.instructorId || '',
             difficulty: meditation.difficulty || 'BEGINNER',
-            durationSeconds: meditation.durationSeconds || 600,
+            duration: meditation.duration || 600,
             audioUrl: meditation.audioUrl || '',
-            audioUrlTr: meditation.audioUrlTr || '',
-            imageUrl: meditation.imageUrl || '',
-            thumbnailUrl: meditation.thumbnailUrl || '',
-            backgroundMusicUrl: meditation.backgroundMusicUrl || '',
+            audioUrlEn: meditation.audioUrlEn || '',
+            coverImage: meditation.coverImage || '',
+            backgroundSoundId: meditation.backgroundSoundId || '',
             tags: meditation.tags || [],
             benefits: meditation.benefits || [],
-            benefitsTr: meditation.benefitsTr || [],
-            isFree: meditation.isFree || false,
             isPremium: meditation.isPremium || false,
             isFeatured: meditation.isFeatured || false,
-            isActive: meditation.isActive || false,
-            sortOrder: meditation.sortOrder || 0,
+            isPublished: meditation.isPublished || false,
           });
         }
       }
@@ -247,15 +239,15 @@ export function MeditationForm({ meditationId }: MeditationFormProps) {
     try {
       const payload = {
         ...formData,
-        durationSeconds: Number(formData.durationSeconds),
-        sortOrder: Number(formData.sortOrder),
+        difficulty: formData.difficulty as 'BEGINNER' | 'INTERMEDIATE' | 'ADVANCED',
+        duration: Number(formData.duration),
       };
 
       if (isEdit) {
-        await updateMeditation(meditationId!, payload);
+        await updateMeditation(meditationId!, payload as any);
         toast.success('Meditasyon güncellendi');
       } else {
-        await createMeditation(payload);
+        await createMeditation(payload as any);
         toast.success('Meditasyon oluşturuldu');
       }
       router.push('/dashboard/wellness/meditations');
@@ -356,9 +348,9 @@ export function MeditationForm({ meditationId }: MeditationFormProps) {
                 <div className="space-y-2">
                   <Label>Başlık (EN)</Label>
                   <Input
-                    value={formData.titleTr}
+                    value={formData.titleEn}
                     onChange={(e) =>
-                      setFormData((prev) => ({ ...prev, titleTr: e.target.value }))
+                      setFormData((prev) => ({ ...prev, titleEn: e.target.value }))
                     }
                     placeholder="Meditation title"
                   />
@@ -391,9 +383,9 @@ export function MeditationForm({ meditationId }: MeditationFormProps) {
                 <div className="space-y-2">
                   <Label>Açıklama (EN)</Label>
                   <Textarea
-                    value={formData.descriptionTr}
+                    value={formData.descriptionEn}
                     onChange={(e) =>
-                      setFormData((prev) => ({ ...prev, descriptionTr: e.target.value }))
+                      setFormData((prev) => ({ ...prev, descriptionEn: e.target.value }))
                     }
                     placeholder="Meditation description"
                     rows={4}
@@ -474,18 +466,18 @@ export function MeditationForm({ meditationId }: MeditationFormProps) {
                 <div className="flex items-center gap-4">
                   <Input
                     type="number"
-                    value={formData.durationSeconds}
+                    value={formData.duration}
                     onChange={(e) =>
                       setFormData((prev) => ({
                         ...prev,
-                        durationSeconds: parseInt(e.target.value) || 0,
+                        duration: parseInt(e.target.value) || 0,
                       }))
                     }
                     className="w-32"
                     min={1}
                   />
                   <span className="text-sm text-muted-foreground">
-                    = {formatDuration(formData.durationSeconds)}
+                    = {formatDuration(formData.duration)}
                   </span>
                 </div>
               </div>
@@ -537,9 +529,9 @@ export function MeditationForm({ meditationId }: MeditationFormProps) {
                 <Label>Ses Dosyası (EN)</Label>
                 <div className="flex items-center gap-2">
                   <Input
-                    value={formData.audioUrlTr}
+                    value={formData.audioUrlEn}
                     onChange={(e) =>
-                      setFormData((prev) => ({ ...prev, audioUrlTr: e.target.value }))
+                      setFormData((prev) => ({ ...prev, audioUrlEn: e.target.value }))
                     }
                     placeholder="https://..."
                   />
@@ -550,39 +542,7 @@ export function MeditationForm({ meditationId }: MeditationFormProps) {
                       className="hidden"
                       onChange={(e) => {
                         const file = e.target.files?.[0];
-                        if (file) handleFileUpload(file, 'audio', 'audioUrlTr');
-                      }}
-                    />
-                    <Button variant="outline" size="icon" disabled={uploading} asChild>
-                      <span>
-                        <IconUpload className="h-4 w-4" />
-                      </span>
-                    </Button>
-                  </label>
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label>Arka Plan Müziği (Opsiyonel)</Label>
-                <div className="flex items-center gap-2">
-                  <Input
-                    value={formData.backgroundMusicUrl}
-                    onChange={(e) =>
-                      setFormData((prev) => ({
-                        ...prev,
-                        backgroundMusicUrl: e.target.value,
-                      }))
-                    }
-                    placeholder="https://..."
-                  />
-                  <label className="cursor-pointer">
-                    <input
-                      type="file"
-                      accept="audio/*"
-                      className="hidden"
-                      onChange={(e) => {
-                        const file = e.target.files?.[0];
-                        if (file) handleFileUpload(file, 'audio', 'backgroundMusicUrl');
+                        if (file) handleFileUpload(file, 'audio', 'audioUrlEn');
                       }}
                     />
                     <Button variant="outline" size="icon" disabled={uploading} asChild>
@@ -601,80 +561,40 @@ export function MeditationForm({ meditationId }: MeditationFormProps) {
               <CardTitle>Görseller</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Kapak Görseli</Label>
-                  <div className="flex items-center gap-2">
-                    <Input
-                      value={formData.imageUrl}
-                      onChange={(e) =>
-                        setFormData((prev) => ({ ...prev, imageUrl: e.target.value }))
-                      }
-                      placeholder="https://..."
+              <div className="space-y-2">
+                <Label>Kapak Görseli</Label>
+                <div className="flex items-center gap-2">
+                  <Input
+                    value={formData.coverImage}
+                    onChange={(e) =>
+                      setFormData((prev) => ({ ...prev, coverImage: e.target.value }))
+                    }
+                    placeholder="https://..."
+                  />
+                  <label className="cursor-pointer">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) handleFileUpload(file, 'image', 'coverImage');
+                      }}
                     />
-                    <label className="cursor-pointer">
-                      <input
-                        type="file"
-                        accept="image/*"
-                        className="hidden"
-                        onChange={(e) => {
-                          const file = e.target.files?.[0];
-                          if (file) handleFileUpload(file, 'image', 'imageUrl');
-                        }}
-                      />
-                      <Button variant="outline" size="icon" disabled={uploading} asChild>
-                        <span>
-                          <IconUpload className="h-4 w-4" />
-                        </span>
-                      </Button>
-                    </label>
-                  </div>
-                  {formData.imageUrl && (
-                    <img
-                      src={formData.imageUrl}
-                      alt="Cover"
-                      className="h-24 w-24 object-cover rounded mt-2"
-                    />
-                  )}
+                    <Button variant="outline" size="icon" disabled={uploading} asChild>
+                      <span>
+                        <IconUpload className="h-4 w-4" />
+                      </span>
+                    </Button>
+                  </label>
                 </div>
-                <div className="space-y-2">
-                  <Label>Thumbnail</Label>
-                  <div className="flex items-center gap-2">
-                    <Input
-                      value={formData.thumbnailUrl}
-                      onChange={(e) =>
-                        setFormData((prev) => ({
-                          ...prev,
-                          thumbnailUrl: e.target.value,
-                        }))
-                      }
-                      placeholder="https://..."
-                    />
-                    <label className="cursor-pointer">
-                      <input
-                        type="file"
-                        accept="image/*"
-                        className="hidden"
-                        onChange={(e) => {
-                          const file = e.target.files?.[0];
-                          if (file) handleFileUpload(file, 'image', 'thumbnailUrl');
-                        }}
-                      />
-                      <Button variant="outline" size="icon" disabled={uploading} asChild>
-                        <span>
-                          <IconUpload className="h-4 w-4" />
-                        </span>
-                      </Button>
-                    </label>
-                  </div>
-                  {formData.thumbnailUrl && (
-                    <img
-                      src={formData.thumbnailUrl}
-                      alt="Thumbnail"
-                      className="h-24 w-24 object-cover rounded mt-2"
-                    />
-                  )}
-                </div>
+                {formData.coverImage && (
+                  <img
+                    src={formData.coverImage}
+                    alt="Cover"
+                    className="h-24 w-24 object-cover rounded mt-2"
+                  />
+                )}
               </div>
             </CardContent>
           </Card>
@@ -777,28 +697,9 @@ export function MeditationForm({ meditationId }: MeditationFormProps) {
                   </div>
                 </div>
                 <Switch
-                  checked={formData.isActive}
+                  checked={formData.isPublished}
                   onCheckedChange={(checked) =>
-                    setFormData((prev) => ({ ...prev, isActive: checked }))
-                  }
-                />
-              </div>
-
-              <div className="flex items-center justify-between p-4 border rounded-lg">
-                <div>
-                  <div className="font-medium">Ücretsiz İçerik</div>
-                  <div className="text-sm text-muted-foreground">
-                    Tüm kullanıcılar erişebilir
-                  </div>
-                </div>
-                <Switch
-                  checked={formData.isFree}
-                  onCheckedChange={(checked) =>
-                    setFormData((prev) => ({
-                      ...prev,
-                      isFree: checked,
-                      isPremium: checked ? false : prev.isPremium,
-                    }))
+                    setFormData((prev) => ({ ...prev, isPublished: checked }))
                   }
                 />
               </div>
@@ -813,11 +714,7 @@ export function MeditationForm({ meditationId }: MeditationFormProps) {
                 <Switch
                   checked={formData.isPremium}
                   onCheckedChange={(checked) =>
-                    setFormData((prev) => ({
-                      ...prev,
-                      isPremium: checked,
-                      isFree: checked ? false : prev.isFree,
-                    }))
+                    setFormData((prev) => ({ ...prev, isPremium: checked }))
                   }
                 />
               </div>
@@ -835,24 +732,6 @@ export function MeditationForm({ meditationId }: MeditationFormProps) {
                     setFormData((prev) => ({ ...prev, isFeatured: checked }))
                   }
                 />
-              </div>
-
-              <div className="space-y-2">
-                <Label>Sıralama</Label>
-                <Input
-                  type="number"
-                  value={formData.sortOrder}
-                  onChange={(e) =>
-                    setFormData((prev) => ({
-                      ...prev,
-                      sortOrder: parseInt(e.target.value) || 0,
-                    }))
-                  }
-                  className="w-32"
-                />
-                <p className="text-xs text-muted-foreground">
-                  Düşük değer = Önce gösterilir
-                </p>
               </div>
             </CardContent>
           </Card>

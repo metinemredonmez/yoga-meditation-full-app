@@ -516,6 +516,22 @@ export async function incrementPlayCount(playlistId: string) {
 
 // ==================== ADMIN FUNCTIONS ====================
 
+export async function getPlaylistStats() {
+  const [total, system, publicCount, featured] = await Promise.all([
+    prisma.playlists.count(),
+    prisma.playlists.count({ where: { isSystem: true } }),
+    prisma.playlists.count({ where: { isPublic: true } }),
+    prisma.playlists.count({ where: { isFeatured: true } }),
+  ]);
+
+  return {
+    total,
+    system,
+    public: publicCount,
+    featured,
+  };
+}
+
 export async function getAdminPlaylists(filters: AdminPlaylistFilters) {
   const { type, contentType, isSystem, isPublic, isFeatured, isPublished, search, page, limit, sortBy, sortOrder } = filters;
 

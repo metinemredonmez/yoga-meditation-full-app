@@ -259,7 +259,7 @@ export function PodcastsTable() {
               onClick={() => router.push('/dashboard/podcasts/new')}
             >
               <IconPlus className="h-4 w-4 mr-2" />
-              İlk Podcast'i Oluştur
+              İlk Podcast&apos;i Oluştur
             </Button>
           </CardContent>
         </Card>

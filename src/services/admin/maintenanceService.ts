@@ -65,3 +65,9 @@ export async function getBackupStatus() {
 export async function triggerBackup(_type?: string) {
   return { success: true, jobId: `backup_${Date.now()}`, status: 'queued' };
 }
+
+export async function getBackups() {
+  // Return empty array as backups are not implemented yet
+  // In production, this would query backup storage/database
+  return [];
+}

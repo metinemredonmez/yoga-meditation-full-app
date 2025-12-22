@@ -5,17 +5,62 @@ import type { NextRequest } from 'next/server';
 const ACCESS_TOKEN_COOKIE = 'yoga_access_token';
 const SESSION_INDICATOR_COOKIE = 'yoga_session_active';
 
+// Role hierarchy with numeric levels
+const ROLE_LEVELS: Record<string, number> = {
+  STUDENT: 10,
+  TEACHER: 50,
+  INSTRUCTOR: 50, // Alias for TEACHER
+  ADMIN: 80,
+  SUPER_ADMIN: 100,
+};
+
 // Routes that require authentication
-const protectedRoutes = ['/dashboard', '/instructor'];
+const protectedRoutes = ['/dashboard', '/instructor', '/student', '/admin'];
 
 // Routes that should redirect to dashboard if already logged in
 const authRoutes = ['/auth/sign-in', '/auth/sign-up'];
 
+// Route-based role restrictions (minimum role level required)
+const routeRoleRequirements: Record<string, number> = {
+  // ADMIN panel routes - ONLY ADMIN+ can access /dashboard
+  '/admin': ROLE_LEVELS.ADMIN,
+  '/dashboard': ROLE_LEVELS.ADMIN, // ALL dashboard routes require ADMIN
+
+  // INSTRUCTOR routes (level 50) - instructors use /instructor path
+  '/instructor': ROLE_LEVELS.TEACHER,
+  '/instructor/classes': ROLE_LEVELS.TEACHER,
+  '/instructor/programs': ROLE_LEVELS.TEACHER,
+  '/instructor/meditations': ROLE_LEVELS.TEACHER,
+  '/instructor/breathwork': ROLE_LEVELS.TEACHER,
+  '/instructor/sleep-stories': ROLE_LEVELS.TEACHER,
+  '/instructor/playlists': ROLE_LEVELS.TEACHER,
+  '/instructor/podcasts': ROLE_LEVELS.TEACHER,
+  '/instructor/live-streams': ROLE_LEVELS.TEACHER,
+  '/instructor/calendar': ROLE_LEVELS.TEACHER,
+  '/instructor/analytics': ROLE_LEVELS.TEACHER,
+  '/instructor/students': ROLE_LEVELS.TEACHER,
+  '/instructor/reviews': ROLE_LEVELS.TEACHER,
+  '/instructor/profile': ROLE_LEVELS.TEACHER,
+  '/instructor/billing': ROLE_LEVELS.TEACHER,
+  '/instructor/notifications': ROLE_LEVELS.TEACHER,
+  '/instructor/settings': ROLE_LEVELS.TEACHER,
+
+  // STUDENT routes (level 10) - accessible to all authenticated users
+  '/student': ROLE_LEVELS.STUDENT,
+  '/student/profile': ROLE_LEVELS.STUDENT,
+  '/student/billing': ROLE_LEVELS.STUDENT,
+  '/student/favorites': ROLE_LEVELS.STUDENT,
+  '/student/history': ROLE_LEVELS.STUDENT,
+  '/student/goals': ROLE_LEVELS.STUDENT,
+  '/student/notifications': ROLE_LEVELS.STUDENT,
+  '/student/settings': ROLE_LEVELS.STUDENT,
+};
+
 /**
- * Parse JWT to get role from HttpOnly cookie
+ * Parse JWT to get payload from HttpOnly cookie
  * Note: This is for route protection only - actual auth is verified by the backend
  */
-function parseTokenRole(token: string): string | null {
+function parseToken(token: string): { role: string; userId: string } | null {
   try {
     const base64Url = token.split('.')[1];
     if (!base64Url) return null;
@@ -27,10 +72,38 @@ function parseTokenRole(token: string): string | null {
         .join('')
     );
     const payload = JSON.parse(jsonPayload);
-    return payload.role || 'STUDENT';
+    return {
+      role: payload.role || 'STUDENT',
+      userId: payload.userId || payload.id,
+    };
   } catch {
     return null;
   }
+}
+
+function getRoleLevel(role: string): number {
+  return ROLE_LEVELS[role] ?? 0;
+}
+
+function getRequiredRoleLevel(pathname: string): number {
+  // Check exact match first
+  if (routeRoleRequirements[pathname]) {
+    return routeRoleRequirements[pathname];
+  }
+
+  // Check prefix matches (for nested routes)
+  for (const [route, level] of Object.entries(routeRoleRequirements)) {
+    if (pathname.startsWith(route + '/')) {
+      return level;
+    }
+  }
+
+  // Default: require TEACHER level for any dashboard route
+  if (pathname.startsWith('/dashboard')) {
+    return ROLE_LEVELS.TEACHER;
+  }
+
+  return 0;
 }
 
 export function middleware(request: NextRequest) {
@@ -55,19 +128,54 @@ export function middleware(request: NextRequest) {
     return NextResponse.redirect(loginUrl);
   }
 
-  // If authenticated and trying to access auth routes, redirect to dashboard
+  // If authenticated, check role-based access
+  if (isProtectedRoute && isAuthenticated && token) {
+    const tokenData = parseToken(token);
+    if (tokenData) {
+      const userLevel = getRoleLevel(tokenData.role);
+      const requiredLevel = getRequiredRoleLevel(pathname);
+
+      // TEACHER should NOT access /student routes - redirect to /instructor
+      if (pathname.startsWith('/student') && (tokenData.role === 'TEACHER' || tokenData.role === 'INSTRUCTOR')) {
+        return NextResponse.redirect(new URL('/instructor', request.url));
+      }
+
+      // ADMIN/SUPER_ADMIN should NOT access /student or /instructor - redirect to /dashboard
+      if ((pathname.startsWith('/student') || pathname.startsWith('/instructor')) &&
+          (tokenData.role === 'ADMIN' || tokenData.role === 'SUPER_ADMIN')) {
+        return NextResponse.redirect(new URL('/dashboard', request.url));
+      }
+
+      // Check if user has sufficient role level
+      if (userLevel < requiredLevel) {
+        // Redirect to appropriate page based on role
+        if (userLevel >= ROLE_LEVELS.ADMIN) {
+          // Admins go to dashboard
+          return NextResponse.redirect(new URL('/dashboard', request.url));
+        } else if (userLevel >= ROLE_LEVELS.TEACHER) {
+          // Teachers/Instructors go to instructor panel
+          return NextResponse.redirect(new URL('/instructor', request.url));
+        } else {
+          // Students and lower get redirected to student panel or unauthorized
+          return NextResponse.redirect(new URL('/student', request.url));
+        }
+      }
+    }
+  }
+
+  // If authenticated and trying to access auth routes, redirect to appropriate page
   if (isAuthRoute && isAuthenticated) {
     // Try to get role from token for role-based redirect
-    const role = token ? parseTokenRole(token) : null;
-    const adminAllowedRoles = ['ADMIN', 'SUPER_ADMIN', 'TEACHER'];
+    const tokenData = token ? parseToken(token) : null;
+    const role = tokenData?.role;
 
-    if (role && adminAllowedRoles.includes(role)) {
-      return NextResponse.redirect(new URL('/dashboard/overview', request.url));
-    } else if (role === 'INSTRUCTOR') {
+    if (role === 'ADMIN' || role === 'SUPER_ADMIN') {
+      return NextResponse.redirect(new URL('/admin', request.url));
+    } else if (role === 'TEACHER' || role === 'INSTRUCTOR') {
       return NextResponse.redirect(new URL('/instructor', request.url));
     } else {
-      // Default redirect for authenticated users
-      return NextResponse.redirect(new URL('/dashboard/overview', request.url));
+      // Default redirect for authenticated users (STUDENT goes to student panel)
+      return NextResponse.redirect(new URL('/student', request.url));
     }
   }
 

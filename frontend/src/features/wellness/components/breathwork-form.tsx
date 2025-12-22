@@ -294,6 +294,11 @@ export function BreathworkForm({ breathworkId }: BreathworkFormProps) {
     try {
       const payload = {
         ...formData,
+        difficulty: formData.difficulty as 'BEGINNER' | 'INTERMEDIATE' | 'ADVANCED',
+        inhale: Number(formData.inhaleSeconds),
+        hold1: Number(formData.hold1Seconds),
+        exhale: Number(formData.exhaleSeconds),
+        hold2: Number(formData.hold2Seconds),
         inhaleSeconds: Number(formData.inhaleSeconds),
         hold1Seconds: Number(formData.hold1Seconds),
         exhaleSeconds: Number(formData.exhaleSeconds),
@@ -304,10 +309,10 @@ export function BreathworkForm({ breathworkId }: BreathworkFormProps) {
       };
 
       if (isEdit) {
-        await updateBreathwork(breathworkId!, payload);
+        await updateBreathwork(breathworkId!, payload as any);
         toast.success('Nefes egzersizi güncellendi');
       } else {
-        await createBreathwork(payload);
+        await createBreathwork(payload as any);
         toast.success('Nefes egzersizi oluşturuldu');
       }
       router.push('/dashboard/wellness/breathwork');

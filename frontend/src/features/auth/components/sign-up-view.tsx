@@ -4,7 +4,7 @@ import { YogaLogo } from '@/components/yoga-logo';
 
 export default function SignUpViewPage() {
   return (
-    <div className='relative h-screen flex-col items-center justify-center md:grid lg:max-w-none lg:grid-cols-2 lg:px-0'>
+    <div className='relative h-screen flex-col items-center justify-center overflow-hidden md:grid lg:max-w-none lg:grid-cols-2 lg:px-0'>
       {/* Left side - Branding */}
       <div className='relative hidden h-full flex-col p-10 text-white lg:flex'>
         {/* Gradient background */}
@@ -72,8 +72,8 @@ export default function SignUpViewPage() {
       </div>
 
       {/* Right side - Form */}
-      <div className='flex h-full items-center justify-center p-4 lg:p-8'>
-        <div className='flex w-full max-w-md flex-col items-center justify-center space-y-6'>
+      <div className='flex h-full items-center justify-center overflow-y-auto p-4 lg:p-8'>
+        <div className='flex w-full max-w-md flex-col items-center justify-center space-y-6 py-8'>
           {/* Mobile logo */}
           <div className='lg:hidden mb-4'>
             <YogaLogo className='h-12 w-12 text-emerald-600' />

@@ -11,6 +11,8 @@ import {
   deleteOwnAccount,
   getAvatarUploadUrl,
   deleteUser,
+  verifyLoginOtp,
+  resendLoginOtp,
 } from '../controllers/userController';
 import { authenticateToken } from '../middleware/auth';
 import { strictRateLimiter, authenticatedRateLimiter } from '../middleware/rateLimiter';
@@ -74,6 +76,70 @@ router.post('/signup', strictRateLimiter, signup);
  *               $ref: '#/components/schemas/ErrorResponse'
  */
 router.post('/login', strictRateLimiter, login);
+
+/**
+ * @openapi
+ * /api/users/verify-otp:
+ *   post:
+ *     tags:
+ *       - Users
+ *     summary: Verify OTP for instructor 2FA login
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - userId
+ *               - code
+ *             properties:
+ *               userId:
+ *                 type: string
+ *                 description: User ID received from login response
+ *               code:
+ *                 type: string
+ *                 minLength: 6
+ *                 maxLength: 6
+ *                 description: 6-digit OTP code
+ *     responses:
+ *       200:
+ *         description: OTP verified, login successful.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/AuthResponse'
+ *       400:
+ *         description: Invalid or expired OTP.
+ */
+router.post('/verify-otp', strictRateLimiter, verifyLoginOtp);
+
+/**
+ * @openapi
+ * /api/users/resend-otp:
+ *   post:
+ *     tags:
+ *       - Users
+ *     summary: Resend OTP for instructor 2FA login
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - userId
+ *             properties:
+ *               userId:
+ *                 type: string
+ *                 description: User ID received from login response
+ *     responses:
+ *       200:
+ *         description: OTP resent successfully.
+ *       429:
+ *         description: Rate limit exceeded, wait before resending.
+ */
+router.post('/resend-otp', strictRateLimiter, resendLoginOtp);
 
 /**
  * @openapi

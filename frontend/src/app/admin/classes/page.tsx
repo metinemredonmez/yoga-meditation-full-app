@@ -196,8 +196,8 @@ export default function ClassesPage() {
       const classData = {
         ...formData,
         schedule: new Date().toISOString(),
-        thumbnailUrl,
-        videoUrl,
+        thumbnailUrl: thumbnailUrl ?? undefined,
+        videoUrl: videoUrl ?? undefined,
       };
 
       if (editingClass) {

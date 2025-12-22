@@ -67,17 +67,16 @@ type DifficultyType = 'BEGINNER' | 'INTERMEDIATE' | 'ADVANCED';
 interface Meditation {
   id: string;
   title: string;
-  titleTr?: string;
+  titleEn?: string;
   slug: string;
   description: string;
-  durationSeconds: number;
+  duration: number;
   difficulty: DifficultyType;
   audioUrl?: string;
-  imageUrl?: string;
-  thumbnailUrl?: string;
+  coverImage?: string;
   isPremium: boolean;
   isFeatured: boolean;
-  isActive: boolean;
+  isPublished: boolean;
   playCount: number;
   averageRating?: number;
   ratingCount?: number;
@@ -175,8 +174,8 @@ export function MeditationsTable() {
 
   const handleTogglePublish = async (meditation: Meditation) => {
     try {
-      await updateMeditation(meditation.id, { isActive: !meditation.isActive });
-      toast.success(meditation.isActive ? 'Yayından kaldırıldı' : 'Yayınlandı');
+      await updateMeditation(meditation.id, { isPublished: !meditation.isPublished } as any);
+      toast.success(meditation.isPublished ? 'Yayından kaldırıldı' : 'Yayınlandı');
       loadMeditations();
     } catch (error) {
       toast.error('İşlem başarısız');
@@ -185,7 +184,7 @@ export function MeditationsTable() {
 
   const handleToggleFeatured = async (meditation: Meditation) => {
     try {
-      await updateMeditation(meditation.id, { isFeatured: !meditation.isFeatured });
+      await updateMeditation(meditation.id, { isFeatured: !meditation.isFeatured } as any);
       toast.success(meditation.isFeatured ? 'Öne çıkan kaldırıldı' : 'Öne çıkarıldı');
       loadMeditations();
     } catch (error) {
@@ -322,9 +321,9 @@ export function MeditationsTable() {
                   <TableRow key={meditation.id}>
                     <TableCell>
                       <div className="relative h-10 w-10 flex-shrink-0">
-                        {meditation.thumbnailUrl || meditation.imageUrl ? (
+                        {meditation.coverImage ? (
                           <img
-                            src={meditation.thumbnailUrl || meditation.imageUrl}
+                            src={meditation.coverImage}
                             alt={meditation.title}
                             className="h-10 w-10 rounded object-cover"
                           />
@@ -358,7 +357,7 @@ export function MeditationsTable() {
                     <TableCell>
                       <div className="flex items-center gap-1 text-sm">
                         <IconClock className="h-3 w-3 text-muted-foreground" />
-                        {formatDuration(meditation.durationSeconds)}
+                        {formatDuration(meditation.duration)}
                       </div>
                     </TableCell>
                     <TableCell>{getDifficultyBadge(meditation.difficulty)}</TableCell>
@@ -386,7 +385,7 @@ export function MeditationsTable() {
                       )}
                     </TableCell>
                     <TableCell>
-                      {meditation.isActive ? (
+                      {meditation.isPublished ? (
                         <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700 dark:bg-green-400/20 dark:text-green-400">
                           Yayında
                         </span>
@@ -413,7 +412,7 @@ export function MeditationsTable() {
                             Düzenle
                           </DropdownMenuItem>
                           <DropdownMenuItem onClick={() => handleTogglePublish(meditation)}>
-                            {meditation.isActive ? (
+                            {meditation.isPublished ? (
                               <>
                                 <IconEyeOff className="mr-2 h-4 w-4" />
                                 Yayından Kaldır

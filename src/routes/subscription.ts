@@ -27,6 +27,72 @@ const router = Router();
  *   description: Subscription management
  */
 
+// ==================== Public Routes ====================
+
+/**
+ * @swagger
+ * /api/subscription/payment-methods:
+ *   get:
+ *     summary: Get available payment methods configuration
+ *     tags: [Subscription]
+ *     responses:
+ *       200:
+ *         description: Payment methods configuration
+ */
+router.get('/payment-methods', async (req, res) => {
+  try {
+    // Import the service dynamically to avoid circular deps
+    const { integrationSettingsService } = await import('../services/integrationSettingsService');
+
+    // Get Google Pay Web config
+    const googlePayConfig = await integrationSettingsService.getProviderConfig('payment', 'google_pay_web');
+    const googlePayStatus = await integrationSettingsService.getProviderStatus('payment', 'google_pay_web');
+
+    // Get Apple Pay Web config
+    const applePayConfig = await integrationSettingsService.getProviderConfig('payment', 'apple_pay_web');
+    const applePayStatus = await integrationSettingsService.getProviderStatus('payment', 'apple_pay_web');
+
+    // Get Stripe config for publishable key
+    const stripeConfig = await integrationSettingsService.getProviderConfig('payment', 'stripe');
+    const stripeStatus = await integrationSettingsService.getProviderStatus('payment', 'stripe');
+
+    res.json({
+      success: true,
+      data: {
+        googlePay: {
+          enabled: googlePayStatus.isActive && googlePayConfig.is_enabled === 'true',
+          merchantId: googlePayConfig.merchant_id || '',
+          merchantName: googlePayConfig.merchant_name || 'Yoga App',
+          environment: googlePayConfig.environment || 'TEST',
+          gateway: googlePayConfig.gateway || 'stripe',
+          allowedCardNetworks: googlePayConfig.allowed_card_networks?.split(',') || ['VISA', 'MASTERCARD'],
+        },
+        applePay: {
+          enabled: applePayStatus.isActive && applePayConfig.is_enabled === 'true',
+          merchantId: applePayConfig.merchant_id || '',
+          merchantName: applePayConfig.merchant_name || 'Yoga App',
+          domainName: applePayConfig.domain_name || '',
+          supportedNetworks: applePayConfig.supported_networks?.split(',') || ['visa', 'masterCard', 'amex'],
+        },
+        stripe: {
+          enabled: stripeStatus.isActive && stripeStatus.isConfigured,
+          publishableKey: stripeConfig.publishable_key || process.env.STRIPE_PUBLISHABLE_KEY || '',
+        },
+      },
+    });
+  } catch (error) {
+    console.error('Failed to get payment methods:', error);
+    res.json({
+      success: true,
+      data: {
+        googlePay: { enabled: false },
+        applePay: { enabled: false },
+        stripe: { enabled: false, publishableKey: process.env.STRIPE_PUBLISHABLE_KEY || '' },
+      },
+    });
+  }
+});
+
 // ==================== User Routes ====================
 
 /**

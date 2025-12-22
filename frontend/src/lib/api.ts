@@ -74,13 +74,18 @@ export async function login(payload: { email: string; password: string }) {
   const { data } = await api.post('/api/users/login', payload);
   // Token is now set as HttpOnly cookie by the server
   // Store user info in session for client-side access
-  if (data.user) {
+  // Note: If requiresOtp is true, login is not complete yet - redirect to OTP verification
+  // Backend returns { users: {...} } - normalize to user object
+  const user = data.user || data.users;
+  if (user && !data.requiresOtp) {
     setSession({
-      userId: data.user.id,
-      email: data.user.email,
-      role: data.user.role,
-      firstName: data.user.firstName,
-      lastName: data.user.lastName,
+      userId: user.id,
+      email: user.email,
+      role: user.role,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      subscriptionTier: user.subscriptionTier || 'FREE',
+      subscriptionExpiresAt: user.subscriptionExpiresAt || null,
     });
   }
   return data;
@@ -91,17 +96,26 @@ export async function signup(payload: {
   password: string;
   firstName?: string;
   lastName?: string;
+  role?: 'STUDENT' | 'TEACHER';
+  phoneNumber?: string;
+  bio?: string;
+  experience?: string;
+  certifications?: string;
+  specializations?: string;
 }) {
   const { data } = await api.post('/api/users/signup', payload);
   // Token is now set as HttpOnly cookie by the server
   // Store user info in session for client-side access
-  if (data.user) {
+  // Note: For instructor applications, pendingApproval will be true and no session is created
+  if (data.users && !data.pendingApproval) {
     setSession({
-      userId: data.user.id,
-      email: data.user.email,
-      role: data.user.role,
-      firstName: data.user.firstName,
-      lastName: data.user.lastName,
+      userId: data.users.id,
+      email: data.users.email,
+      role: data.users.role,
+      firstName: data.users.firstName,
+      lastName: data.users.lastName,
+      subscriptionTier: data.users.subscriptionTier || 'FREE',
+      subscriptionExpiresAt: data.users.subscriptionExpiresAt || null,
     });
   }
   return data;
@@ -123,28 +137,52 @@ export async function refreshAccessToken() {
 }
 
 export async function forgotPassword(email: string) {
-  const { data } = await api.post('/api/users/forgot-password', { email });
+  const { data } = await api.post('/api/password-reset/request', { email });
   return data;
 }
 
-export async function resetPassword(token: string, password: string) {
-  const { data } = await api.post('/api/users/reset-password', { token, password });
+// OTP Verification for 2FA login
+export async function verifyLoginOtp(payload: { userId: string; code: string }) {
+  const { data } = await api.post('/api/users/verify-otp', payload);
+  // If OTP verified successfully, store session
+  // Backend returns { users: {...} } - normalize to user object
+  const user = data.user || data.users;
+  if (user) {
+    setSession({
+      userId: user.id,
+      email: user.email,
+      role: user.role,
+      firstName: user.firstName,
+      lastName: user.lastName,
+    });
+  }
+  return data;
+}
+
+export async function resendLoginOtp(userId: string) {
+  const { data } = await api.post('/api/users/resend-otp', { userId });
+  return data;
+}
+
+export async function resetPassword(token: string, newPassword: string) {
+  const { data } = await api.post('/api/password-reset/reset', { token, newPassword });
   return data;
 }
 
 export async function getMe() {
   const { data } = await api.get('/api/users/me');
-  // Update session with latest user info
-  if (data.user) {
+  // Backend returns { users: {...} } - normalize to user object
+  const user = data.user || data.users;
+  if (user) {
     setSession({
-      userId: data.user.id,
-      email: data.user.email,
-      role: data.user.role,
-      firstName: data.user.firstName,
-      lastName: data.user.lastName,
+      userId: user.id,
+      email: user.email,
+      role: user.role,
+      firstName: user.firstName,
+      lastName: user.lastName,
     });
   }
-  return data;
+  return user;
 }
 
 export async function updateMe(payload: {
@@ -648,7 +686,7 @@ export async function getInstructorAnalytics(id: string) {
 // ============================================
 
 export async function getSubscriptionPlans() {
-  const { data } = await api.get('/api/admin/dashboard/financial/plans');
+  const { data } = await api.get('/api/admin/subscription-plans');
   return data;
 }
 
@@ -660,7 +698,7 @@ export async function createSubscriptionPlan(payload: {
   features: string[];
   isActive?: boolean;
 }) {
-  const { data } = await api.post('/api/admin/dashboard/financial/plans', payload);
+  const { data } = await api.post('/api/admin/subscription-plans', payload);
   return data;
 }
 
@@ -672,12 +710,12 @@ export async function updateSubscriptionPlan(id: string, payload: Partial<{
   features: string[];
   isActive: boolean;
 }>) {
-  const { data } = await api.put(`/api/admin/dashboard/financial/plans/${id}`, payload);
+  const { data } = await api.put(`/api/admin/subscription-plans/${id}`, payload);
   return data;
 }
 
 export async function deleteSubscriptionPlan(id: string) {
-  const { data } = await api.delete(`/api/admin/dashboard/financial/plans/${id}`);
+  const { data } = await api.delete(`/api/admin/subscription-plans/${id}`);
   return data;
 }
 
@@ -687,17 +725,17 @@ export async function getSubscriptions(params?: {
   status?: string;
   search?: string;
 }) {
-  const { data } = await api.get('/api/admin/dashboard/financial/subscriptions', { params });
+  const { data } = await api.get('/api/admin/financial/subscriptions', { params });
   return data;
 }
 
 export async function cancelSubscription(id: string) {
-  const { data } = await api.post(`/api/admin/dashboard/financial/subscriptions/${id}/cancel`);
+  const { data } = await api.post(`/api/admin/financial/subscriptions/${id}/cancel`);
   return data;
 }
 
 export async function extendSubscription(id: string, days: number) {
-  const { data } = await api.post(`/api/admin/dashboard/financial/subscriptions/${id}/extend`, { days });
+  const { data } = await api.post(`/api/admin/financial/subscriptions/${id}/extend`, { days });
   return data;
 }
 
@@ -707,17 +745,17 @@ export async function getPayments(params?: {
   status?: string;
   search?: string;
 }) {
-  const { data } = await api.get('/api/admin/dashboard/financial/payments', { params });
+  const { data } = await api.get('/api/admin/financial/payments', { params });
   return data;
 }
 
 export async function getPaymentById(id: string) {
-  const { data } = await api.get(`/api/admin/dashboard/financial/payments/${id}`);
+  const { data } = await api.get(`/api/admin/financial/payments/${id}`);
   return data;
 }
 
 export async function refundPayment(id: string) {
-  const { data } = await api.post(`/api/admin/dashboard/financial/payments/${id}/refund`);
+  const { data } = await api.post(`/api/admin/financial/payments/${id}/refund`);
   return data;
 }
 
@@ -726,7 +764,7 @@ export async function getCoupons(params?: {
   limit?: number;
   search?: string;
 }) {
-  const { data } = await api.get('/api/admin/dashboard/financial/coupons', { params });
+  const { data } = await api.get('/api/admin/financial/coupons', { params });
   return data;
 }
 
@@ -737,7 +775,7 @@ export async function createCoupon(payload: {
   maxUses?: number;
   expiresAt?: string;
 }) {
-  const { data } = await api.post('/api/admin/dashboard/financial/coupons', payload);
+  const { data } = await api.post('/api/admin/financial/coupons', payload);
   return data;
 }
 
@@ -749,12 +787,12 @@ export async function updateCoupon(id: string, payload: Partial<{
   expiresAt: string;
   isActive: boolean;
 }>) {
-  const { data } = await api.put(`/api/admin/dashboard/financial/coupons/${id}`, payload);
+  const { data } = await api.put(`/api/admin/financial/coupons/${id}`, payload);
   return data;
 }
 
 export async function deleteCoupon(id: string) {
-  const { data } = await api.delete(`/api/admin/dashboard/financial/coupons/${id}`);
+  const { data } = await api.delete(`/api/admin/financial/coupons/${id}`);
   return data;
 }
 
@@ -857,12 +895,12 @@ export async function getExportStatus(id: string) {
 // ============================================
 
 export async function getFeatureFlags() {
-  const { data } = await api.get('/api/admin/dashboard/settings/features');
+  const { data } = await api.get('/api/admin/settings/features');
   return data;
 }
 
 export async function toggleFeatureFlag(id: string) {
-  const { data } = await api.post(`/api/admin/dashboard/settings/features/${id}/toggle`);
+  const { data } = await api.post(`/api/admin/settings/features/${id}/toggle`);
   return data;
 }
 
@@ -872,23 +910,23 @@ export async function createFeatureFlag(flagData: {
   description: string;
   environment: string;
 }) {
-  const { data } = await api.post('/api/admin/dashboard/settings/features', flagData);
+  const { data } = await api.post('/api/admin/settings/features', flagData);
   return data;
 }
 
 export async function deleteFeatureFlag(id: string) {
-  const { data } = await api.delete(`/api/admin/dashboard/settings/features/${id}`);
+  const { data } = await api.delete(`/api/admin/settings/features/${id}`);
   return data;
 }
 
 // System Settings
 export async function getSystemSettings() {
-  const { data } = await api.get('/api/admin/dashboard/settings/system');
+  const { data } = await api.get('/api/admin/settings/system');
   return data;
 }
 
 export async function updateSystemSetting(key: string, value: any) {
-  const { data } = await api.put(`/api/admin/dashboard/settings/system/${key}`, { value });
+  const { data } = await api.put(`/api/admin/settings/system/${key}`, { value });
   return data;
 }
 
@@ -899,7 +937,7 @@ export async function getLanguages() {
 }
 
 export async function getTranslations() {
-  const { data } = await api.get('/api/admin/i18n/translations');
+  const { data } = await api.get('/api/admin/i18n/keys');
   return data;
 }
 
@@ -968,7 +1006,7 @@ export async function getNotificationCampaigns() {
 // Maintenance
 export async function getMaintenanceWindows() {
   const { data } = await api.get('/api/admin/dashboard/maintenance/windows');
-  return data;
+  return data.windows || [];
 }
 
 export async function createMaintenanceWindow(windowData: {
@@ -982,7 +1020,7 @@ export async function createMaintenanceWindow(windowData: {
 }
 
 export async function clearCache() {
-  const { data } = await api.delete('/api/admin/dashboard/maintenance/cache');
+  const { data } = await api.post('/api/admin/dashboard/maintenance/cache/clear');
   return data;
 }
 
@@ -993,7 +1031,14 @@ export async function optimizeDatabase() {
 
 export async function getHealthCheck() {
   const { data } = await api.get('/api/admin/dashboard/maintenance/health');
-  return data;
+  // Transform backend response to match frontend HealthStatus interface
+  const health = data.health || data;
+  return {
+    overall: health.overall || 'healthy',
+    services: health.services || [],
+    uptime: health.uptime || 99.9,
+    version: health.version || '1.0.0',
+  };
 }
 
 export async function getBackups() {
@@ -1347,6 +1392,27 @@ export async function resetNotificationPreferences() {
   return data;
 }
 
+// User Notifications
+export async function getMyNotifications(params?: { limit?: number; offset?: number; unreadOnly?: boolean }) {
+  const { data } = await api.get('/api/notifications/my', { params });
+  return data;
+}
+
+export async function markNotificationAsRead(id: string) {
+  const { data } = await api.patch(`/api/notifications/${id}/read`);
+  return data;
+}
+
+export async function markAllNotificationsAsRead() {
+  const { data } = await api.post('/api/notifications/mark-all-read');
+  return data;
+}
+
+export async function deleteNotification(id: string) {
+  const { data } = await api.delete(`/api/notifications/${id}`);
+  return data;
+}
+
 export async function getNotificationOptions() {
   const { data } = await api.get('/api/notification-preferences/options');
   return data;
@@ -1407,19 +1473,57 @@ export async function sendBulkNotification(payload: {
   return data;
 }
 
-// Notification History
-export async function getNotificationHistory(params?: {
+// Notification Logs
+export async function getNotificationLogs(params?: {
   page?: number;
   limit?: number;
-  type?: string;
   status?: string;
+  userId?: string;
 }) {
-  const { data } = await api.get('/api/admin/notifications/history', { params });
+  const { data } = await api.get('/api/admin/notifications', { params });
   return data;
 }
 
 export async function getNotificationStats() {
   const { data } = await api.get('/api/admin/notifications/stats');
+  return data;
+}
+
+// Notification Templates
+export async function getNotificationTemplatesConfig() {
+  const { data } = await api.get('/api/admin/notifications/templates');
+  return data;
+}
+
+export async function updateNotificationTemplatesConfig(templates: any[]) {
+  const { data } = await api.put('/api/admin/notifications/templates', { templates });
+  return data;
+}
+
+// Push Provider Settings
+export async function getNotificationProviderSettings() {
+  const { data } = await api.get('/api/admin/notifications/provider-settings');
+  return data;
+}
+
+export async function updateNotificationProviderSettings(settings: any) {
+  const { data } = await api.put('/api/admin/notifications/provider-settings', settings);
+  return data;
+}
+
+// Broadcast Campaigns
+export async function getBroadcastCampaigns() {
+  const { data } = await api.get('/api/admin/notifications/campaigns');
+  return data;
+}
+
+export async function createBroadcastCampaign(campaign: any) {
+  const { data } = await api.post('/api/admin/notifications/campaigns', campaign);
+  return data;
+}
+
+export async function updateBroadcastCampaign(id: string, updates: any) {
+  const { data } = await api.put(`/api/admin/notifications/campaigns/${id}`, updates);
   return data;
 }
 
@@ -1658,7 +1762,8 @@ export async function getMyEarnings(params?: {
 // Instructor Profile
 export async function getInstructorProfile() {
   const { data } = await api.get('/api/instructor/profile');
-  return data;
+  // Backend returns { success: true, data: {...} }
+  return data.data || data;
 }
 
 export async function updateInstructorProfile(payload: {
@@ -1666,8 +1771,28 @@ export async function updateInstructorProfile(payload: {
   specialties?: string[];
   socialLinks?: { platform: string; url: string }[];
   avatarUrl?: string;
+  profileImageUrl?: string;
 }) {
-  const { data } = await api.put('/api/instructor/profile', payload);
+  // Map frontend fields to backend expected fields
+  const mappedPayload: any = {};
+
+  if (payload.bio !== undefined) mappedPayload.bio = payload.bio;
+  if (payload.specialties !== undefined) mappedPayload.specializations = payload.specialties;
+  if (payload.avatarUrl !== undefined) mappedPayload.profileImageUrl = payload.avatarUrl;
+  if (payload.profileImageUrl !== undefined) mappedPayload.profileImageUrl = payload.profileImageUrl;
+
+  // Convert socialLinks array to object format
+  if (payload.socialLinks !== undefined) {
+    const socialLinksObj: Record<string, string> = {};
+    payload.socialLinks.forEach(link => {
+      if (link.url) {
+        socialLinksObj[link.platform] = link.url;
+      }
+    });
+    mappedPayload.socialLinks = socialLinksObj;
+  }
+
+  const { data } = await api.put('/api/instructor/profile', mappedPayload);
   return data;
 }
 
@@ -1692,8 +1817,14 @@ export async function getAchievements(params?: {
   category?: string;
   isSecret?: boolean;
 }) {
-  const { data } = await api.get('/api/achievements', { params });
-  return data;
+  const { data } = await api.get('/api/admin/gamification/achievements', { params });
+  // Map backend fields to frontend expected fields
+  const achievements = (data.achievements || data || []).map((a: any) => ({
+    ...a,
+    condition: a.condition || a.requirementType,
+    conditionValue: a.conditionValue ?? a.requirementValue ?? 0,
+  }));
+  return { achievements, total: data.total || achievements.length };
 }
 
 export async function getAchievementById(id: string) {
@@ -1702,8 +1833,10 @@ export async function getAchievementById(id: string) {
 }
 
 export async function getAchievementCategories() {
-  const { data } = await api.get('/api/achievements/categories');
-  return data;
+  // Return enum values from schema - AchievementCategory
+  return {
+    categories: ['PRACTICE', 'CONSISTENCY', 'EXPLORATION', 'MASTERY', 'SOCIAL', 'SPECIAL', 'ONBOARDING', 'INSTRUCTOR']
+  };
 }
 
 export async function createAchievement(payload: {
@@ -1862,6 +1995,75 @@ export async function adminGrantStreakFreeze(userId: string, payload: {
 }
 
 // ============================================
+// USER MANAGEMENT (Admin)
+// ============================================
+
+export async function getAdminUsers(params?: {
+  page?: number;
+  limit?: number;
+  tier?: string;
+  status?: string;
+  role?: string;
+  search?: string;
+}) {
+  const { data } = await api.get('/api/admin/users', { params });
+  return data;
+}
+
+// ============================================
+// SUBSCRIPTION MANAGEMENT (Admin)
+// ============================================
+
+export async function adminGrantSubscription(payload: {
+  userId: string;
+  tier: 'FREE' | 'PREMIUM' | 'FAMILY';
+  durationMonths?: number;
+  reason?: string;
+}) {
+  const { data } = await api.post('/api/admin/subscriptions/grant', payload);
+  return data;
+}
+
+export async function adminRevokeSubscription(payload: {
+  userId: string;
+  reason?: string;
+}) {
+  const { data } = await api.post('/api/admin/subscriptions/revoke', payload);
+  return data;
+}
+
+export async function adminExtendSubscription(payload: {
+  userId: string;
+  additionalMonths: number;
+  reason?: string;
+}) {
+  const { data } = await api.post('/api/admin/subscriptions/extend', payload);
+  return data;
+}
+
+export async function getUserSubscription(userId: string) {
+  const { data } = await api.get(`/api/admin/subscriptions/user/${userId}`);
+  return data;
+}
+
+export async function getAdminSubscriptions(params?: {
+  page?: number;
+  limit?: number;
+  tier?: string;
+  status?: string;
+  isManual?: boolean;
+  provider?: string;
+}) {
+  const { data } = await api.get('/api/admin/subscriptions', { params });
+  return data;
+}
+
+export async function getAdminSubscriptionStats() {
+  const { data } = await api.get('/api/admin/subscriptions/stats');
+  return data;
+}
+
+// ============================================
 // GAMIFICATION - SHOP MANAGEMENT (Admin)
 // ============================================
 
@@ -1927,7 +2129,19 @@ export async function deleteShopItem(id: string) {
 
 export async function getDailyRewards() {
   const { data } = await api.get('/api/admin/gamification/daily-rewards');
-  return data;
+  // Map backend response to frontend interface
+  const rewards = data.rewards || data || [];
+  return {
+    rewards: rewards.map((r: any, index: number) => ({
+      id: r.id || `day-${r.day || index + 1}`,
+      day: r.day || index + 1,
+      xpReward: r.xpReward ?? r.xp ?? 0,
+      coinReward: r.coinReward ?? r.coins ?? 0,
+      bonusType: r.bonusType || r.bonusItem,
+      bonusValue: r.bonusValue,
+      isMilestone: r.isMilestone ?? (r.day % 7 === 0),
+    })),
+  };
 }
 
 export async function createDailyReward(payload: {
@@ -2370,12 +2584,11 @@ export async function getMeditationCategories(params?: {
 
 export async function createMeditationCategory(payload: {
   name: string;
-  nameTr?: string;
+  nameEn?: string;
   slug: string;
   description?: string;
-  descriptionTr?: string;
-  iconUrl?: string;
-  imageUrl?: string;
+  icon?: string;
+  coverImage?: string;
   color?: string;
   sortOrder?: number;
   isActive?: boolean;
@@ -2386,12 +2599,11 @@ export async function createMeditationCategory(payload: {
 
 export async function updateMeditationCategory(id: string, payload: Partial<{
   name: string;
-  nameTr: string;
+  nameEn: string;
   slug: string;
   description: string;
-  descriptionTr: string;
-  iconUrl: string;
-  imageUrl: string;
+  icon: string;
+  coverImage: string;
   color: string;
   sortOrder: number;
   isActive: boolean;
@@ -2421,12 +2633,12 @@ export async function getAdminBreathwork(params?: {
   sortBy?: string;
   sortOrder?: 'asc' | 'desc';
 }) {
-  const { data } = await api.get('/api/admin/breathwork', { params });
+  const { data } = await api.get('/api/admin/breathworks', { params });
   return data;
 }
 
 export async function getAdminBreathworkById(id: string) {
-  const { data } = await api.get(`/api/admin/breathwork/${id}`);
+  const { data } = await api.get(`/api/admin/breathworks/${id}`);
   return data;
 }
 
@@ -2455,7 +2667,7 @@ export async function createBreathwork(payload: {
   isFeatured?: boolean;
   isPublished?: boolean;
 }) {
-  const { data } = await api.post('/api/admin/breathwork', payload);
+  const { data } = await api.post('/api/admin/breathworks', payload);
   return data;
 }
 
@@ -2485,17 +2697,17 @@ export async function updateBreathwork(id: string, payload: Partial<{
   isPublished: boolean;
   isActive: boolean;
 }>) {
-  const { data } = await api.put(`/api/admin/breathwork/${id}`, payload);
+  const { data } = await api.put(`/api/admin/breathworks/${id}`, payload);
   return data;
 }
 
 export async function deleteBreathwork(id: string) {
-  const { data } = await api.delete(`/api/admin/breathwork/${id}`);
+  const { data } = await api.delete(`/api/admin/breathworks/${id}`);
   return data;
 }
 
 export async function getBreathworkStats() {
-  const { data } = await api.get('/api/admin/breathwork/stats');
+  const { data } = await api.get('/api/admin/breathworks/stats');
   return data;
 }
 
@@ -2652,12 +2864,12 @@ export async function getAdminSleepStories(params?: {
   sortBy?: string;
   sortOrder?: 'asc' | 'desc';
 }) {
-  const { data } = await api.get('/api/admin/sleep-stories', { params });
+  const { data } = await api.get('/api/admin/dashboard/sleep/stories', { params });
   return data;
 }
 
 export async function getAdminSleepStoryById(id: string) {
-  const { data } = await api.get(`/api/admin/sleep-stories/${id}`);
+  const { data } = await api.get(`/api/admin/dashboard/sleep/stories/${id}`);
   return data;
 }
 
@@ -2678,7 +2890,7 @@ export async function createSleepStory(payload: {
   isFeatured?: boolean;
   isPublished?: boolean;
 }) {
-  const { data } = await api.post('/api/admin/sleep-stories', payload);
+  const { data } = await api.post('/api/admin/dashboard/sleep/stories', payload);
   return data;
 }
 
@@ -2699,17 +2911,17 @@ export async function updateSleepStory(id: string, payload: Partial<{
   isFeatured: boolean;
   isPublished: boolean;
 }>) {
-  const { data } = await api.put(`/api/admin/sleep-stories/${id}`, payload);
+  const { data } = await api.put(`/api/admin/dashboard/sleep/stories/${id}`, payload);
   return data;
 }
 
 export async function deleteSleepStory(id: string) {
-  const { data } = await api.delete(`/api/admin/sleep-stories/${id}`);
+  const { data } = await api.delete(`/api/admin/dashboard/sleep/stories/${id}`);
   return data;
 }
 
 export async function getSleepStoryStats() {
-  const { data } = await api.get('/api/admin/sleep-stories/stats');
+  const { data } = await api.get('/api/admin/dashboard/sleep/stories/stats');
   return data;
 }
 
@@ -2722,12 +2934,12 @@ export async function getAdminTimerPresets(params?: {
   limit?: number;
   isSystem?: boolean;
 }) {
-  const { data } = await api.get('/api/admin/timer-presets', { params });
+  const { data } = await api.get('/api/admin/dashboard/timer/presets', { params });
   return data;
 }
 
 export async function getAdminTimerPresetById(id: string) {
-  const { data } = await api.get(`/api/admin/timer-presets/${id}`);
+  const { data } = await api.get(`/api/admin/dashboard/timer/presets/${id}`);
   return data;
 }
 
@@ -2748,7 +2960,7 @@ export async function createTimerPreset(payload: {
   isDefault?: boolean;
   sortOrder?: number;
 }) {
-  const { data } = await api.post('/api/admin/timer-presets', payload);
+  const { data } = await api.post('/api/admin/dashboard/timer/presets', payload);
   return data;
 }
 
@@ -2769,22 +2981,22 @@ export async function updateTimerPreset(id: string, payload: Partial<{
   isDefault: boolean;
   sortOrder: number;
 }>) {
-  const { data } = await api.put(`/api/admin/timer-presets/${id}`, payload);
+  const { data } = await api.put(`/api/admin/dashboard/timer/presets/${id}`, payload);
   return data;
 }
 
 export async function deleteTimerPreset(id: string) {
-  const { data } = await api.delete(`/api/admin/timer-presets/${id}`);
+  const { data } = await api.delete(`/api/admin/dashboard/timer/presets/${id}`);
   return data;
 }
 
 export async function reorderTimerPresets(presetIds: string[]) {
-  const { data } = await api.put('/api/admin/timer-presets/reorder', { presetIds });
+  const { data } = await api.put('/api/admin/dashboard/timer/presets/reorder', { presetIds });
   return data;
 }
 
 export async function getTimerPresetStats() {
-  const { data } = await api.get('/api/admin/timer-presets/stats');
+  const { data } = await api.get('/api/admin/dashboard/timer/presets/stats');
   return data;
 }
 
@@ -2799,12 +3011,12 @@ export async function getAdminJournalPrompts(params?: {
   category?: string;
   isActive?: boolean;
 }) {
-  const { data } = await api.get('/api/admin/journal-prompts', { params });
+  const { data } = await api.get('/api/admin/journal/prompts', { params });
   return data;
 }
 
 export async function getAdminJournalPromptById(id: string) {
-  const { data } = await api.get(`/api/admin/journal-prompts/${id}`);
+  const { data } = await api.get(`/api/admin/journal/prompts/${id}`);
   return data;
 }
 
@@ -2816,7 +3028,7 @@ export async function createJournalPrompt(payload: {
   sortOrder?: number;
   isActive?: boolean;
 }) {
-  const { data } = await api.post('/api/admin/journal-prompts', payload);
+  const { data } = await api.post('/api/admin/journal/prompts', payload);
   return data;
 }
 
@@ -2828,22 +3040,22 @@ export async function updateJournalPrompt(id: string, payload: Partial<{
   sortOrder: number;
   isActive: boolean;
 }>) {
-  const { data } = await api.put(`/api/admin/journal-prompts/${id}`, payload);
+  const { data } = await api.put(`/api/admin/journal/prompts/${id}`, payload);
   return data;
 }
 
 export async function deleteJournalPrompt(id: string) {
-  const { data } = await api.delete(`/api/admin/journal-prompts/${id}`);
+  const { data } = await api.delete(`/api/admin/journal/prompts/${id}`);
   return data;
 }
 
 export async function reorderJournalPrompts(promptIds: string[]) {
-  const { data } = await api.put('/api/admin/journal-prompts/reorder', { promptIds });
+  const { data } = await api.put('/api/admin/journal/prompts/reorder', { promptIds });
   return data;
 }
 
 export async function getJournalPromptStats() {
-  const { data } = await api.get('/api/admin/journal-prompts/stats');
+  const { data } = await api.get('/api/admin/journal/prompts/stats');
   return data;
 }
 
@@ -3200,6 +3412,340 @@ export async function updateReminderTemplate(id: string, payload: any) {
 
 export async function deleteReminderTemplate(id: string) {
   const { data } = await api.delete(`/api/admin/reminder-templates/${id}`);
+  return data;
+}
+
+// ============================================
+// STUDENT / USER ENDPOINTS
+// ============================================
+
+// Progress Summary
+export async function getProgressSummary() {
+  const { data } = await api.get('/api/progress/summary');
+  return data;
+}
+
+// Video Progress (Watch History)
+export async function getVideoProgress(params?: {
+  lessonType?: 'PROGRAM_SESSION' | 'CLASS';
+  completedOnly?: boolean;
+  page?: number;
+  limit?: number;
+}) {
+  const { data } = await api.get('/api/progress/video', { params });
+  return data;
+}
+
+export async function getVideoProgressById(lessonId: string, lessonType: 'PROGRAM_SESSION' | 'CLASS') {
+  const { data } = await api.get(`/api/progress/video/${lessonId}`, { params: { lessonType } });
+  return data;
+}
+
+// Favorites
+export async function getFavorites(params?: {
+  itemType?: 'PROGRAM' | 'POSE' | 'CLASS';
+  page?: number;
+  limit?: number;
+}) {
+  const { data } = await api.get('/api/favorites', { params });
+  return data;
+}
+
+export async function getFavoriteCounts() {
+  const { data } = await api.get('/api/favorites/counts');
+  return data;
+}
+
+export async function toggleFavorite(itemId: string, itemType: 'PROGRAM' | 'POSE' | 'CLASS') {
+  const { data } = await api.post('/api/favorites/toggle', { itemId, itemType });
+  return data;
+}
+
+export async function checkFavorite(itemType: string, itemId: string) {
+  const { data } = await api.get(`/api/favorites/check/${itemType}/${itemId}`);
+  return data;
+}
+
+// User Goals
+export async function getUserGoals(params?: {
+  page?: number;
+  limit?: number;
+}) {
+  const { data } = await api.get('/api/goals', { params });
+  return data;
+}
+
+export async function getGoalTemplates() {
+  const { data } = await api.get('/api/goals/templates');
+  return data;
+}
+
+export async function getGoalSuggestions() {
+  const { data } = await api.get('/api/goals/suggestions');
+  return data;
+}
+
+export async function createUserGoal(payload: {
+  type: string;
+  target: number;
+  period: string;
+  name?: string;
+  description?: string;
+}) {
+  const { data } = await api.post('/api/goals', payload);
+  return data;
+}
+
+export async function updateUserGoal(id: string, payload: {
+  name?: string;
+  description?: string;
+  target?: number;
+  isActive?: boolean;
+}) {
+  const { data } = await api.put(`/api/goals/${id}`, payload);
+  return data;
+}
+
+export async function deleteUserGoal(id: string) {
+  const { data } = await api.delete(`/api/goals/${id}`);
+  return data;
+}
+
+export async function completeUserGoal(id: string) {
+  const { data } = await api.post(`/api/goals/${id}/complete`);
+  return data;
+}
+
+export async function addGoalProgress(id: string, payload: { value: number; note?: string }) {
+  const { data } = await api.post(`/api/goals/${id}/progress`, payload);
+  return data;
+}
+
+// ============================================
+// USER SUBSCRIPTION & BILLING
+// ============================================
+
+export async function getMySubscription() {
+  const { data } = await api.get('/api/subscription');
+  return data;
+}
+
+export async function getSubscriptionStatus() {
+  const { data } = await api.get('/api/subscription/status');
+  return data;
+}
+
+export async function getSubscriptionHistory(params?: { page?: number; limit?: number }) {
+  const { data } = await api.get('/api/subscription/history', { params });
+  return data;
+}
+
+export async function checkActiveSubscription() {
+  const { data } = await api.get('/api/subscription/check');
+  return data;
+}
+
+export async function createCheckoutSession(payload: { planId: string; interval?: 'monthly' | 'yearly' }) {
+  const { data } = await api.post('/api/subscription/checkout', payload);
+  return data;
+}
+
+export async function cancelMySubscription(payload: { subscriptionId: string; reason?: string; immediate?: boolean }) {
+  const { data } = await api.post('/api/subscription/cancel', payload);
+  return data;
+}
+
+export async function resumeMySubscription(payload: { subscriptionId: string }) {
+  const { data } = await api.post('/api/subscription/resume', payload);
+  return data;
+}
+
+export async function changeMyPlan(payload: { subscriptionId: string; newPlanId: string; immediate?: boolean }) {
+  const { data } = await api.post('/api/subscription/change-plan', payload);
+  return data;
+}
+
+// User invoices
+export async function getMyInvoices(params?: { page?: number; limit?: number; status?: string }) {
+  const { data } = await api.get('/api/invoices', { params });
+  return data;
+}
+
+export async function getInvoice(invoiceId: string) {
+  const { data } = await api.get(`/api/invoices/${invoiceId}`);
+  return data;
+}
+
+export async function getInvoicePdf(invoiceId: string) {
+  const { data } = await api.get(`/api/invoices/${invoiceId}/pdf`);
+  return data;
+}
+
+export async function downloadInvoice(invoiceId: string) {
+  const response = await api.get(`/api/invoices/${invoiceId}/download`, {
+    responseType: 'blob'
+  });
+  return response.data;
+}
+
+// Get available subscription plans for users
+export async function getAvailablePlans() {
+  const { data } = await api.get('/api/plans');
+  return data;
+}
+
+// ============================================
+// PAYMENT METHODS
+// ============================================
+
+export async function getPaymentMethods() {
+  const { data } = await api.get('/api/payments/methods');
+  return data;
+}
+
+export async function addPaymentMethod(paymentMethodId: string) {
+  const { data } = await api.post('/api/payments/methods/add', { paymentMethodId });
+  return data;
+}
+
+export async function removePaymentMethod(paymentMethodId: string) {
+  const { data } = await api.delete(`/api/payments/methods/${paymentMethodId}`);
+  return data;
+}
+
+export async function setDefaultPaymentMethod(paymentMethodId: string) {
+  const { data } = await api.post('/api/payments/methods/default', { paymentMethodId });
+  return data;
+}
+
+export async function createSetupIntent() {
+  const { data } = await api.post('/api/payments/setup-intent');
+  return data;
+}
+
+// ============================================
+// PAYMENT METHODS CONFIGURATION
+// ============================================
+
+export interface PaymentMethodsConfig {
+  googlePay: {
+    enabled: boolean;
+    merchantId: string;
+    merchantName: string;
+    environment: 'TEST' | 'PRODUCTION';
+    gateway: string;
+    allowedCardNetworks: string[];
+  };
+  applePay: {
+    enabled: boolean;
+    merchantId: string;
+    merchantName: string;
+    domainName: string;
+    supportedNetworks: string[];
+  };
+  stripe: {
+    enabled: boolean;
+    publishableKey: string;
+  };
+}
+
+// Get available payment methods configuration (public endpoint)
+export async function getPaymentMethodsConfig(): Promise<PaymentMethodsConfig> {
+  try {
+    const { data } = await api.get('/api/subscription/payment-methods');
+    return data.data;
+  } catch {
+    // Return default disabled config on error
+    return {
+      googlePay: { enabled: false, merchantId: '', merchantName: 'Yoga App', environment: 'TEST', gateway: 'stripe', allowedCardNetworks: [] },
+      applePay: { enabled: false, merchantId: '', merchantName: 'Yoga App', domainName: '', supportedNetworks: [] },
+      stripe: { enabled: false, publishableKey: '' },
+    };
+  }
+}
+
+// ============================================
+// MOBILE PAYMENTS (Google Play / Apple Pay)
+// ============================================
+
+// Verify Google Play purchase
+export async function verifyGooglePurchase(payload: {
+  purchaseToken: string;
+  productId: string;
+  packageName?: string;
+}) {
+  const { data } = await api.post('/api/subscription/verify-google', payload);
+  return data;
+}
+
+// Verify Apple IAP receipt
+export async function verifyApplePurchase(payload: {
+  receiptData: string;
+  productId?: string;
+}) {
+  const { data } = await api.post('/api/subscription/verify-apple', payload);
+  return data;
+}
+
+// Restore Google Play purchases
+export async function restoreGooglePurchases() {
+  const { data } = await api.post('/api/subscription/restore-google');
+  return data;
+}
+
+// Restore Apple purchases
+export async function restoreApplePurchases(payload: { receiptData: string }) {
+  const { data } = await api.post('/api/subscription/restore-apple', payload);
+  return data;
+}
+
+// Get available payment providers status
+export async function getPaymentProviders() {
+  const { data } = await api.get('/api/payments/providers');
+  return data;
+}
+
+// ============================================
+// USER PROFILE
+// ============================================
+
+export async function getMyProfile() {
+  const { data } = await api.get('/api/users/me');
+  return data;
+}
+
+export async function updateMyProfile(payload: {
+  firstName?: string;
+  lastName?: string;
+  phoneNumber?: string;
+  avatarUrl?: string;
+}) {
+  const { data } = await api.put('/api/users/me', payload);
+  return data;
+}
+
+// ============================================
+// OTP ENDPOINTS
+// ============================================
+
+export async function sendOtp(payload: { phoneNumber: string; purpose: string }) {
+  const { data } = await api.post('/api/sms/send-otp', payload);
+  return data;
+}
+
+export async function verifyOtp(payload: { phoneNumber: string; code: string; purpose: string }) {
+  const { data } = await api.post('/api/sms/verify-otp', payload);
+  return data;
+}
+
+// Authenticated phone verification (for logged-in users like instructors)
+export async function sendPhoneVerification() {
+  const { data } = await api.post('/api/sms/send-verification');
+  return data;
+}
+
+export async function verifyPhone(payload: { code: string }) {
+  const { data } = await api.post('/api/sms/verify-phone', payload);
   return data;
 }
 

@@ -100,7 +100,7 @@ export function PodcastForm({ podcastId }: PodcastFormProps) {
     watch,
     formState: { errors }
   } = useForm<PodcastFormData>({
-    resolver: zodResolver(podcastSchema),
+    resolver: zodResolver(podcastSchema) as any,
     defaultValues: {
       language: 'tr',
       isExplicit: false,
@@ -258,7 +258,7 @@ export function PodcastForm({ podcastId }: PodcastFormProps) {
             <CardHeader>
               <CardTitle>Temel Bilgiler</CardTitle>
               <CardDescription>
-                Podcast'in başlık, açıklama ve kategori bilgileri
+                Podcast&apos;in başlık, açıklama ve kategori bilgileri
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">

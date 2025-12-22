@@ -5,13 +5,19 @@ export const breathworkPatternEnum = z.enum(['BOX', 'FOUR_SEVEN_EIGHT', 'ALTERNA
 export const breathworkCategoryEnum = z.enum(['CALM', 'FOCUS', 'ENERGY', 'SLEEP', 'STRESS', 'ANXIETY']);
 export const breathworkAnimationEnum = z.enum(['CIRCLE', 'WAVE', 'LUNG', 'MINIMAL']);
 
+// Difficulty enum for breathwork
+export const breathworkDifficultyEnum = z.enum(['BEGINNER', 'INTERMEDIATE', 'ADVANCED']);
+
 // Query parameter schemas
 export const breathworkFiltersSchema = z.object({
   category: breathworkCategoryEnum.optional(),
   pattern: breathworkPatternEnum.optional(),
-  instructorId: z.string().uuid().optional(),
+  difficulty: breathworkDifficultyEnum.optional(),
+  instructorId: z.string().min(1).optional(),
   isFree: z.coerce.boolean().optional(),
   isFeatured: z.coerce.boolean().optional(),
+  isPremium: z.coerce.boolean().optional(),
+  isActive: z.coerce.boolean().optional(),
   minDuration: z.coerce.number().int().positive().optional(),
   maxDuration: z.coerce.number().int().positive().optional(),
   search: z.string().min(1).optional(),
@@ -22,7 +28,7 @@ export const breathworkFiltersSchema = z.object({
 });
 
 export const breathworkIdParamSchema = z.object({
-  id: z.string().uuid(),
+  id: z.string().min(1),
 });
 
 // Progress update schema

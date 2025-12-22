@@ -31,6 +31,23 @@ export async function logAdminAction(
   });
 }
 
+// Transform log to frontend format
+function transformLog(log: any) {
+  return {
+    id: log.id,
+    adminId: log.adminId,
+    adminEmail: log.users?.email || '',
+    adminName: log.users ? `${log.users.firstName || ''} ${log.users.lastName || ''}`.trim() : '',
+    action: log.action,
+    entityType: log.entityType,
+    entityId: log.entityId || '',
+    details: log.metadata || {},
+    ipAddress: log.ipAddress || '',
+    userAgent: log.userAgent || '',
+    createdAt: log.createdAt,
+  };
+}
+
 // Get audit logs with pagination
 export async function getAuditLogs(filters: AuditLogFilters) {
   const { adminId, action, entityType, entityId, startDate, endDate, page = 1, limit = 50 } = filters;
@@ -60,7 +77,7 @@ export async function getAuditLogs(filters: AuditLogFilters) {
   ]);
 
   return {
-    logs,
+    logs: logs.map(transformLog),
     pagination: { page, limit, total, totalPages: Math.ceil(total / limit) },
   };
 }
@@ -121,7 +138,10 @@ export async function getAuditStats(days = 30) {
   const startDate = new Date();
   startDate.setDate(startDate.getDate() - days);
 
-  const [totalLogs, byAction, byEntityType] = await Promise.all([
+  const last24Hours = new Date();
+  last24Hours.setHours(last24Hours.getHours() - 24);
+
+  const [totalLogs, byAction, byEntityType, recentActivity, topAdmins] = await Promise.all([
     prisma.admin_audit_logs.count({ where: { createdAt: { gte: startDate } } }),
     prisma.admin_audit_logs.groupBy({
       by: ['action'],
@@ -133,12 +153,23 @@ export async function getAuditStats(days = 30) {
       where: { createdAt: { gte: startDate } },
       _count: true,
     }),
+    prisma.admin_audit_logs.count({ where: { createdAt: { gte: last24Hours } } }),
+    prisma.admin_audit_logs.groupBy({
+      by: ['adminId'],
+      where: { createdAt: { gte: startDate } },
+      _count: true,
+      orderBy: { _count: { adminId: 'desc' } },
+      take: 5,
+    }),
   ]);
 
   return {
     totalLogs,
+    actionCounts: Object.fromEntries(byAction.map((a) => [a.action, a._count])),
     byAction: Object.fromEntries(byAction.map((a) => [a.action, a._count])),
     byEntityType: Object.fromEntries(byEntityType.map((e) => [e.entityType, e._count])),
+    recentActivity,
+    topAdmins: topAdmins.map((a) => ({ adminId: a.adminId, count: a._count })),
   };
 }
 
@@ -167,7 +198,7 @@ export async function searchAuditLogs(query: string, page = 1, limit = 50) {
   ]);
 
   return {
-    logs,
+    logs: logs.map(transformLog),
     pagination: { page, limit, total, totalPages: Math.ceil(total / limit) },
   };
 }
@@ -184,11 +215,13 @@ export async function exportAuditLogs(filters: AuditLogFilters) {
     if (filters.endDate) (where.createdAt as Prisma.DateTimeFilter).lte = filters.endDate;
   }
 
-  return prisma.admin_audit_logs.findMany({
+  const logs = await prisma.admin_audit_logs.findMany({
     where,
     orderBy: { createdAt: 'desc' },
     include: {
-      users: { select: { firstName: true, lastName: true, email: true } },
+      users: { select: { id: true, firstName: true, lastName: true, email: true } },
     },
   });
+
+  return logs.map(transformLog);
 }

@@ -113,7 +113,7 @@ export function MoodTagsTable() {
     setLoading(true);
     try {
       const { data } = await api.get('/api/admin/mood-tags', {
-        params: { limit: 100, category: categoryFilter || undefined, search: search || undefined },
+        params: { limit: 100, category: (categoryFilter && categoryFilter !== 'all') ? categoryFilter : undefined, search: search || undefined },
       });
       setTags(data.data || []);
     } catch (error) {
@@ -279,7 +279,7 @@ export function MoodTagsTable() {
               <SelectValue placeholder="Kategori" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">Tümü</SelectItem>
+              <SelectItem value="all">Tümü</SelectItem>
               {CATEGORIES.map((cat) => (
                 <SelectItem key={cat.value} value={cat.value}>
                   {cat.label}

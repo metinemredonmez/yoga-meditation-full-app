@@ -51,14 +51,23 @@ export function NotificationsPanel() {
 
   const loadData = async () => {
     try {
-      const [templatesData, campaignsData] = await Promise.all([
+      const [templatesResponse, campaignsResponse] = await Promise.all([
         getNotificationTemplates(),
         getNotificationCampaigns(),
       ]);
+      // Handle both array and { data: [...] } response formats
+      const templatesData = Array.isArray(templatesResponse)
+        ? templatesResponse
+        : (templatesResponse?.data || templatesResponse?.templates || []);
+      const campaignsData = Array.isArray(campaignsResponse)
+        ? campaignsResponse
+        : (campaignsResponse?.data || campaignsResponse?.campaigns || []);
       setTemplates(templatesData);
       setCampaigns(campaignsData);
     } catch (error) {
       console.error('Failed to load notification data:', error);
+      setTemplates([]);
+      setCampaigns([]);
     } finally {
       setLoading(false);
     }

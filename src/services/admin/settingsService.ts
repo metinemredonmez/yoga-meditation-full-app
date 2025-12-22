@@ -277,14 +277,18 @@ export async function seedDefaultSettings(adminId: string) {
 
 export async function seedDefaultFeatureFlags(adminId: string) {
   const defaultFlags = [
-    { key: 'dark_mode', name: 'Dark Mode', description: 'Enable dark mode UI', isEnabled: true },
-    { key: 'social_login', name: 'Social Login', description: 'Enable social login (Google, Apple)', isEnabled: true },
-    { key: 'offline_mode', name: 'Offline Mode', description: 'Enable offline content access', isEnabled: false },
-    { key: 'ai_recommendations', name: 'AI Recommendations', description: 'AI-powered class recommendations', isEnabled: false, rolloutPercentage: 0 },
-    { key: 'live_classes', name: 'Live Classes', description: 'Enable live streaming classes', isEnabled: false },
+    { key: 'mood_tracking_feature', name: 'Mood Tracking', description: 'Enable mood tracking for users', isEnabled: true },
+    { key: 'dark_mode_feature', name: 'Dark Mode', description: 'Enable dark mode UI', isEnabled: true },
+    { key: 'social_login_feature', name: 'Social Login', description: 'Enable social login (Google, Apple)', isEnabled: true },
+    { key: 'offline_mode_feature', name: 'Offline Mode', description: 'Enable offline content access', isEnabled: false },
+    { key: 'ai_recommendations_feature', name: 'AI Recommendations', description: 'AI-powered class recommendations', isEnabled: false, rolloutPercentage: 0 },
+    { key: 'live_classes_feature', name: 'Live Classes', description: 'Enable live streaming classes', isEnabled: false },
     { key: 'community_features', name: 'Community', description: 'Enable community features (forums, comments)', isEnabled: true },
-    { key: 'advanced_analytics', name: 'Advanced Analytics', description: 'Show advanced user analytics', isEnabled: true },
+    { key: 'advanced_analytics_feature', name: 'Advanced Analytics', description: 'Show advanced user analytics', isEnabled: true },
     { key: 'beta_features', name: 'Beta Features', description: 'Enable beta features for testing', isEnabled: false, rolloutPercentage: 10 },
+    { key: 'push_notifications_feature', name: 'Push Notifications', description: 'Enable push notifications', isEnabled: true },
+    { key: 'workout_reminders_feature', name: 'Workout Reminders', description: 'Enable workout reminder notifications', isEnabled: true },
+    { key: 'streak_tracking_feature', name: 'Streak Tracking', description: 'Enable streak tracking for users', isEnabled: true },
   ];
 
   const results = [];

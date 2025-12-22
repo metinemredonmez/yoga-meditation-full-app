@@ -396,6 +396,29 @@ export async function getAdminMeditations(req: Request, res: Response) {
 }
 
 /**
+ * GET /api/admin/meditations/:id
+ * Get a meditation by ID (admin)
+ */
+export async function getAdminMeditationById(req: Request, res: Response) {
+  try {
+    const { id } = meditationIdParamSchema.parse(req.params);
+    const meditation = await meditationService.getAdminMeditationById(id);
+
+    if (!meditation) {
+      return res.status(404).json({ error: 'Meditation not found' });
+    }
+
+    return res.json({ meditation });
+  } catch (error) {
+    if (error instanceof ZodError) {
+      return res.status(400).json({ error: 'Invalid meditation id', details: error.flatten() });
+    }
+    logger.error({ err: error }, 'Failed to get admin meditation by id');
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+}
+
+/**
  * POST /api/admin/meditations
  * Create a new meditation
  */

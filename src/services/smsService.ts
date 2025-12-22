@@ -13,6 +13,8 @@ import {
 
 let twilioClient: twilio.Twilio | null = null;
 
+type SmsProvider = 'twilio' | 'netgsm' | 'auto';
+
 export interface SendSmsResult {
   success: boolean;
   logId: string;
@@ -47,15 +49,127 @@ export interface PaginatedSmsLogs {
 }
 
 /**
- * Check if SMS/Twilio is properly configured
+ * Check if Twilio is properly configured
  */
-export function isSmsConfigured(): boolean {
+export function isTwilioConfigured(): boolean {
   return !!(
-    config.sms.enabled &&
     config.sms.twilioAccountSid &&
     config.sms.twilioAuthToken &&
     (config.sms.twilioPhoneNumber || config.sms.twilioMessagingServiceSid)
   );
+}
+
+/**
+ * Check if NetGSM is properly configured
+ */
+export function isNetGsmConfigured(): boolean {
+  return !!(
+    config.sms.netgsmUserCode &&
+    config.sms.netgsmPassword &&
+    config.sms.netgsmHeader
+  );
+}
+
+/**
+ * Check if any SMS provider is properly configured
+ */
+export function isSmsConfigured(): boolean {
+  if (!config.sms.enabled) return false;
+  return isTwilioConfigured() || isNetGsmConfigured();
+}
+
+/**
+ * Determine which SMS provider to use
+ */
+export function getActiveProvider(): SmsProvider | null {
+  if (!config.sms.enabled) return null;
+
+  const provider = config.sms.provider as SmsProvider;
+
+  if (provider === 'twilio' && isTwilioConfigured()) {
+    return 'twilio';
+  }
+
+  if (provider === 'netgsm' && isNetGsmConfigured()) {
+    return 'netgsm';
+  }
+
+  // Auto mode: prefer Twilio, fallback to NetGSM
+  if (provider === 'auto') {
+    if (isTwilioConfigured()) return 'twilio';
+    if (isNetGsmConfigured()) return 'netgsm';
+  }
+
+  return null;
+}
+
+/**
+ * Send SMS via NetGSM API
+ */
+async function sendViaNetGsm(
+  phoneNumber: string,
+  message: string,
+): Promise<{ success: boolean; messageId?: string; error?: string }> {
+  try {
+    // NetGSM API endpoint for XML based SMS
+    const apiUrl = 'https://api.netgsm.com.tr/sms/send/get';
+
+    // Format phone number for NetGSM (remove + and leading 0)
+    let formattedPhone = phoneNumber.replace(/\+/g, '');
+    if (formattedPhone.startsWith('90')) {
+      // Already in Turkish format
+    } else if (formattedPhone.startsWith('0')) {
+      formattedPhone = '90' + formattedPhone.substring(1);
+    } else {
+      formattedPhone = '90' + formattedPhone;
+    }
+
+    const params = new URLSearchParams({
+      usercode: config.sms.netgsmUserCode || '',
+      password: config.sms.netgsmPassword || '',
+      gsmno: formattedPhone,
+      message: message,
+      msgheader: config.sms.netgsmHeader || 'YOGAAPP',
+      dil: 'TR',
+    });
+
+    const response = await fetch(`${apiUrl}?${params.toString()}`, {
+      method: 'GET',
+    });
+
+    const responseText = await response.text();
+
+    // NetGSM returns codes like "00" for success, "30" for invalid credentials, etc.
+    // Format: "00 <messageId>" for success
+    const parts = responseText.trim().split(' ');
+    const code = parts[0];
+    const messageId = parts[1] || undefined;
+
+    if (code === '00' || code === '01' || code === '02') {
+      return { success: true, messageId };
+    }
+
+    // Error codes mapping
+    const errorMessages: Record<string, string> = {
+      '20': 'Mesaj metninde hata var',
+      '30': 'Gecersiz kullanici adi veya sifre',
+      '40': 'Mesaj baslik bilgisi hatali',
+      '50': 'Alici numara hatasi',
+      '51': 'Gecersiz numara formatı',
+      '70': 'Bakiye yetersiz',
+      '80': 'Parametre hatasi',
+      '85': 'Musteri IP degisikligi',
+    };
+
+    return {
+      success: false,
+      error: (code && errorMessages[code as keyof typeof errorMessages]) || `NetGSM Error: ${code}`,
+    };
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown NetGSM error';
+    logger.error({ err: error }, 'NetGSM API error');
+    return { success: false, error: errorMessage };
+  }
 }
 
 /**
@@ -66,8 +180,7 @@ function getTwilioClient(): twilio.Twilio | null {
     return twilioClient;
   }
 
-  if (!isSmsConfigured()) {
-    logger.warn('Twilio SMS is not configured - SMS will be simulated');
+  if (!isTwilioConfigured()) {
     return null;
   }
 
@@ -80,50 +193,16 @@ function getTwilioClient(): twilio.Twilio | null {
 }
 
 /**
- * Send SMS message
+ * Send SMS message via Twilio
  */
-export async function sendSms(
-  phoneNumber: string,
+async function sendViaTwilio(
+  formattedPhone: string,
   message: string,
-  userId?: string,
-  messageType: SmsMessageType = 'NOTIFICATION',
-): Promise<SendSmsResult> {
-  const formattedPhone = formatPhoneNumber(phoneNumber);
-
-  // Create SMS log entry
-  const smsLog = await prisma.sms_logs.create({
-    data: {
-      userId: userId ?? null,
-      phoneNumber: formattedPhone,
-      message,
-      messageType,
-      status: 'PENDING',
-    },
-  });
-
+): Promise<{ success: boolean; messageId?: string; error?: string }> {
   const client = getTwilioClient();
 
-  // If not configured, simulate success (dev mode)
   if (!client) {
-    logger.info(
-      { phoneNumber: maskPhoneNumber(formattedPhone), messageType },
-      'SMS simulated (Twilio not configured)',
-    );
-
-    await prisma.sms_logs.update({
-      where: { id: smsLog.id },
-      data: {
-        status: 'SENT',
-        sentAt: new Date(),
-        twilioSid: `SIMULATED_${Date.now()}`,
-      },
-    });
-
-    return {
-      success: true,
-      logId: smsLog.id,
-      twilioSid: `SIMULATED_${Date.now()}`,
-    };
+    return { success: false, error: 'Twilio not configured' };
   }
 
   try {
@@ -145,20 +224,84 @@ export async function sendSms(
     }
 
     const twilioMessage = await client.messages.create(messageOptions);
+    return { success: true, messageId: twilioMessage.sid };
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown Twilio error';
+    logger.error({ err: error }, 'Twilio API error');
+    return { success: false, error: errorMessage };
+  }
+}
+
+/**
+ * Send SMS message
+ */
+export async function sendSms(
+  phoneNumber: string,
+  message: string,
+  userId?: string,
+  messageType: SmsMessageType = 'NOTIFICATION',
+): Promise<SendSmsResult> {
+  const formattedPhone = formatPhoneNumber(phoneNumber);
+  const activeProvider = getActiveProvider();
+
+  // Create SMS log entry
+  const smsLog = await prisma.sms_logs.create({
+    data: {
+      userId: userId ?? null,
+      phoneNumber: formattedPhone,
+      message,
+      messageType,
+      status: 'PENDING',
+    },
+  });
+
+  // If no provider configured, simulate success (dev mode)
+  if (!activeProvider) {
+    logger.info(
+      { phoneNumber: maskPhoneNumber(formattedPhone), messageType },
+      'SMS simulated (no SMS provider configured)',
+    );
 
     await prisma.sms_logs.update({
       where: { id: smsLog.id },
       data: {
         status: 'SENT',
         sentAt: new Date(),
-        twilioSid: twilioMessage.sid,
+        twilioSid: `SIMULATED_${Date.now()}`,
+      },
+    });
+
+    return {
+      success: true,
+      logId: smsLog.id,
+      twilioSid: `SIMULATED_${Date.now()}`,
+    };
+  }
+
+  let result: { success: boolean; messageId?: string; error?: string };
+
+  // Send via the appropriate provider
+  if (activeProvider === 'netgsm') {
+    result = await sendViaNetGsm(formattedPhone, message);
+  } else {
+    result = await sendViaTwilio(formattedPhone, message);
+  }
+
+  if (result.success) {
+    await prisma.sms_logs.update({
+      where: { id: smsLog.id },
+      data: {
+        status: 'SENT',
+        sentAt: new Date(),
+        twilioSid: result.messageId || `${activeProvider.toUpperCase()}_${Date.now()}`,
       },
     });
 
     logger.info(
       {
         phoneNumber: maskPhoneNumber(formattedPhone),
-        twilioSid: twilioMessage.sid,
+        provider: activeProvider,
+        messageId: result.messageId,
         messageType,
       },
       'SMS sent successfully',
@@ -167,30 +310,31 @@ export async function sendSms(
     return {
       success: true,
       logId: smsLog.id,
-      twilioSid: twilioMessage.sid,
+      twilioSid: result.messageId,
     };
-  } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    const errorCode = (error as { code?: string })?.code;
-
+  } else {
     await prisma.sms_logs.update({
       where: { id: smsLog.id },
       data: {
         status: 'FAILED',
-        errorCode: errorCode ?? null,
-        errorMessage,
+        errorCode: activeProvider,
+        errorMessage: result.error || 'Unknown error',
       },
     });
 
     logger.error(
-      { err: error, phoneNumber: maskPhoneNumber(formattedPhone) },
+      {
+        phoneNumber: maskPhoneNumber(formattedPhone),
+        provider: activeProvider,
+        error: result.error
+      },
       'Failed to send SMS',
     );
 
     return {
       success: false,
       logId: smsLog.id,
-      error: errorMessage,
+      error: result.error,
     };
   }
 }
@@ -250,15 +394,42 @@ export async function sendOtp(
       message = `Dogrulama kodunuz: ${otpCode}. ${config.sms.otpExpiryMinutes} dakika gecerlidir.`;
   }
 
-  // Send SMS
+  // In development mode, log OTP to console for testing
+  if (config.NODE_ENV === 'development') {
+    logger.warn(
+      { phoneNumber: maskPhoneNumber(formattedPhone), purpose, otpCode },
+      '🔐 DEV MODE: OTP code (not sending SMS)',
+    );
+    console.log('\n' + '='.repeat(50));
+    console.log(`🔐 DEV MODE OTP CODE: ${otpCode}`);
+    console.log(`📱 Phone: ${maskPhoneNumber(formattedPhone)}`);
+    console.log(`📋 Purpose: ${purpose}`);
+    console.log('='.repeat(50) + '\n');
+  }
+
+  // Send SMS (will fail gracefully in dev if not configured)
   const smsResult = await sendSms(formattedPhone, message, userId, 'OTP');
 
+  // In development, succeed even if SMS fails (we logged the OTP)
   if (!smsResult.success) {
-    return {
-      success: false,
-      message: 'Failed to send OTP',
-      ...(smsResult.error && { error: smsResult.error }),
-    };
+    if (config.NODE_ENV === 'development') {
+      logger.warn(
+        { phoneNumber: maskPhoneNumber(formattedPhone), error: smsResult.error },
+        'SMS failed in dev mode, but OTP is logged above - continuing...',
+      );
+      // In dev mode, return success since we logged the OTP
+      return {
+        success: true,
+        message: 'OTP sent successfully (dev mode - check console)',
+        expiresAt,
+      };
+    } else {
+      return {
+        success: false,
+        message: 'Failed to send OTP',
+        ...(smsResult.error && { error: smsResult.error }),
+      };
+    }
   }
 
   logger.info(

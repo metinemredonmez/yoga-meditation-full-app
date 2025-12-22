@@ -81,16 +81,27 @@ export function MaintenancePanel() {
 
   const loadData = async () => {
     try {
-      const [windowsData, healthData, backupsData] = await Promise.all([
-        getMaintenanceWindows(),
-        getHealthCheck(),
-        getBackups(),
+      const [windowsResponse, healthResponse, backupsResponse] = await Promise.all([
+        getMaintenanceWindows().catch(() => []),
+        getHealthCheck().catch(() => null),
+        getBackups().catch(() => []),
       ]);
+      // Handle both array and { data: [...] } response formats
+      const windowsData = Array.isArray(windowsResponse)
+        ? windowsResponse
+        : (windowsResponse?.data || windowsResponse?.windows || []);
+      const backupsData = Array.isArray(backupsResponse)
+        ? backupsResponse
+        : (backupsResponse?.data || backupsResponse?.backups || []);
+      // Health is an object, not an array
+      const healthData = healthResponse?.overall ? healthResponse : ((healthResponse as any)?.data || null);
       setMaintenanceWindows(windowsData);
       setHealthStatus(healthData);
       setBackups(backupsData);
     } catch (error) {
       console.error('Failed to load maintenance data:', error);
+      setMaintenanceWindows([]);
+      setBackups([]);
     } finally {
       setLoading(false);
     }

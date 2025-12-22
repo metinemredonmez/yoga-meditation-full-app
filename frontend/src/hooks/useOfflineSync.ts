@@ -388,9 +388,10 @@ export function useOfflineSync(): UseOfflineSyncReturn {
       }));
 
       // Register background sync if supported
-      if ('serviceWorker' in navigator && 'sync' in window.registration!) {
+      const windowWithReg = window as Window & { registration?: ServiceWorkerRegistration };
+      if ('serviceWorker' in navigator && windowWithReg.registration && 'sync' in windowWithReg.registration) {
         try {
-          await (window as Window & { registration?: ServiceWorkerRegistration }).registration?.sync.register('sync-offline-actions');
+          await (windowWithReg.registration as any).sync.register('sync-offline-actions');
         } catch {
           // Background sync not supported
         }

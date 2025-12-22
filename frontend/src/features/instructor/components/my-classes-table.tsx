@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -39,6 +39,9 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Switch } from '@/components/ui/switch';
+import { Progress } from '@/components/ui/progress';
 import {
   Select,
   SelectContent,
@@ -58,6 +61,11 @@ import {
   IconLoader2,
   IconVideo,
   IconClock,
+  IconPhoto,
+  IconX,
+  IconMusic,
+  IconPlayerPlay,
+  IconCheck,
 } from '@tabler/icons-react';
 import { toast } from 'sonner';
 import {
@@ -77,14 +85,28 @@ interface MyClass {
   duration: number;
   level: 'BEGINNER' | 'INTERMEDIATE' | 'ADVANCED';
   status: 'DRAFT' | 'PENDING' | 'PUBLISHED' | 'REJECTED';
+  category?: string;
   videoUrl?: string;
+  audioUrl?: string;
   thumbnailUrl?: string;
+  isPremium?: boolean;
+  tags?: string[];
   viewCount: number;
   studentCount: number;
   rating: number;
   createdAt: string;
   updatedAt: string;
 }
+
+const categories = [
+  { value: 'YOGA', label: 'Yoga' },
+  { value: 'MEDITATION', label: 'Meditasyon' },
+  { value: 'BREATHWORK', label: 'Nefes Çalışması' },
+  { value: 'PILATES', label: 'Pilates' },
+  { value: 'STRETCHING', label: 'Esneme' },
+  { value: 'STRENGTH', label: 'Güç' },
+  { value: 'RELAXATION', label: 'Rahatlama' },
+];
 
 const levelLabels: Record<string, string> = {
   BEGINNER: 'Başlangıç',
@@ -124,9 +146,22 @@ export function MyClassesTable() {
     description: '',
     duration: 30,
     level: 'BEGINNER' as 'BEGINNER' | 'INTERMEDIATE' | 'ADVANCED',
+    category: 'YOGA',
     videoUrl: '',
+    audioUrl: '',
     thumbnailUrl: '',
+    isPremium: false,
+    tags: '' as string,
   });
+
+  // Upload states
+  const [uploadingVideo, setUploadingVideo] = useState(false);
+  const [uploadingAudio, setUploadingAudio] = useState(false);
+  const [uploadingThumbnail, setUploadingThumbnail] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const videoInputRef = useRef<HTMLInputElement>(null);
+  const audioInputRef = useRef<HTMLInputElement>(null);
+  const thumbnailInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     loadClasses();
@@ -195,8 +230,12 @@ export function MyClassesTable() {
       description: '',
       duration: 30,
       level: 'BEGINNER',
+      category: 'YOGA',
       videoUrl: '',
+      audioUrl: '',
       thumbnailUrl: '',
+      isPremium: false,
+      tags: '',
     });
     setEditDialog(true);
   };
@@ -208,10 +247,67 @@ export function MyClassesTable() {
       description: cls.description,
       duration: cls.duration,
       level: cls.level,
+      category: cls.category || 'YOGA',
       videoUrl: cls.videoUrl || '',
+      audioUrl: cls.audioUrl || '',
       thumbnailUrl: cls.thumbnailUrl || '',
+      isPremium: cls.isPremium || false,
+      tags: cls.tags?.join(', ') || '',
     });
     setEditDialog(true);
+  };
+
+  // Simulated file upload function
+  const handleFileUpload = async (
+    file: File,
+    type: 'video' | 'audio' | 'thumbnail'
+  ) => {
+    const setUploading = {
+      video: setUploadingVideo,
+      audio: setUploadingAudio,
+      thumbnail: setUploadingThumbnail,
+    }[type];
+
+    setUploading(true);
+    setUploadProgress(0);
+
+    // Simulate upload progress
+    const interval = setInterval(() => {
+      setUploadProgress((prev) => {
+        if (prev >= 95) {
+          clearInterval(interval);
+          return prev;
+        }
+        return prev + Math.random() * 15;
+      });
+    }, 300);
+
+    try {
+      // In production, this would be an actual upload to your storage service
+      // For now, we'll create a fake URL after simulating upload
+      await new Promise((resolve) => setTimeout(resolve, 2000));
+
+      clearInterval(interval);
+      setUploadProgress(100);
+
+      // Create a mock URL (in production, this would come from your upload service)
+      const mockUrl = `https://storage.example.com/${type}s/${Date.now()}-${file.name}`;
+
+      if (type === 'video') {
+        setFormData((prev) => ({ ...prev, videoUrl: mockUrl }));
+      } else if (type === 'audio') {
+        setFormData((prev) => ({ ...prev, audioUrl: mockUrl }));
+      } else {
+        setFormData((prev) => ({ ...prev, thumbnailUrl: mockUrl }));
+      }
+
+      toast.success(`${type === 'video' ? 'Video' : type === 'audio' ? 'Ses' : 'Görsel'} yüklendi`);
+    } catch (error) {
+      toast.error('Yükleme başarısız');
+    } finally {
+      setUploading(false);
+      setUploadProgress(0);
+    }
   };
 
   const handleSave = async () => {
@@ -409,97 +505,390 @@ export function MyClassesTable() {
 
       {/* Edit/Create Dialog */}
       <Dialog open={editDialog} onOpenChange={setEditDialog}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{selectedClass ? 'Dersi Düzenle' : 'Yeni Ders Oluştur'}</DialogTitle>
             <DialogDescription>
-              Ders bilgilerini girin. Video yüklemek için ayrı bir sekme kullanın.
+              Ders bilgilerini, medya dosyalarını ve ayarları girin.
             </DialogDescription>
           </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid gap-2">
-              <Label htmlFor="title">Ders Adı *</Label>
-              <Input
-                id="title"
-                value={formData.title}
-                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                placeholder="Örn: Sabah Yoga Akışı"
-              />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="description">Açıklama *</Label>
-              <Textarea
-                id="description"
-                value={formData.description}
-                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                placeholder="Ders hakkında detaylı açıklama..."
-                rows={3}
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
+
+          <Tabs defaultValue="info" className="w-full">
+            <TabsList className="grid w-full grid-cols-3">
+              <TabsTrigger value="info">Bilgiler</TabsTrigger>
+              <TabsTrigger value="media">Medya</TabsTrigger>
+              <TabsTrigger value="settings">Ayarlar</TabsTrigger>
+            </TabsList>
+
+            {/* Info Tab */}
+            <TabsContent value="info" className="space-y-4 mt-4">
               <div className="grid gap-2">
-                <Label htmlFor="level">Seviye</Label>
-                <Select
-                  value={formData.level}
-                  onValueChange={(value: 'BEGINNER' | 'INTERMEDIATE' | 'ADVANCED') =>
-                    setFormData({ ...formData, level: value })
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="BEGINNER">Başlangıç</SelectItem>
-                    <SelectItem value="INTERMEDIATE">Orta</SelectItem>
-                    <SelectItem value="ADVANCED">İleri</SelectItem>
-                  </SelectContent>
-                </Select>
+                <Label htmlFor="title">Ders Adı *</Label>
+                <Input
+                  id="title"
+                  value={formData.title}
+                  onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                  placeholder="Örn: Sabah Yoga Akışı"
+                />
               </div>
               <div className="grid gap-2">
-                <Label htmlFor="duration">Süre (dakika)</Label>
-                <Input
-                  id="duration"
-                  type="number"
-                  value={formData.duration}
-                  onChange={(e) => setFormData({ ...formData, duration: parseInt(e.target.value) || 0 })}
-                  min={1}
+                <Label htmlFor="description">Açıklama *</Label>
+                <Textarea
+                  id="description"
+                  value={formData.description}
+                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                  placeholder="Ders hakkında detaylı açıklama..."
+                  rows={4}
                 />
               </div>
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="videoUrl">Video URL</Label>
-              <div className="flex gap-2">
-                <Input
-                  id="videoUrl"
-                  value={formData.videoUrl}
-                  onChange={(e) => setFormData({ ...formData, videoUrl: e.target.value })}
-                  placeholder="https://..."
-                />
-                <Button variant="outline" size="icon">
-                  <IconUpload className="h-4 w-4" />
-                </Button>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="category">Kategori</Label>
+                  <Select
+                    value={formData.category}
+                    onValueChange={(value) => setFormData({ ...formData, category: value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {categories.map((cat) => (
+                        <SelectItem key={cat.value} value={cat.value}>
+                          {cat.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="level">Seviye</Label>
+                  <Select
+                    value={formData.level}
+                    onValueChange={(value: 'BEGINNER' | 'INTERMEDIATE' | 'ADVANCED') =>
+                      setFormData({ ...formData, level: value })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="BEGINNER">Başlangıç</SelectItem>
+                      <SelectItem value="INTERMEDIATE">Orta</SelectItem>
+                      <SelectItem value="ADVANCED">İleri</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="thumbnailUrl">Kapak Görseli URL</Label>
-              <div className="flex gap-2">
-                <Input
-                  id="thumbnailUrl"
-                  value={formData.thumbnailUrl}
-                  onChange={(e) => setFormData({ ...formData, thumbnailUrl: e.target.value })}
-                  placeholder="https://..."
-                />
-                <Button variant="outline" size="icon">
-                  <IconUpload className="h-4 w-4" />
-                </Button>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="duration">Süre (dakika)</Label>
+                  <Input
+                    id="duration"
+                    type="number"
+                    value={formData.duration}
+                    onChange={(e) => setFormData({ ...formData, duration: parseInt(e.target.value) || 0 })}
+                    min={1}
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="tags">Etiketler</Label>
+                  <Input
+                    id="tags"
+                    value={formData.tags}
+                    onChange={(e) => setFormData({ ...formData, tags: e.target.value })}
+                    placeholder="yoga, sabah, enerji (virgülle ayırın)"
+                  />
+                </div>
               </div>
-            </div>
-          </div>
-          <DialogFooter>
+            </TabsContent>
+
+            {/* Media Tab */}
+            <TabsContent value="media" className="space-y-6 mt-4">
+              {/* Video Upload/URL */}
+              <div className="space-y-3">
+                <Label className="flex items-center gap-2">
+                  <IconVideo className="h-4 w-4" />
+                  Video
+                </Label>
+
+                {/* Video Source Tabs */}
+                <Tabs defaultValue="upload" className="w-full">
+                  <TabsList className="grid w-full grid-cols-4">
+                    <TabsTrigger value="upload">Yükle</TabsTrigger>
+                    <TabsTrigger value="youtube">YouTube</TabsTrigger>
+                    <TabsTrigger value="vimeo">Vimeo</TabsTrigger>
+                    <TabsTrigger value="url">URL</TabsTrigger>
+                  </TabsList>
+
+                  <TabsContent value="upload" className="mt-3">
+                    <div className="border-2 border-dashed rounded-lg p-6 text-center">
+                  {formData.videoUrl ? (
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-center gap-2 text-green-600">
+                        <IconCheck className="h-5 w-5" />
+                        <span>Video yüklendi</span>
+                      </div>
+                      <p className="text-sm text-muted-foreground truncate max-w-md mx-auto">
+                        {formData.videoUrl}
+                      </p>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setFormData({ ...formData, videoUrl: '' })}
+                      >
+                        <IconX className="h-4 w-4 mr-1" />
+                        Kaldır
+                      </Button>
+                    </div>
+                  ) : uploadingVideo ? (
+                    <div className="space-y-2">
+                      <IconLoader2 className="h-8 w-8 animate-spin mx-auto text-primary" />
+                      <p className="text-sm">Video yükleniyor...</p>
+                      <Progress value={uploadProgress} className="max-w-xs mx-auto" />
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      <IconUpload className="h-8 w-8 mx-auto text-muted-foreground" />
+                      <p className="text-sm text-muted-foreground">
+                        Video dosyasını sürükleyin veya seçin
+                      </p>
+                      <input
+                        ref={videoInputRef}
+                        type="file"
+                        accept="video/*"
+                        className="hidden"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) handleFileUpload(file, 'video');
+                        }}
+                      />
+                      <Button
+                        variant="outline"
+                        onClick={() => videoInputRef.current?.click()}
+                      >
+                        Video Seç
+                      </Button>
+                      <p className="text-xs text-muted-foreground">MP4, MOV, WebM (max 500MB)</p>
+                    </div>
+                  )}
+                    </div>
+                  </TabsContent>
+
+                  <TabsContent value="youtube" className="mt-3">
+                    <div className="space-y-3">
+                      <Input
+                        placeholder="https://www.youtube.com/watch?v=..."
+                        value={formData.videoUrl?.includes('youtube') ? formData.videoUrl : ''}
+                        onChange={(e) => setFormData({ ...formData, videoUrl: e.target.value })}
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        YouTube video URL&apos;sini yapıştırın (örn: https://www.youtube.com/watch?v=dQw4w9WgXcQ)
+                      </p>
+                    </div>
+                  </TabsContent>
+
+                  <TabsContent value="vimeo" className="mt-3">
+                    <div className="space-y-3">
+                      <Input
+                        placeholder="https://vimeo.com/..."
+                        value={formData.videoUrl?.includes('vimeo') ? formData.videoUrl : ''}
+                        onChange={(e) => setFormData({ ...formData, videoUrl: e.target.value })}
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Vimeo video URL&apos;sini yapıştırın (örn: https://vimeo.com/123456789)
+                      </p>
+                    </div>
+                  </TabsContent>
+
+                  <TabsContent value="url" className="mt-3">
+                    <div className="space-y-3">
+                      <Input
+                        placeholder="https://example.com/video.mp4"
+                        value={formData.videoUrl && !formData.videoUrl.includes('youtube') && !formData.videoUrl.includes('vimeo') ? formData.videoUrl : ''}
+                        onChange={(e) => setFormData({ ...formData, videoUrl: e.target.value })}
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Dailymotion veya diğer platformlardan direkt video URL&apos;si
+                      </p>
+                    </div>
+                  </TabsContent>
+                </Tabs>
+              </div>
+
+              {/* Audio Upload (Optional) */}
+              <div className="space-y-3">
+                <Label className="flex items-center gap-2">
+                  <IconMusic className="h-4 w-4" />
+                  Ses Dosyası (Opsiyonel)
+                </Label>
+                <div className="border-2 border-dashed rounded-lg p-6 text-center">
+                  {formData.audioUrl ? (
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-center gap-2 text-green-600">
+                        <IconCheck className="h-5 w-5" />
+                        <span>Ses dosyası yüklendi</span>
+                      </div>
+                      <p className="text-sm text-muted-foreground truncate max-w-md mx-auto">
+                        {formData.audioUrl}
+                      </p>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setFormData({ ...formData, audioUrl: '' })}
+                      >
+                        <IconX className="h-4 w-4 mr-1" />
+                        Kaldır
+                      </Button>
+                    </div>
+                  ) : uploadingAudio ? (
+                    <div className="space-y-2">
+                      <IconLoader2 className="h-8 w-8 animate-spin mx-auto text-primary" />
+                      <p className="text-sm">Ses yükleniyor...</p>
+                      <Progress value={uploadProgress} className="max-w-xs mx-auto" />
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      <IconMusic className="h-8 w-8 mx-auto text-muted-foreground" />
+                      <p className="text-sm text-muted-foreground">
+                        Ses dosyasını sürükleyin veya seçin
+                      </p>
+                      <input
+                        ref={audioInputRef}
+                        type="file"
+                        accept="audio/*"
+                        className="hidden"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) handleFileUpload(file, 'audio');
+                        }}
+                      />
+                      <Button
+                        variant="outline"
+                        onClick={() => audioInputRef.current?.click()}
+                      >
+                        Ses Dosyası Seç
+                      </Button>
+                      <p className="text-xs text-muted-foreground">MP3, WAV, AAC (max 100MB)</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Thumbnail Upload */}
+              <div className="space-y-3">
+                <Label className="flex items-center gap-2">
+                  <IconPhoto className="h-4 w-4" />
+                  Kapak Görseli
+                </Label>
+                <div className="border-2 border-dashed rounded-lg p-6 text-center">
+                  {formData.thumbnailUrl ? (
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-center gap-2 text-green-600">
+                        <IconCheck className="h-5 w-5" />
+                        <span>Görsel yüklendi</span>
+                      </div>
+                      <p className="text-sm text-muted-foreground truncate max-w-md mx-auto">
+                        {formData.thumbnailUrl}
+                      </p>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setFormData({ ...formData, thumbnailUrl: '' })}
+                      >
+                        <IconX className="h-4 w-4 mr-1" />
+                        Kaldır
+                      </Button>
+                    </div>
+                  ) : uploadingThumbnail ? (
+                    <div className="space-y-2">
+                      <IconLoader2 className="h-8 w-8 animate-spin mx-auto text-primary" />
+                      <p className="text-sm">Görsel yükleniyor...</p>
+                      <Progress value={uploadProgress} className="max-w-xs mx-auto" />
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      <IconPhoto className="h-8 w-8 mx-auto text-muted-foreground" />
+                      <p className="text-sm text-muted-foreground">
+                        Kapak görselini sürükleyin veya seçin
+                      </p>
+                      <input
+                        ref={thumbnailInputRef}
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) handleFileUpload(file, 'thumbnail');
+                        }}
+                      />
+                      <Button
+                        variant="outline"
+                        onClick={() => thumbnailInputRef.current?.click()}
+                      >
+                        Görsel Seç
+                      </Button>
+                      <p className="text-xs text-muted-foreground">JPG, PNG, WebP (max 5MB, 16:9 önerilir)</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </TabsContent>
+
+            {/* Settings Tab */}
+            <TabsContent value="settings" className="space-y-6 mt-4">
+              <div className="flex items-center justify-between rounded-lg border p-4">
+                <div className="space-y-0.5">
+                  <Label className="text-base">Premium İçerik</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Bu dersi sadece premium üyelere göster
+                  </p>
+                </div>
+                <Switch
+                  checked={formData.isPremium}
+                  onCheckedChange={(checked) => setFormData({ ...formData, isPremium: checked })}
+                />
+              </div>
+
+              <div className="rounded-lg border p-4 space-y-3">
+                <Label className="text-base">Ders Durumu</Label>
+                <p className="text-sm text-muted-foreground">
+                  {selectedClass ? (
+                    <>
+                      Mevcut durum:{' '}
+                      <Badge className={statusColors[selectedClass.status]}>
+                        {statusLabels[selectedClass.status]}
+                      </Badge>
+                    </>
+                  ) : (
+                    'Yeni dersler "Taslak" olarak kaydedilir. Yayınlamak için onaya gönderin.'
+                  )}
+                </p>
+                {selectedClass?.status === 'REJECTED' && (
+                  <div className="p-3 bg-red-50 dark:bg-red-900/20 rounded-md">
+                    <p className="text-sm text-red-600 dark:text-red-400">
+                      Bu ders reddedildi. Düzenleyip tekrar onaya gönderebilirsiniz.
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              <div className="rounded-lg border p-4 space-y-3">
+                <Label className="text-base">İpuçları</Label>
+                <ul className="text-sm text-muted-foreground space-y-1 list-disc list-inside">
+                  <li>Video kalitesi için 1080p veya üzeri önerilir</li>
+                  <li>İyi aydınlatma ve net ses önemlidir</li>
+                  <li>Kapak görseli dikkat çekici olmalı</li>
+                  <li>Açıklama SEO için detaylı olmalı</li>
+                </ul>
+              </div>
+            </TabsContent>
+          </Tabs>
+
+          <DialogFooter className="mt-6">
             <Button variant="outline" onClick={() => setEditDialog(false)}>
               İptal
             </Button>
-            <Button onClick={handleSave} disabled={saving}>
+            <Button onClick={handleSave} disabled={saving || uploadingVideo || uploadingAudio || uploadingThumbnail}>
               {saving && <IconLoader2 className="mr-2 h-4 w-4 animate-spin" />}
               {selectedClass ? 'Güncelle' : 'Oluştur'}
             </Button>

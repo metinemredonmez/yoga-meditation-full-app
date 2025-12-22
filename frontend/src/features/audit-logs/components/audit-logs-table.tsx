@@ -85,6 +85,10 @@ const ACTION_COLORS: Record<string, string> = {
   APPROVE: 'bg-emerald-500/10 text-emerald-600',
   REJECT: 'bg-rose-500/10 text-rose-600',
   EXPORT: 'bg-indigo-500/10 text-indigo-600',
+  PUBLISH: 'bg-cyan-500/10 text-cyan-600',
+  UNPUBLISH: 'bg-amber-500/10 text-amber-600',
+  CHANGE: 'bg-violet-500/10 text-violet-600',
+  RESET: 'bg-pink-500/10 text-pink-600',
 };
 
 const ACTION_ICONS: Record<string, React.ReactNode> = {
@@ -97,6 +101,24 @@ const ACTION_ICONS: Record<string, React.ReactNode> = {
   UNBAN: <IconCheck className='h-3 w-3' />,
   APPROVE: <IconCheck className='h-3 w-3' />,
   REJECT: <IconAlertTriangle className='h-3 w-3' />,
+  PUBLISH: <IconCheck className='h-3 w-3' />,
+  UNPUBLISH: <IconAlertTriangle className='h-3 w-3' />,
+};
+
+// Extract the base action from compound actions like USER_CREATE -> CREATE
+const getBaseAction = (action: string): string => {
+  const parts = action.split('_');
+  // For actions like USER_CREATE, PROGRAM_UPDATE, get the last part
+  // For actions like SETTINGS_UPDATE, get UPDATE
+  return parts[parts.length - 1];
+};
+
+// Sum counts for actions that end with a specific base action
+const sumActionCounts = (actionCounts: Record<string, number> | undefined, baseAction: string): number => {
+  if (!actionCounts) return 0;
+  return Object.entries(actionCounts)
+    .filter(([key]) => key.endsWith(baseAction))
+    .reduce((sum, [, count]) => sum + count, 0);
 };
 
 const ENTITY_TYPES = [
@@ -216,12 +238,13 @@ export function AuditLogsTable() {
   }, []);
 
   const getActionBadge = (action: string) => {
-    const color = ACTION_COLORS[action] || 'bg-gray-500/10 text-gray-600';
-    const icon = ACTION_ICONS[action];
+    const baseAction = getBaseAction(action);
+    const color = ACTION_COLORS[baseAction] || 'bg-gray-500/10 text-gray-600';
+    const icon = ACTION_ICONS[baseAction];
     return (
       <Badge className={`${color} flex items-center gap-1`}>
         {icon}
-        {action}
+        {baseAction}
       </Badge>
     );
   };
@@ -280,7 +303,7 @@ export function AuditLogsTable() {
                 <IconPlus className='h-4 w-4' />
                 Creates
               </CardDescription>
-              <CardTitle className='text-2xl'>{stats.actionCounts?.CREATE?.toLocaleString() || 0}</CardTitle>
+              <CardTitle className='text-2xl'>{sumActionCounts(stats.actionCounts, 'CREATE').toLocaleString()}</CardTitle>
             </CardHeader>
           </Card>
           <Card>
@@ -289,7 +312,7 @@ export function AuditLogsTable() {
                 <IconTrash className='h-4 w-4' />
                 Deletes
               </CardDescription>
-              <CardTitle className='text-2xl'>{stats.actionCounts?.DELETE?.toLocaleString() || 0}</CardTitle>
+              <CardTitle className='text-2xl'>{sumActionCounts(stats.actionCounts, 'DELETE').toLocaleString()}</CardTitle>
             </CardHeader>
           </Card>
         </div>

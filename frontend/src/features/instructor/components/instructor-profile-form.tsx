@@ -20,8 +20,9 @@ import {
   IconWorld,
 } from '@tabler/icons-react';
 import { toast } from 'sonner';
-import { getInstructorProfile, updateInstructorProfile } from '@/lib/api';
+import { getInstructorProfile, updateInstructorProfile, uploadInstructorMedia } from '@/lib/api';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 interface InstructorProfile {
   id: string;
@@ -50,6 +51,8 @@ export function InstructorProfileForm() {
   const [profile, setProfile] = useState<InstructorProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const [showPhotoDialog, setShowPhotoDialog] = useState(false);
 
   // Form state
   const [bio, setBio] = useState('');
@@ -57,6 +60,7 @@ export function InstructorProfileForm() {
   const [newSpecialty, setNewSpecialty] = useState('');
   const [socialLinks, setSocialLinks] = useState<{ platform: string; url: string }[]>([]);
   const [avatarUrl, setAvatarUrl] = useState('');
+  const [avatarUrlInput, setAvatarUrlInput] = useState('');
 
   useEffect(() => {
     loadProfile();
@@ -65,11 +69,27 @@ export function InstructorProfileForm() {
   const loadProfile = async () => {
     try {
       const data = await getInstructorProfile();
-      setProfile(data);
-      setBio(data.bio || '');
-      setSpecialties(data.specialties || []);
-      setSocialLinks(data.socialLinks || []);
-      setAvatarUrl(data.avatarUrl || '');
+      // Map backend data to frontend format
+      const mappedProfile: InstructorProfile = {
+        id: data.id,
+        firstName: data.users?.firstName || data.displayName?.split(' ')[0] || '',
+        lastName: data.users?.lastName || data.displayName?.split(' ').slice(1).join(' ') || '',
+        email: data.users?.email || '',
+        bio: data.bio || '',
+        avatarUrl: data.profileImageUrl || '',
+        specialties: data.specializations || [],
+        socialLinks: data.socialLinks ? Object.entries(data.socialLinks).map(([platform, url]) => ({ platform, url: url as string })) : [],
+        totalClasses: data.totalClasses || 0,
+        totalStudents: data.totalStudents || 0,
+        rating: parseFloat(data.averageRating) || 0,
+        joinedAt: data.createdAt || '',
+      };
+      setProfile(mappedProfile);
+      setBio(mappedProfile.bio || '');
+      setSpecialties(mappedProfile.specialties || []);
+      setSocialLinks(mappedProfile.socialLinks || []);
+      setAvatarUrl(mappedProfile.avatarUrl || '');
+      setAvatarUrlInput(mappedProfile.avatarUrl || '');
     } catch (error) {
       // Mock data
       const mockProfile: InstructorProfile = {
@@ -94,6 +114,7 @@ export function InstructorProfileForm() {
       setSpecialties(mockProfile.specialties);
       setSocialLinks(mockProfile.socialLinks);
       setAvatarUrl(mockProfile.avatarUrl || '');
+      setAvatarUrlInput(mockProfile.avatarUrl || '');
     } finally {
       setLoading(false);
     }
@@ -140,6 +161,47 @@ export function InstructorProfileForm() {
     return socialLinks.find((l) => l.platform === platform)?.url || '';
   };
 
+  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file
+    if (!file.type.startsWith('image/')) {
+      toast.error('Lütfen geçerli bir resim dosyası seçin');
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('Dosya boyutu 5MB\'dan küçük olmalı');
+      return;
+    }
+
+    setUploadingPhoto(true);
+    try {
+      const result = await uploadInstructorMedia(file, 'image');
+      if (result.success && result.url) {
+        setAvatarUrl(result.url);
+        setAvatarUrlInput(result.url);
+        setShowPhotoDialog(false);
+        toast.success('Fotoğraf yüklendi');
+      } else {
+        toast.error('Fotoğraf yüklenemedi');
+      }
+    } catch (error) {
+      toast.error('Fotoğraf yüklenirken hata oluştu');
+    } finally {
+      setUploadingPhoto(false);
+    }
+  };
+
+  const handleUrlSave = () => {
+    if (avatarUrlInput) {
+      setAvatarUrl(avatarUrlInput);
+      setShowPhotoDialog(false);
+      toast.success('Fotoğraf URL\'si güncellendi');
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -169,8 +231,14 @@ export function InstructorProfileForm() {
                 size="icon"
                 variant="outline"
                 className="absolute -bottom-2 -right-2 h-8 w-8 rounded-full"
+                onClick={() => setShowPhotoDialog(true)}
+                disabled={uploadingPhoto}
               >
-                <IconUpload className="h-4 w-4" />
+                {uploadingPhoto ? (
+                  <IconLoader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <IconUpload className="h-4 w-4" />
+                )}
               </Button>
             </div>
             <div className="flex-1 space-y-4">
@@ -279,27 +347,6 @@ export function InstructorProfileForm() {
         </CardContent>
       </Card>
 
-      {/* Avatar URL */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Profil Fotoğrafı</CardTitle>
-          <CardDescription>Profil fotoğrafınızın URL adresi</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="flex gap-2">
-            <Input
-              value={avatarUrl}
-              onChange={(e) => setAvatarUrl(e.target.value)}
-              placeholder="https://..."
-            />
-            <Button variant="outline">
-              <IconUpload className="mr-2 h-4 w-4" />
-              Yükle
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-
       {/* Save Button */}
       <div className="flex justify-end">
         <Button onClick={handleSave} disabled={saving}>
@@ -307,6 +354,77 @@ export function InstructorProfileForm() {
           Değişiklikleri Kaydet
         </Button>
       </div>
+
+      {/* Photo Upload Dialog */}
+      <Dialog open={showPhotoDialog} onOpenChange={setShowPhotoDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Profil Fotoğrafı</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-6">
+            {/* Current Photo Preview */}
+            <div className="flex justify-center">
+              <Avatar className="h-32 w-32">
+                <AvatarImage src={avatarUrl || avatarUrlInput} />
+                <AvatarFallback className="text-3xl">
+                  {profile?.firstName?.charAt(0)}{profile?.lastName?.charAt(0)}
+                </AvatarFallback>
+              </Avatar>
+            </div>
+
+            {/* Upload Option */}
+            <div className="space-y-2">
+              <Label>Dosyadan Yükle</Label>
+              <div className="flex gap-2">
+                <Input
+                  type="file"
+                  accept="image/*"
+                  onChange={handlePhotoUpload}
+                  disabled={uploadingPhoto}
+                  className="flex-1"
+                />
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Maksimum 5MB, JPG, PNG veya GIF formatında
+              </p>
+            </div>
+
+            <Separator />
+
+            {/* URL Option */}
+            <div className="space-y-2">
+              <Label>veya URL Girin</Label>
+              <div className="flex gap-2">
+                <Input
+                  value={avatarUrlInput}
+                  onChange={(e) => setAvatarUrlInput(e.target.value)}
+                  placeholder="https://..."
+                  className="flex-1"
+                />
+                <Button onClick={handleUrlSave} variant="outline" disabled={!avatarUrlInput}>
+                  Kaydet
+                </Button>
+              </div>
+            </div>
+
+            {/* Remove Photo */}
+            {avatarUrl && (
+              <Button
+                variant="destructive"
+                className="w-full"
+                onClick={() => {
+                  setAvatarUrl('');
+                  setAvatarUrlInput('');
+                  setShowPhotoDialog(false);
+                  toast.success('Fotoğraf kaldırıldı');
+                }}
+              >
+                Fotoğrafı Kaldır
+              </Button>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

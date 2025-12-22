@@ -67,6 +67,125 @@ async function main() {
 
   const teacher = teacherTaylor;
 
+  // More instructor users for comprehensive seed data
+  const teacherZeynep = await prisma.users.upsert({
+    where: { email: 'zeynep@fitness.com' },
+    update: {},
+    create: {
+      email: 'zeynep@fitness.com',
+      passwordHash: teacherPassword,
+      firstName: 'Zeynep',
+      lastName: 'Demir',
+      role: 'TEACHER',
+      bio: 'Yin Yoga ve Restorative uzmanı. Stres yönetimi koçu.',
+    },
+  });
+
+  const teacherCan = await prisma.users.upsert({
+    where: { email: 'can@fitness.com' },
+    update: {},
+    create: {
+      email: 'can@fitness.com',
+      passwordHash: teacherPassword,
+      firstName: 'Can',
+      lastName: 'Özkan',
+      role: 'TEACHER',
+      bio: 'Mindfulness eğitmeni. Vipassana meditasyonu uzmanı.',
+    },
+  });
+
+  const teacherElif = await prisma.users.upsert({
+    where: { email: 'elif@fitness.com' },
+    update: {},
+    create: {
+      email: 'elif@fitness.com',
+      passwordHash: teacherPassword,
+      firstName: 'Elif',
+      lastName: 'Arslan',
+      role: 'TEACHER',
+      bio: 'Uyku meditasyonu ve Yoga Nidra uzmanı.',
+    },
+  });
+
+  const teacherBurak = await prisma.users.upsert({
+    where: { email: 'burak@fitness.com' },
+    update: {},
+    create: {
+      email: 'burak@fitness.com',
+      passwordHash: teacherPassword,
+      firstName: 'Burak',
+      lastName: 'Şahin',
+      role: 'TEACHER',
+      bio: 'Pranayama ve breathwork uzmanı. Wim Hof sertifikalı.',
+    },
+  });
+
+  const teacherSeda = await prisma.users.upsert({
+    where: { email: 'seda@fitness.com' },
+    update: {},
+    create: {
+      email: 'seda@fitness.com',
+      passwordHash: teacherPassword,
+      firstName: 'Seda',
+      lastName: 'Yıldız',
+      role: 'TEACHER',
+      bio: 'Hamile yogası ve doğum sonrası uzmanı.',
+    },
+  });
+
+  const teacherDeniz = await prisma.users.upsert({
+    where: { email: 'deniz@fitness.com' },
+    update: {},
+    create: {
+      email: 'deniz@fitness.com',
+      passwordHash: teacherPassword,
+      firstName: 'Deniz',
+      lastName: 'Aydın',
+      role: 'TEACHER',
+      bio: 'Çocuk yogası uzmanı. Eğlenceli ve eğitici dersler.',
+    },
+  });
+
+  const teacherAhmet = await prisma.users.upsert({
+    where: { email: 'ahmet@fitness.com' },
+    update: {},
+    create: {
+      email: 'ahmet@fitness.com',
+      passwordHash: teacherPassword,
+      firstName: 'Ahmet',
+      lastName: 'Çelik',
+      role: 'TEACHER',
+      bio: 'Ofis yogası ve sandalye yogası uzmanı.',
+    },
+  });
+
+  // Pending instructors (for testing approval flow)
+  const teacherMerve = await prisma.users.upsert({
+    where: { email: 'merve@fitness.com' },
+    update: {},
+    create: {
+      email: 'merve@fitness.com',
+      passwordHash: teacherPassword,
+      firstName: 'Merve',
+      lastName: 'Koç',
+      role: 'TEACHER',
+      bio: 'Yeni mezun yoga öğretmeni.',
+    },
+  });
+
+  const teacherEmre = await prisma.users.upsert({
+    where: { email: 'emre@fitness.com' },
+    update: {},
+    create: {
+      email: 'emre@fitness.com',
+      passwordHash: teacherPassword,
+      firstName: 'Emre',
+      lastName: 'Güneş',
+      role: 'TEACHER',
+      bio: 'Fitness ve yoga kombinasyonu uzmanı.',
+    },
+  });
+
   // ============================================
   // STUDENT USERS
   // ============================================
@@ -304,7 +423,233 @@ async function main() {
       coverImageUrl: 'https://images.unsplash.com/photo-1593811167562-9cef47bfc4d7?w=1200',
     },
   });
-  console.log('👩‍🏫 Instructor profiles ensured');
+
+  // Zeynep - Yin/Restorative Yoga Expert
+  await prisma.instructor_profiles.upsert({
+    where: { slug: 'zeynep-yin' },
+    update: { userId: teacherZeynep.id },
+    create: {
+      userId: teacherZeynep.id,
+      displayName: 'Zeynep Yin Yoga',
+      slug: 'zeynep-yin',
+      bio: 'Yin Yoga ve Restorative uzmanı. Stres yönetimi koçu. 7 yıllık deneyim.',
+      shortBio: 'Yin & Restorative Yoga Uzmanı',
+      specializations: ['Yin Yoga', 'Restorative Yoga', 'Stress Relief'],
+      yearsOfExperience: 7,
+      languages: ['Turkish', 'English'],
+      status: 'APPROVED',
+      tier: 'PRO',
+      isVerified: true,
+      isFeatured: false,
+      totalStudents: 1800,
+      averageRating: 4.7,
+      commissionRate: 0.25,
+      profileImageUrl: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=400',
+      coverImageUrl: 'https://images.unsplash.com/photo-1506126613408-eca07ce68773?w=1200',
+    },
+  });
+
+  // Can - Mindfulness Expert
+  await prisma.instructor_profiles.upsert({
+    where: { slug: 'can-mindfulness' },
+    update: { userId: teacherCan.id },
+    create: {
+      userId: teacherCan.id,
+      displayName: 'Can Mindfulness',
+      slug: 'can-mindfulness',
+      bio: 'Mindfulness eğitmeni. Vipassana meditasyonu uzmanı. 12 yıllık deneyim.',
+      shortBio: 'Mindfulness & Vipassana Uzmanı',
+      specializations: ['Mindfulness', 'Vipassana', 'Guided Meditation'],
+      yearsOfExperience: 12,
+      languages: ['Turkish', 'English', 'German'],
+      status: 'APPROVED',
+      tier: 'PRO',
+      isVerified: true,
+      isFeatured: true,
+      totalStudents: 4200,
+      averageRating: 4.95,
+      commissionRate: 0.20,
+      profileImageUrl: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=400',
+      coverImageUrl: 'https://images.unsplash.com/photo-1508672019048-805c876b67e2?w=1200',
+    },
+  });
+
+  // Elif - Sleep & Yoga Nidra Expert
+  await prisma.instructor_profiles.upsert({
+    where: { slug: 'elif-sleep' },
+    update: { userId: teacherElif.id },
+    create: {
+      userId: teacherElif.id,
+      displayName: 'Elif Uyku Yogası',
+      slug: 'elif-sleep',
+      bio: 'Uyku meditasyonu ve Yoga Nidra uzmanı. Kaliteli uyku için rehberlik.',
+      shortBio: 'Uyku & Yoga Nidra Uzmanı',
+      specializations: ['Sleep Meditation', 'Yoga Nidra', 'Relaxation'],
+      yearsOfExperience: 5,
+      languages: ['Turkish'],
+      status: 'APPROVED',
+      tier: 'STARTER',
+      isVerified: true,
+      isFeatured: false,
+      totalStudents: 2800,
+      averageRating: 4.6,
+      commissionRate: 0.30,
+      profileImageUrl: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=400',
+      coverImageUrl: 'https://images.unsplash.com/photo-1511367461989-f85a21fda167?w=1200',
+    },
+  });
+
+  // Burak - Breathwork Expert
+  await prisma.instructor_profiles.upsert({
+    where: { slug: 'burak-breathwork' },
+    update: { userId: teacherBurak.id },
+    create: {
+      userId: teacherBurak.id,
+      displayName: 'Burak Nefes Ustası',
+      slug: 'burak-breathwork',
+      bio: 'Pranayama ve breathwork uzmanı. Wim Hof sertifikalı. Enerji ve odaklanma.',
+      shortBio: 'Pranayama & Wim Hof Uzmanı',
+      specializations: ['Pranayama', 'Wim Hof Method', 'Holotropic Breathwork'],
+      yearsOfExperience: 8,
+      languages: ['Turkish', 'English'],
+      status: 'APPROVED',
+      tier: 'PRO',
+      isVerified: true,
+      isFeatured: true,
+      totalStudents: 1500,
+      averageRating: 4.8,
+      commissionRate: 0.25,
+      profileImageUrl: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=400',
+      coverImageUrl: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=1200',
+    },
+  });
+
+  // Seda - Prenatal Yoga Expert
+  await prisma.instructor_profiles.upsert({
+    where: { slug: 'seda-prenatal' },
+    update: { userId: teacherSeda.id },
+    create: {
+      userId: teacherSeda.id,
+      displayName: 'Seda Anne Yogası',
+      slug: 'seda-prenatal',
+      bio: 'Hamile yogası ve doğum sonrası uzmanı. Anne adayları için güvenli yoga.',
+      shortBio: 'Hamile & Doğum Sonrası Yoga',
+      specializations: ['Prenatal Yoga', 'Postnatal Yoga', 'Gentle Yoga'],
+      yearsOfExperience: 9,
+      languages: ['Turkish'],
+      status: 'APPROVED',
+      tier: 'PRO',
+      isVerified: true,
+      isFeatured: false,
+      totalStudents: 950,
+      averageRating: 4.9,
+      commissionRate: 0.25,
+      profileImageUrl: 'https://images.unsplash.com/photo-1489424731084-a5d8b219a5bb?w=400',
+      coverImageUrl: 'https://images.unsplash.com/photo-1518611012118-696072aa579a?w=1200',
+    },
+  });
+
+  // Deniz - Kids Yoga Expert
+  await prisma.instructor_profiles.upsert({
+    where: { slug: 'deniz-kids' },
+    update: { userId: teacherDeniz.id },
+    create: {
+      userId: teacherDeniz.id,
+      displayName: 'Deniz Çocuk Yogası',
+      slug: 'deniz-kids',
+      bio: 'Çocuk yogası uzmanı. Eğlenceli ve eğitici dersler. 3-12 yaş grubu.',
+      shortBio: 'Çocuk & Aile Yogası',
+      specializations: ['Kids Yoga', 'Family Yoga', 'Playful Movement'],
+      yearsOfExperience: 6,
+      languages: ['Turkish', 'English'],
+      status: 'APPROVED',
+      tier: 'STARTER',
+      isVerified: true,
+      isFeatured: false,
+      totalStudents: 1200,
+      averageRating: 4.7,
+      commissionRate: 0.30,
+      profileImageUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400',
+      coverImageUrl: 'https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?w=1200',
+    },
+  });
+
+  // Ahmet - Office/Chair Yoga Expert
+  await prisma.instructor_profiles.upsert({
+    where: { slug: 'ahmet-office' },
+    update: { userId: teacherAhmet.id },
+    create: {
+      userId: teacherAhmet.id,
+      displayName: 'Ahmet Ofis Yogası',
+      slug: 'ahmet-office',
+      bio: 'Ofis yogası ve sandalye yogası uzmanı. Masa başı çalışanlar için pratik yoga.',
+      shortBio: 'Ofis & Sandalye Yogası',
+      specializations: ['Chair Yoga', 'Office Yoga', 'Corporate Wellness'],
+      yearsOfExperience: 4,
+      languages: ['Turkish'],
+      status: 'APPROVED',
+      tier: 'STARTER',
+      isVerified: false,
+      isFeatured: false,
+      totalStudents: 800,
+      averageRating: 4.5,
+      commissionRate: 0.30,
+      profileImageUrl: 'https://images.unsplash.com/photo-1507591064344-4c6ce005b128?w=400',
+      coverImageUrl: 'https://images.unsplash.com/photo-1497366216548-37526070297c?w=1200',
+    },
+  });
+
+  // Merve - PENDING instructor (for testing approval flow)
+  await prisma.instructor_profiles.upsert({
+    where: { slug: 'merve-yoga' },
+    update: { userId: teacherMerve.id },
+    create: {
+      userId: teacherMerve.id,
+      displayName: 'Merve Yoga',
+      slug: 'merve-yoga',
+      bio: 'Yeni mezun yoga öğretmeni. RYT-200 sertifikalı.',
+      shortBio: 'Yeni Başlayan Eğitmen',
+      specializations: ['Hatha Yoga', 'Beginner Yoga'],
+      yearsOfExperience: 1,
+      languages: ['Turkish'],
+      status: 'PENDING',
+      tier: 'STARTER',
+      isVerified: false,
+      isFeatured: false,
+      totalStudents: 0,
+      averageRating: 0,
+      commissionRate: 0.30,
+      profileImageUrl: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=400',
+      coverImageUrl: 'https://images.unsplash.com/photo-1545389336-cf090694435e?w=1200',
+    },
+  });
+
+  // Emre - PENDING instructor (for testing approval flow)
+  await prisma.instructor_profiles.upsert({
+    where: { slug: 'emre-power' },
+    update: { userId: teacherEmre.id },
+    create: {
+      userId: teacherEmre.id,
+      displayName: 'Emre Power Yoga',
+      slug: 'emre-power',
+      bio: 'Fitness ve yoga kombinasyonu. Power yoga ve güç antrenmanı.',
+      shortBio: 'Power Yoga & Fitness',
+      specializations: ['Power Yoga', 'Fitness Yoga', 'Strength Training'],
+      yearsOfExperience: 3,
+      languages: ['Turkish', 'English'],
+      status: 'PENDING',
+      tier: 'STARTER',
+      isVerified: false,
+      isFeatured: false,
+      totalStudents: 0,
+      averageRating: 0,
+      commissionRate: 0.30,
+      profileImageUrl: 'https://images.unsplash.com/photo-1568602471122-7832951cc4c5?w=400',
+      coverImageUrl: 'https://images.unsplash.com/photo-1518611012118-696072aa579a?w=1200',
+    },
+  });
+
+  console.log('👩‍🏫 Instructor profiles ensured (12 instructors)');
 
   // ============================================
   // GAMIFICATION: USER LEVELS (removed - model deleted)
@@ -397,6 +742,8 @@ async function main() {
     { id: 'med-anxiety-calm', title: 'Kaygı Yatıştırma', titleEn: 'Anxiety Calming', slug: 'kaygi-yatistirma', description: 'Kaygı ve endişeyi sakinleştiren meditasyon.', audioUrl: 'https://cdn.pixabay.com/audio/2023/05/16/audio_166b9c9e42.mp3', coverImage: 'https://images.unsplash.com/photo-1499209974431-9dddcece7f88?w=800', duration: 600, categoryId: 'med-cat-anxiety', difficulty: 'BEGINNER' as const, instructorId: instructorProfileAlex.id, isPremium: false, playCount: 21340, averageRating: 4.82, tags: ['kaygı', 'sakinlik'], benefits: ['Kaygıyı azaltır'], isPublished: true, publishedAt: new Date('2024-01-20') },
     { id: 'med-focus-deep', title: 'Derin Odaklanma', titleEn: 'Deep Focus', slug: 'derin-odaklanma', description: 'Çalışma ve öğrenme için konsantrasyon.', audioUrl: 'https://cdn.pixabay.com/audio/2022/10/18/audio_5eb0bf8f61.mp3', coverImage: 'https://images.unsplash.com/photo-1434030216411-0b793f4b4173?w=800', duration: 720, categoryId: 'med-cat-focus', difficulty: 'INTERMEDIATE' as const, instructorId: instructorProfileAlex.id, isPremium: true, playCount: 14560, averageRating: 4.78, tags: ['odak', 'çalışma'], benefits: ['Konsantrasyonu artırır'], isPublished: true, publishedAt: new Date('2024-02-01') },
     { id: 'med-body-scan', title: 'Vücut Taraması', titleEn: 'Body Scan', slug: 'vucut-taramasi', description: 'Tüm vücudu farkındalıkla tarayın.', audioUrl: 'https://cdn.pixabay.com/audio/2023/10/30/audio_5ec52ddd53.mp3', coverImage: 'https://images.unsplash.com/photo-1552196563-55cd4e45efb3?w=800', duration: 900, categoryId: 'med-cat-mindfulness', difficulty: 'BEGINNER' as const, instructorId: instructorProfileAlex.id, isPremium: false, playCount: 19870, averageRating: 4.88, tags: ['vücut', 'farkındalık'], benefits: ['Gerginliği fark eder'], isPublished: true, publishedAt: new Date('2024-01-25') },
+    // Demo meditation with local audio file
+    { id: 'med-super-deep-demo', title: '15 Dakika Süper Derin Meditasyon', titleEn: '15 Minute Super Deep Meditation', slug: 'super-derin-meditasyon', description: 'Zihin ve bedeni dinlendiren, iç huzur sağlayan 15 dakikalık derin meditasyon seansı. Rahatlatıcı müzik eşliğinde.', audioUrl: '/uploads/demo/meditation-demo.mp3', coverImage: 'https://images.unsplash.com/photo-1506126613408-eca07ce68773?w=800', duration: 900, categoryId: 'med-cat-mindfulness', difficulty: 'BEGINNER' as const, instructorId: instructorProfileAlex.id, isPremium: false, playCount: 0, averageRating: 5.0, tags: ['derin meditasyon', 'huzur', 'rahatlama'], benefits: ['Zihinsel dinginlik', 'Stres azaltma', 'İç huzur'], isPublished: true, publishedAt: new Date('2024-12-22') },
   ];
 
   for (const meditation of meditations) {
@@ -509,14 +856,41 @@ async function main() {
   // MOOD TAGS
   // ============================================
   const moodTags = [
+    // EMOTION - Duygular
+    { id: 'mood-tag-happy', name: 'Mutlu', nameEn: 'Happy', category: 'EMOTION' as const, icon: '😊', color: '#FFD700' },
+    { id: 'mood-tag-sad', name: 'Üzgün', nameEn: 'Sad', category: 'EMOTION' as const, icon: '😢', color: '#6B7280' },
+    { id: 'mood-tag-anxious', name: 'Endişeli', nameEn: 'Anxious', category: 'EMOTION' as const, icon: '😰', color: '#F59E0B' },
+    { id: 'mood-tag-calm', name: 'Sakin', nameEn: 'Calm', category: 'EMOTION' as const, icon: '😌', color: '#10B981' },
+    { id: 'mood-tag-stressed', name: 'Stresli', nameEn: 'Stressed', category: 'EMOTION' as const, icon: '😤', color: '#EF4444' },
+    { id: 'mood-tag-excited', name: 'Heyecanlı', nameEn: 'Excited', category: 'EMOTION' as const, icon: '🤩', color: '#EC4899' },
+    // ACTIVITY - Aktiviteler
     { id: 'mood-tag-work', name: 'İş', nameEn: 'Work', category: 'ACTIVITY' as const, icon: '💼', color: '#607D8B' },
     { id: 'mood-tag-exercise', name: 'Egzersiz', nameEn: 'Exercise', category: 'ACTIVITY' as const, icon: '🏃', color: '#4CAF50' },
     { id: 'mood-tag-meditation', name: 'Meditasyon', nameEn: 'Meditation', category: 'ACTIVITY' as const, icon: '🧘', color: '#9C27B0' },
+    { id: 'mood-tag-reading', name: 'Okuma', nameEn: 'Reading', category: 'ACTIVITY' as const, icon: '📚', color: '#8B5CF6' },
+    { id: 'mood-tag-cooking', name: 'Yemek Yapma', nameEn: 'Cooking', category: 'ACTIVITY' as const, icon: '🍳', color: '#F97316' },
+    // LOCATION - Konumlar
+    { id: 'mood-tag-home', name: 'Ev', nameEn: 'Home', category: 'LOCATION' as const, icon: '🏠', color: '#14B8A6' },
+    { id: 'mood-tag-office', name: 'Ofis', nameEn: 'Office', category: 'LOCATION' as const, icon: '🏢', color: '#6366F1' },
+    { id: 'mood-tag-outdoor', name: 'Dışarıda', nameEn: 'Outdoor', category: 'LOCATION' as const, icon: '🌳', color: '#22C55E' },
+    { id: 'mood-tag-travel', name: 'Seyahat', nameEn: 'Travel', category: 'LOCATION' as const, icon: '✈️', color: '#0EA5E9' },
+    // SOCIAL - Sosyal
     { id: 'mood-tag-family', name: 'Aile', nameEn: 'Family', category: 'SOCIAL' as const, icon: '👨‍👩‍👧', color: '#E91E63' },
     { id: 'mood-tag-friends', name: 'Arkadaşlar', nameEn: 'Friends', category: 'SOCIAL' as const, icon: '👫', color: '#2196F3' },
+    { id: 'mood-tag-alone', name: 'Yalnız', nameEn: 'Alone', category: 'SOCIAL' as const, icon: '🧑', color: '#A78BFA' },
+    // HEALTH - Sağlık
     { id: 'mood-tag-tired', name: 'Yorgun', nameEn: 'Tired', category: 'HEALTH' as const, icon: '😫', color: '#78909C' },
     { id: 'mood-tag-energetic', name: 'Enerjik', nameEn: 'Energetic', category: 'HEALTH' as const, icon: '⚡', color: '#FFEB3B' },
+    { id: 'mood-tag-sleepy', name: 'Uykulu', nameEn: 'Sleepy', category: 'HEALTH' as const, icon: '😴', color: '#818CF8' },
+    { id: 'mood-tag-sick', name: 'Hasta', nameEn: 'Sick', category: 'HEALTH' as const, icon: '🤒', color: '#DC2626' },
+    // WEATHER - Hava
+    { id: 'mood-tag-sunny', name: 'Güneşli', nameEn: 'Sunny', category: 'WEATHER' as const, icon: '☀️', color: '#FCD34D' },
+    { id: 'mood-tag-rainy', name: 'Yağmurlu', nameEn: 'Rainy', category: 'WEATHER' as const, icon: '🌧️', color: '#60A5FA' },
+    { id: 'mood-tag-cloudy', name: 'Bulutlu', nameEn: 'Cloudy', category: 'WEATHER' as const, icon: '☁️', color: '#9CA3AF' },
+    // OTHER - Diğer
     { id: 'mood-tag-grateful', name: 'Minnettar', nameEn: 'Grateful', category: 'OTHER' as const, icon: '🙏', color: '#8BC34A' },
+    { id: 'mood-tag-creative', name: 'Yaratıcı', nameEn: 'Creative', category: 'OTHER' as const, icon: '🎨', color: '#F472B6' },
+    { id: 'mood-tag-focused', name: 'Odaklanmış', nameEn: 'Focused', category: 'OTHER' as const, icon: '🎯', color: '#06B6D4' },
   ];
 
   for (const tag of moodTags) {
@@ -1765,6 +2139,133 @@ async function main() {
       videoDuration: 2400,
       thumbnailUrl: 'https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?w=400',
     },
+    // Demo class with local video file
+    {
+      id: 'class-pilates-demo',
+      title: '15 Dakika Pilates Başlangıç',
+      description: 'Yeni başlayanlar için mükemmel 15 dakikalık pilates dersi. Core güçlendirme ve esneklik çalışmaları.',
+      duration: 15,
+      level: 'BEGINNER' as const,
+      status: 'PUBLISHED' as const,
+      category: 'pilates',
+      isFree: true,
+      videoUrl: '/uploads/demo/pilates-demo.mp4',
+      videoSource: 'UPLOAD' as const,
+      videoDuration: 900,
+      thumbnailUrl: 'https://images.unsplash.com/photo-1518611012118-696072aa579a?w=400',
+    },
+    // Demo class with Vimeo
+    {
+      id: 'class-yoga-vimeo-demo',
+      title: 'Vinyasa Flow Demo',
+      description: 'Orta seviye vinyasa yoga akışı. Nefes ve hareket senkronizasyonu.',
+      duration: 30,
+      level: 'INTERMEDIATE' as const,
+      status: 'PUBLISHED' as const,
+      category: 'yoga',
+      isFree: false,
+      videoUrl: 'https://vimeo.com/253989945',
+      videoSource: 'VIMEO' as const,
+      videoId: '253989945',
+      videoDuration: 1800,
+      thumbnailUrl: 'https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?w=400',
+    },
+    // Vimeo - Meditation class
+    {
+      id: 'class-meditation-vimeo',
+      title: 'Derin Meditasyon Rehberli',
+      description: 'Nefes odaklı derin meditasyon seansı. Stres azaltma ve zihinsel berraklık.',
+      duration: 20,
+      level: 'BEGINNER' as const,
+      status: 'PUBLISHED' as const,
+      category: 'meditation',
+      isFree: true,
+      videoUrl: 'https://vimeo.com/312974583',
+      videoSource: 'VIMEO' as const,
+      videoId: '312974583',
+      videoDuration: 1200,
+      thumbnailUrl: 'https://images.unsplash.com/photo-1506126613408-eca07ce68773?w=400',
+    },
+    // Dailymotion - Yoga class
+    {
+      id: 'class-yoga-dailymotion',
+      title: 'Hatha Yoga Temelleri',
+      description: 'Hatha yoga temel pozisyonları ve nefes teknikleri. Başlangıç seviyesi için ideal.',
+      duration: 25,
+      level: 'BEGINNER' as const,
+      status: 'PUBLISHED' as const,
+      category: 'yoga',
+      isFree: true,
+      videoUrl: 'https://www.dailymotion.com/video/x6g8j7w',
+      videoSource: 'DAILYMOTION' as const,
+      videoId: 'x6g8j7w',
+      videoDuration: 1500,
+      thumbnailUrl: 'https://images.unsplash.com/photo-1599901860904-17e6ed7083a0?w=400',
+    },
+    // YouTube - Pilates class
+    {
+      id: 'class-pilates-youtube',
+      title: '20 Dakika Full Body Pilates',
+      description: 'Tüm vücudu çalıştıran etkili pilates rutini. Mat üzerinde yapılabilir.',
+      duration: 20,
+      level: 'INTERMEDIATE' as const,
+      status: 'PUBLISHED' as const,
+      category: 'pilates',
+      isFree: false,
+      videoUrl: 'https://www.youtube.com/watch?v=K56Z12XNQ5c',
+      videoSource: 'YOUTUBE' as const,
+      videoId: 'K56Z12XNQ5c',
+      videoDuration: 1200,
+      thumbnailUrl: 'https://images.unsplash.com/photo-1518611012118-696072aa579a?w=400',
+    },
+    // Vimeo - Breathwork
+    {
+      id: 'class-breathwork-vimeo',
+      title: 'Pranayama Temelleri',
+      description: 'Temel pranayama teknikleri ve nefes farkındalığı. Enerji artırıcı.',
+      duration: 15,
+      level: 'BEGINNER' as const,
+      status: 'PUBLISHED' as const,
+      category: 'breathwork',
+      isFree: true,
+      videoUrl: 'https://vimeo.com/383936492',
+      videoSource: 'VIMEO' as const,
+      videoId: '383936492',
+      videoDuration: 900,
+      thumbnailUrl: 'https://images.unsplash.com/photo-1593811167562-9cef47bfc4d7?w=400',
+    },
+    // YouTube - Restorative Yoga
+    {
+      id: 'class-restorative-youtube',
+      title: 'Restorative Yoga - Gece Rahatlama',
+      description: 'Uyku öncesi rahatlatıcı restorative yoga. Derin gevşeme ve rahatlama.',
+      duration: 35,
+      level: 'BEGINNER' as const,
+      status: 'PUBLISHED' as const,
+      category: 'yoga',
+      isFree: false,
+      videoUrl: 'https://www.youtube.com/watch?v=BiWDsfZ3zbo',
+      videoSource: 'YOUTUBE' as const,
+      videoId: 'BiWDsfZ3zbo',
+      videoDuration: 2100,
+      thumbnailUrl: 'https://images.unsplash.com/photo-1545389336-cf090694435e?w=400',
+    },
+    // Dailymotion - Core workout
+    {
+      id: 'class-core-dailymotion',
+      title: 'Core Güçlendirme',
+      description: '15 dakikada etkili core egzersizleri. Karın ve sırt kaslarını güçlendirir.',
+      duration: 15,
+      level: 'INTERMEDIATE' as const,
+      status: 'PUBLISHED' as const,
+      category: 'pilates',
+      isFree: true,
+      videoUrl: 'https://www.dailymotion.com/video/x7u3gk4',
+      videoSource: 'DAILYMOTION' as const,
+      videoId: 'x7u3gk4',
+      videoDuration: 900,
+      thumbnailUrl: 'https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?w=400',
+    },
   ];
 
   for (const classData of classesData) {
@@ -1919,6 +2420,1816 @@ async function main() {
     });
   }
   console.log('🏆 Challenges ensured');
+
+  // ============================================
+  // GAMIFICATION: DAILY REWARDS CONFIG
+  // ============================================
+  const dailyRewardsConfig = [
+    { day: 1, xp: 10, coins: 5, description: 'Day 1 Reward' },
+    { day: 2, xp: 15, coins: 8, description: 'Day 2 Reward' },
+    { day: 3, xp: 20, coins: 10, description: 'Day 3 Reward' },
+    { day: 4, xp: 25, coins: 12, description: 'Day 4 Reward' },
+    { day: 5, xp: 35, coins: 15, description: 'Day 5 Reward' },
+    { day: 6, xp: 45, coins: 20, description: 'Day 6 Reward' },
+    { day: 7, xp: 100, coins: 50, bonusItem: 'streak_freeze', description: 'Week Completion Bonus!' },
+  ];
+
+  await prisma.gamification_config.upsert({
+    where: { key: 'daily_rewards_config' },
+    update: { value: dailyRewardsConfig },
+    create: {
+      key: 'daily_rewards_config',
+      value: dailyRewardsConfig,
+      description: 'Daily login rewards configuration',
+    },
+  });
+  console.log('🎁 Daily rewards config ensured');
+
+  // ============================================
+  // GAMIFICATION: XP LEVELS CONFIG
+  // ============================================
+  const xpLevelsConfig = [
+    { level: 1, minXp: 0, maxXp: 100, title: 'Başlangıç' },
+    { level: 2, minXp: 100, maxXp: 250, title: 'Çırak' },
+    { level: 3, minXp: 250, maxXp: 500, title: 'Pratisyen' },
+    { level: 4, minXp: 500, maxXp: 1000, title: 'Deneyimli' },
+    { level: 5, minXp: 1000, maxXp: 2000, title: 'Uzman' },
+    { level: 6, minXp: 2000, maxXp: 4000, title: 'Usta' },
+    { level: 7, minXp: 4000, maxXp: 8000, title: 'Grandmaster' },
+    { level: 8, minXp: 8000, maxXp: 15000, title: 'Efsane' },
+    { level: 9, minXp: 15000, maxXp: 30000, title: 'Mitolojik' },
+    { level: 10, minXp: 30000, maxXp: 999999, title: 'Tanrısal' },
+  ];
+
+  await prisma.gamification_config.upsert({
+    where: { key: 'xp_levels_config' },
+    update: { value: xpLevelsConfig },
+    create: {
+      key: 'xp_levels_config',
+      value: xpLevelsConfig,
+      description: 'XP level thresholds and titles',
+    },
+  });
+  console.log('📈 XP levels config ensured');
+
+  // ============================================
+  // GAMIFICATION: XP REWARDS CONFIG
+  // ============================================
+  const xpRewardsConfig = {
+    meditation_complete: 25,
+    breathwork_complete: 20,
+    yoga_complete: 30,
+    daily_login: 10,
+    streak_bonus_7: 50,
+    streak_bonus_30: 200,
+    challenge_complete: 100,
+    achievement_unlock: 50,
+    first_activity_of_day: 15,
+    journal_entry: 10,
+    mood_log: 5,
+  };
+
+  await prisma.gamification_config.upsert({
+    where: { key: 'xp_rewards_config' },
+    update: { value: xpRewardsConfig },
+    create: {
+      key: 'xp_rewards_config',
+      value: xpRewardsConfig,
+      description: 'XP rewards for various activities',
+    },
+  });
+  console.log('💰 XP rewards config ensured');
+
+  // ============================================
+  // NOTIFICATIONS: DEMO NOTIFICATION LOGS
+  // ============================================
+  const demoNotifications = [
+    {
+      title: 'Dersiniz başlıyor!',
+      body: 'Yoga dersiniz 15 dakika sonra başlıyor. Hazır mısınız?',
+      status: 'SENT' as const,
+      sentAt: new Date(Date.now() - 1000 * 60 * 5),
+    },
+    {
+      title: 'Haftalık özet hazır',
+      body: 'Bu hafta 5 ders tamamladınız ve 250 XP kazandınız!',
+      status: 'SENT' as const,
+      sentAt: new Date(Date.now() - 1000 * 60 * 30),
+    },
+    {
+      title: 'Challenge hatırlatıcı',
+      body: '30 Günlük Yoga Challenge devam ediyor. Bugünkü dersinizi kaçırmayın!',
+      status: 'SENT' as const,
+      sentAt: new Date(Date.now() - 1000 * 60 * 60),
+    },
+    {
+      title: 'Yeni program eklendi',
+      body: 'Sabah Yoga programı artık mevcut. Hemen keşfedin!',
+      status: 'SENT' as const,
+      sentAt: new Date(Date.now() - 1000 * 60 * 120),
+    },
+    {
+      title: 'Streak hatırlatıcı',
+      body: 'Bugün henüz bir aktivite yapmadınız. Seriyi korumak için bir ders tamamlayın!',
+      status: 'PENDING' as const,
+      sentAt: null,
+    },
+  ];
+
+  // Get first user for demo notifications
+  const firstUser = await prisma.users.findFirst();
+  if (firstUser) {
+    for (const notif of demoNotifications) {
+      await prisma.notification_logs.create({
+        data: {
+          userId: firstUser.id,
+          title: notif.title,
+          body: notif.body,
+          status: notif.status,
+          sentAt: notif.sentAt,
+        },
+      });
+    }
+    console.log('🔔 Demo notification logs created');
+  }
+
+  // ============================================
+  // NOTIFICATIONS: NOTIFICATION TEMPLATES CONFIG
+  // ============================================
+  const notificationTemplatesConfig = [
+    {
+      slug: 'welcome',
+      name: 'Hoş Geldiniz',
+      type: 'EMAIL',
+      category: 'TRANSACTIONAL',
+      subject: 'Yoga App\'e Hoş Geldiniz!',
+      title: 'Hoş Geldiniz',
+      body: 'Merhaba {{firstName}}, Yoga App ailesine hoş geldiniz!',
+      htmlBody: '<h1>Hoş Geldiniz {{firstName}}!</h1><p>Yoga yolculuğunuza başlamak için hazırsınız.</p>',
+      variables: ['firstName', 'lastName', 'email'],
+      isActive: true,
+    },
+    {
+      slug: 'password-reset',
+      name: 'Şifre Sıfırlama',
+      type: 'EMAIL',
+      category: 'TRANSACTIONAL',
+      subject: 'Şifre Sıfırlama Talebi',
+      title: 'Şifre Sıfırlama',
+      body: 'Merhaba {{firstName}}, şifrenizi sıfırlamak için linke tıklayın: {{resetLink}}',
+      variables: ['firstName', 'resetLink', 'expiresIn'],
+      isActive: true,
+    },
+    {
+      slug: 'class-reminder',
+      name: 'Ders Hatırlatıcı',
+      type: 'PUSH',
+      category: 'REMINDER',
+      title: 'Dersiniz Yaklaşıyor!',
+      body: '{{className}} dersiniz {{timeUntil}} sonra başlıyor.',
+      variables: ['className', 'timeUntil', 'instructorName'],
+      isActive: true,
+    },
+    {
+      slug: 'challenge-completed',
+      name: 'Challenge Tamamlandı',
+      type: 'PUSH',
+      category: 'TRANSACTIONAL',
+      title: 'Tebrikler!',
+      body: '{{challengeName}} challenge\'ını başarıyla tamamladınız!',
+      variables: ['challengeName', 'completionDate', 'badge'],
+      isActive: true,
+    },
+    {
+      slug: 'new-program',
+      name: 'Yeni Program',
+      type: 'EMAIL',
+      category: 'MARKETING',
+      subject: 'Yeni Program: {{programName}}',
+      title: 'Yeni Program Eklendi',
+      body: 'Heyecan verici bir program daha! {{programName}} artık mevcut.',
+      variables: ['programName', 'programDescription', 'instructorName'],
+      isActive: true,
+    },
+  ];
+
+  await prisma.gamification_config.upsert({
+    where: { key: 'notification_templates_config' },
+    update: { value: notificationTemplatesConfig },
+    create: {
+      key: 'notification_templates_config',
+      value: notificationTemplatesConfig,
+      description: 'Notification templates configuration',
+    },
+  });
+  console.log('📧 Notification templates config ensured');
+
+  // ============================================
+  // NOTIFICATIONS: PUSH PROVIDER SETTINGS CONFIG
+  // ============================================
+  const pushProviderSettingsConfig = {
+    providers: [
+      {
+        id: 'firebase',
+        name: 'Firebase Cloud Messaging',
+        provider: 'FIREBASE',
+        isEnabled: false,
+        isConfigured: false,
+        config: {
+          projectId: '',
+          privateKey: '',
+          clientEmail: '',
+        },
+      },
+      {
+        id: 'onesignal',
+        name: 'OneSignal',
+        provider: 'ONESIGNAL',
+        isEnabled: false,
+        isConfigured: false,
+        config: {
+          appId: '',
+          apiKey: '',
+        },
+      },
+      {
+        id: 'expo',
+        name: 'Expo Push Notifications',
+        provider: 'EXPO',
+        isEnabled: false,
+        isConfigured: false,
+        config: {
+          accessToken: '',
+        },
+      },
+    ],
+    emailConfig: {
+      provider: 'SMTP',
+      isEnabled: false,
+      isConfigured: false,
+      fromEmail: '',
+      fromName: '',
+      config: {
+        host: '',
+        port: '587',
+        username: '',
+        password: '',
+        secure: 'true',
+      },
+    },
+  };
+
+  await prisma.gamification_config.upsert({
+    where: { key: 'push_provider_settings' },
+    update: { value: pushProviderSettingsConfig },
+    create: {
+      key: 'push_provider_settings',
+      value: pushProviderSettingsConfig,
+      description: 'Push notification provider settings',
+    },
+  });
+  console.log('📲 Push provider settings config ensured');
+
+  // ============================================
+  // NOTIFICATIONS: BROADCAST CAMPAIGNS CONFIG
+  // ============================================
+  const broadcastCampaignsConfig = [
+    {
+      id: 'campaign-1',
+      name: 'Yeni Yıl Kampanyası',
+      status: 'SENT',
+      channels: ['push', 'email'],
+      targetAudience: { type: 'ALL' },
+      content: {
+        title: 'Yeni Yıla Yoga ile Girin!',
+        body: '2024\'te yoga yolculuğunuza başlayın. %20 indirim!',
+        subject: 'Yeni Yıla Yoga ile Merhaba!',
+      },
+      sentAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 7).toISOString(),
+      stats: {
+        total: 5000,
+        sent: 5000,
+        delivered: 4850,
+        opened: 2100,
+        clicked: 450,
+        failed: 150,
+      },
+      createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 10).toISOString(),
+    },
+    {
+      id: 'campaign-2',
+      name: 'Premium Kullanıcı Duyurusu',
+      status: 'SCHEDULED',
+      channels: ['push', 'inApp'],
+      targetAudience: { type: 'ROLES', roles: ['PREMIUM'] },
+      content: {
+        title: 'Yeni Özellik: Canlı Dersler',
+        body: 'Premium üyeliğinize özel canlı yoga dersleri başlıyor!',
+      },
+      scheduledAt: new Date(Date.now() + 1000 * 60 * 60 * 24 * 7).toISOString(),
+      stats: {
+        total: 1200,
+        sent: 0,
+        delivered: 0,
+        opened: 0,
+        clicked: 0,
+        failed: 0,
+      },
+      createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 2).toISOString(),
+    },
+    {
+      id: 'campaign-3',
+      name: 'Haftalık Özet',
+      status: 'SENDING',
+      channels: ['email'],
+      targetAudience: { type: 'ALL' },
+      content: {
+        title: 'Bu Haftanız Nasıl Geçti?',
+        body: 'Haftalık yoga ilerlemenizi görüntüleyin.',
+        subject: 'Haftalık Yoga Özetiniz',
+      },
+      stats: {
+        total: 3500,
+        sent: 2100,
+        delivered: 2050,
+        opened: 0,
+        clicked: 0,
+        failed: 50,
+      },
+      createdAt: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString(),
+    },
+  ];
+
+  await prisma.gamification_config.upsert({
+    where: { key: 'broadcast_campaigns_config' },
+    update: { value: broadcastCampaignsConfig },
+    create: {
+      key: 'broadcast_campaigns_config',
+      value: broadcastCampaignsConfig,
+      description: 'Broadcast notification campaigns',
+    },
+  });
+  console.log('📢 Broadcast campaigns config ensured');
+
+  // ============================================
+  // ADMIN AUDIT LOGS
+  // ============================================
+  const adminAuditLogs = [
+    {
+      adminId: admin.id,
+      action: 'USER_CREATE' as const,
+      entityType: 'USER',
+      entityId: studentSam.id,
+      ipAddress: '192.168.1.100',
+      userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)',
+      metadata: { email: studentSam.email, firstName: studentSam.firstName, lastName: studentSam.lastName },
+      createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 5), // 5 days ago
+    },
+    {
+      adminId: admin.id,
+      action: 'USER_CREATE' as const,
+      entityType: 'USER',
+      entityId: studentEmma.id,
+      ipAddress: '192.168.1.100',
+      userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)',
+      metadata: { email: studentEmma.email, firstName: studentEmma.firstName, lastName: studentEmma.lastName },
+      createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 5), // 5 days ago
+    },
+    {
+      adminId: admin.id,
+      action: 'PROGRAM_CREATE' as const,
+      entityType: 'PROGRAM',
+      entityId: 'prog-demo-1',
+      ipAddress: '192.168.1.100',
+      userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)',
+      metadata: { title: '30-Day Yoga Challenge', level: 'INTERMEDIATE' },
+      createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 4), // 4 days ago
+    },
+    {
+      adminId: admin.id,
+      action: 'PROGRAM_PUBLISH' as const,
+      entityType: 'PROGRAM',
+      entityId: 'prog-demo-1',
+      ipAddress: '192.168.1.101',
+      userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
+      metadata: { title: '30-Day Yoga Challenge', previousStatus: 'DRAFT', newStatus: 'PUBLISHED' },
+      createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 3), // 3 days ago
+    },
+    {
+      adminId: admin.id,
+      action: 'CLASS_CREATE' as const,
+      entityType: 'CLASS',
+      entityId: 'class-demo-1',
+      ipAddress: '192.168.1.100',
+      userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)',
+      metadata: { title: 'Morning Flow', duration: 45, instructor: 'Taylor Johnson' },
+      createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 3), // 3 days ago
+    },
+    {
+      adminId: admin.id,
+      action: 'USER_UPDATE' as const,
+      entityType: 'USER',
+      entityId: studentSam.id,
+      ipAddress: '192.168.1.102',
+      userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 16_0)',
+      metadata: { field: 'subscription', oldValue: 'FREE', newValue: 'PREMIUM' },
+      createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 2), // 2 days ago
+    },
+    {
+      adminId: admin.id,
+      action: 'CHALLENGE_CREATE' as const,
+      entityType: 'CHALLENGE',
+      entityId: 'challenge-demo-1',
+      ipAddress: '192.168.1.100',
+      userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)',
+      metadata: { title: 'Winter Wellness Challenge', duration: '7 days', participants: 0 },
+      createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 2), // 2 days ago
+    },
+    {
+      adminId: admin.id,
+      action: 'POSE_CREATE' as const,
+      entityType: 'POSE',
+      entityId: 'pose-demo-1',
+      ipAddress: '192.168.1.100',
+      userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)',
+      metadata: { name: 'Downward Dog', sanskritName: 'Adho Mukha Svanasana', difficulty: 'BEGINNER' },
+      createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24), // 1 day ago
+    },
+    {
+      adminId: admin.id,
+      action: 'CLASS_UPDATE' as const,
+      entityType: 'CLASS',
+      entityId: 'class-demo-1',
+      ipAddress: '192.168.1.103',
+      userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
+      metadata: { field: 'duration', oldValue: 45, newValue: 60 },
+      createdAt: new Date(Date.now() - 1000 * 60 * 60 * 12), // 12 hours ago
+    },
+    {
+      adminId: admin.id,
+      action: 'SETTINGS_UPDATE' as const,
+      entityType: 'SETTINGS',
+      entityId: 'app-config',
+      ipAddress: '192.168.1.100',
+      userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)',
+      metadata: { setting: 'enableNotifications', oldValue: false, newValue: true },
+      createdAt: new Date(Date.now() - 1000 * 60 * 60 * 6), // 6 hours ago
+    },
+    {
+      adminId: admin.id,
+      action: 'USER_BAN' as const,
+      entityType: 'USER',
+      entityId: 'user-banned-demo',
+      ipAddress: '192.168.1.100',
+      userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)',
+      metadata: { reason: 'Spam activity', email: 'spammer@example.com' },
+      createdAt: new Date(Date.now() - 1000 * 60 * 60 * 3), // 3 hours ago
+    },
+    {
+      adminId: admin.id,
+      action: 'PROGRAM_UPDATE' as const,
+      entityType: 'PROGRAM',
+      entityId: 'prog-demo-1',
+      ipAddress: '192.168.1.100',
+      userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)',
+      metadata: { field: 'description', action: 'updated' },
+      createdAt: new Date(Date.now() - 1000 * 60 * 60 * 2), // 2 hours ago
+    },
+    {
+      adminId: admin.id,
+      action: 'POSE_UPDATE' as const,
+      entityType: 'POSE',
+      entityId: 'pose-demo-1',
+      ipAddress: '192.168.1.100',
+      userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)',
+      metadata: { field: 'benefits', action: 'added new benefits' },
+      createdAt: new Date(Date.now() - 1000 * 60 * 60), // 1 hour ago
+    },
+    {
+      adminId: admin.id,
+      action: 'CLASS_DELETE' as const,
+      entityType: 'CLASS',
+      entityId: 'class-deleted-demo',
+      ipAddress: '192.168.1.100',
+      userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)',
+      metadata: { title: 'Old Deprecated Class', reason: 'Content outdated' },
+      createdAt: new Date(Date.now() - 1000 * 60 * 30), // 30 minutes ago
+    },
+    {
+      adminId: admin.id,
+      action: 'USER_UNBAN' as const,
+      entityType: 'USER',
+      entityId: 'user-unbanned-demo',
+      ipAddress: '192.168.1.100',
+      userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)',
+      metadata: { reason: 'Appeal accepted', email: 'restored@example.com' },
+      createdAt: new Date(Date.now() - 1000 * 60 * 15), // 15 minutes ago
+    },
+  ];
+
+  // Clear existing audit logs and insert fresh ones
+  await prisma.admin_audit_logs.deleteMany({});
+  for (const log of adminAuditLogs) {
+    await prisma.admin_audit_logs.create({ data: log });
+  }
+  console.log('📋 Admin audit logs seeded');
+
+  // ============================================
+  // PODCASTS
+  // ============================================
+  const podcastsData = [
+    {
+      id: 'podcast-mindful-mornings',
+      title: 'Mindful Mornings',
+      slug: 'mindful-mornings',
+      description: 'Güne farkındalıkla başlamanın yollarını keşfedin. Her sabah yeni bir meditasyon ve mindfulness pratiği ile uyanın.',
+      shortDescription: 'Sabah meditasyonları ve farkındalık pratikleri',
+      coverImage: 'https://images.unsplash.com/photo-1506126613408-eca07ce68773?w=800',
+      bannerImage: 'https://images.unsplash.com/photo-1506126613408-eca07ce68773?w=1200',
+      category: 'MINDFULNESS' as const,
+      hostName: 'Ayşe Yoga',
+      hostBio: '15 yıllık yoga ve meditasyon eğitmeni. Mindfulness pratisyeni.',
+      hostAvatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=200',
+      status: 'PUBLISHED' as const,
+      isExplicit: false,
+      language: 'tr',
+      rssEnabled: true,
+      totalEpisodes: 45,
+      totalDuration: 81000, // 22.5 hours
+      totalListens: 12500,
+      subscriberCount: 3420,
+      publishedAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 180), // 6 months ago
+    },
+    {
+      id: 'podcast-yoga-journey',
+      title: 'Yoga Journey',
+      slug: 'yoga-journey',
+      description: 'Yoga felsefesi, asana teknikleri ve kişisel dönüşüm hikayeleri. Deneyimli yoga eğitmenleri ile derinlemesine sohbetler.',
+      shortDescription: 'Yoga felsefesi ve pratik rehberlik',
+      coverImage: 'https://images.unsplash.com/photo-1545205597-3d9d02c29597?w=800',
+      bannerImage: 'https://images.unsplash.com/photo-1545205597-3d9d02c29597?w=1200',
+      category: 'YOGA_INSTRUCTION' as const,
+      hostName: 'Mehmet Asana',
+      hostBio: 'RYT-500 sertifikalı yoga eğitmeni. Ashtanga ve Vinyasa uzmanı.',
+      hostAvatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200',
+      status: 'PUBLISHED' as const,
+      isExplicit: false,
+      language: 'tr',
+      rssEnabled: true,
+      totalEpisodes: 32,
+      totalDuration: 69120, // 19.2 hours
+      totalListens: 8700,
+      subscriberCount: 2150,
+      publishedAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 120), // 4 months ago
+    },
+    {
+      id: 'podcast-breath-mastery',
+      title: 'Breath Mastery',
+      slug: 'breath-mastery',
+      description: 'Nefes çalışmaları ve pranayama teknikleri üzerine kapsamlı bir rehber. Stres yönetimi, enerji artırma ve derin rahatlama.',
+      shortDescription: 'Pranayama ve nefes teknikleri',
+      coverImage: 'https://images.unsplash.com/photo-1518611012118-696072aa579a?w=800',
+      bannerImage: 'https://images.unsplash.com/photo-1518611012118-696072aa579a?w=1200',
+      category: 'BREATHWORK' as const,
+      hostName: 'Dr. Zeynep Nefes',
+      hostBio: 'Nefes terapisti ve wellness koçu. 10+ yıl deneyim.',
+      hostAvatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=200',
+      status: 'PUBLISHED' as const,
+      isExplicit: false,
+      language: 'tr',
+      rssEnabled: true,
+      totalEpisodes: 28,
+      totalDuration: 50400, // 14 hours
+      totalListens: 6200,
+      subscriberCount: 1890,
+      publishedAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 90), // 3 months ago
+    },
+    {
+      id: 'podcast-sleep-sanctuary',
+      title: 'Sleep Sanctuary',
+      slug: 'sleep-sanctuary',
+      description: 'Kaliteli uyku için meditasyonlar, uyku hikayeleri ve rahatlama teknikleri. Her gece huzurlu bir uykuya dalın.',
+      shortDescription: 'Uyku meditasyonları ve hikayeler',
+      coverImage: 'https://images.unsplash.com/photo-1511295742362-92c96b1cf484?w=800',
+      bannerImage: 'https://images.unsplash.com/photo-1511295742362-92c96b1cf484?w=1200',
+      category: 'SLEEP' as const,
+      hostName: 'Luna Dreams',
+      hostBio: 'Uyku uzmanı ve sesli içerik üreticisi. Rahatlatıcı sesler ve hikayeler.',
+      hostAvatar: 'https://images.unsplash.com/photo-1489424731084-a5d8b219a5bb?w=200',
+      status: 'PUBLISHED' as const,
+      isExplicit: false,
+      language: 'tr',
+      rssEnabled: true,
+      totalEpisodes: 52,
+      totalDuration: 93600, // 26 hours
+      totalListens: 18900,
+      subscriberCount: 5670,
+      publishedAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 240), // 8 months ago
+    },
+    {
+      id: 'podcast-wellness-talks',
+      title: 'Wellness Talks',
+      slug: 'wellness-talks',
+      description: 'Sağlık, wellness ve kişisel gelişim üzerine uzman konuklarla röportajlar. Beslenme, egzersiz ve mental sağlık.',
+      shortDescription: 'Uzman röportajları ve wellness içgörüleri',
+      coverImage: 'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=800',
+      bannerImage: 'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=1200',
+      category: 'WELLNESS' as const,
+      hostName: 'Wellness Team',
+      hostBio: 'Sağlık ve wellness alanında uzman ekip.',
+      hostAvatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=200',
+      status: 'PUBLISHED' as const,
+      isExplicit: false,
+      language: 'tr',
+      rssEnabled: true,
+      totalEpisodes: 38,
+      totalDuration: 82080, // 22.8 hours
+      totalListens: 9400,
+      subscriberCount: 2780,
+      publishedAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 150), // 5 months ago
+    },
+    {
+      id: 'podcast-meditation-basics',
+      title: 'Meditation Basics',
+      slug: 'meditation-basics',
+      description: 'Meditasyona yeni başlayanlar için adım adım rehber. Temel teknikler, yaygın hatalar ve pratik ipuçları.',
+      shortDescription: 'Başlangıç seviye meditasyon dersleri',
+      coverImage: 'https://images.unsplash.com/photo-1508672019048-805c876b67e2?w=800',
+      bannerImage: 'https://images.unsplash.com/photo-1508672019048-805c876b67e2?w=1200',
+      category: 'MEDITATION' as const,
+      hostName: 'Calm Mind',
+      hostBio: 'Meditasyon öğretmeni. Başlangıç seviye eğitim uzmanı.',
+      hostAvatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=200',
+      status: 'DRAFT' as const,
+      isExplicit: false,
+      language: 'tr',
+      rssEnabled: false,
+      totalEpisodes: 12,
+      totalDuration: 21600, // 6 hours
+      totalListens: 0,
+      subscriberCount: 0,
+      publishedAt: null,
+    },
+  ];
+
+  for (const podcast of podcastsData) {
+    await prisma.podcasts.upsert({
+      where: { id: podcast.id },
+      update: podcast,
+      create: podcast,
+    });
+  }
+  console.log('🎙️ Podcasts seeded');
+
+  // ============================================
+  // LIVE STREAMS
+  // ============================================
+  const liveStreamsData = [
+    {
+      id: 'live-stream-morning-yoga',
+      title: 'Morning Yoga Flow',
+      description: 'Start your day with energizing vinyasa yoga. Perfect for all levels.',
+      thumbnailUrl: 'https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?w=800',
+      instructorId: instructorProfile.id,
+      coHostIds: [],
+      type: 'YOGA_CLASS' as const,
+      status: 'SCHEDULED' as const,
+      scheduledStartAt: new Date(Date.now() + 1000 * 60 * 60 * 24), // Tomorrow
+      scheduledEndAt: new Date(Date.now() + 1000 * 60 * 60 * 25), // Tomorrow + 1 hour
+      maxParticipants: 100,
+      currentParticipants: 0,
+      isRecorded: true,
+      requiresSubscription: true,
+      minimumTier: 'FREE' as const,
+      tags: ['yoga', 'morning', 'vinyasa', 'beginner-friendly'],
+      level: 'BEGINNER' as const,
+      equipment: ['yoga mat'],
+      agoraChannelName: 'morning-yoga-flow-channel',
+      chatEnabled: true,
+      handRaiseEnabled: true,
+      viewCount: 0,
+      likeCount: 0,
+    },
+    {
+      id: 'live-stream-meditation-master',
+      title: 'Deep Meditation Masterclass',
+      description: 'Learn advanced meditation techniques for stress relief and mental clarity.',
+      thumbnailUrl: 'https://images.unsplash.com/photo-1506126613408-eca07ce68773?w=800',
+      instructorId: instructorProfileAlex.id,
+      coHostIds: [],
+      type: 'MEDITATION' as const,
+      status: 'SCHEDULED' as const,
+      scheduledStartAt: new Date(Date.now() + 1000 * 60 * 60 * 48), // 2 days from now
+      scheduledEndAt: new Date(Date.now() + 1000 * 60 * 60 * 49), // 2 days + 1 hour
+      maxParticipants: 200,
+      currentParticipants: 0,
+      isRecorded: true,
+      requiresSubscription: true,
+      minimumTier: 'YOGA' as const,
+      tags: ['meditation', 'advanced', 'stress-relief', 'mindfulness'],
+      level: 'INTERMEDIATE' as const,
+      equipment: ['cushion'],
+      agoraChannelName: 'meditation-masterclass-channel',
+      chatEnabled: true,
+      handRaiseEnabled: true,
+      viewCount: 0,
+      likeCount: 0,
+    },
+    {
+      id: 'live-stream-pilates-core',
+      title: 'Pilates Core Intensive',
+      description: 'Strengthen your core with focused Pilates exercises. Intermediate level.',
+      thumbnailUrl: 'https://images.unsplash.com/photo-1518611012118-696072aa579a?w=800',
+      instructorId: instructorProfileMaya.id,
+      coHostIds: [],
+      type: 'WORKSHOP' as const,
+      status: 'SCHEDULED' as const,
+      scheduledStartAt: new Date(Date.now() + 1000 * 60 * 60 * 72), // 3 days from now
+      scheduledEndAt: new Date(Date.now() + 1000 * 60 * 60 * 73.5), // 3 days + 1.5 hours
+      maxParticipants: 50,
+      currentParticipants: 0,
+      isRecorded: true,
+      requiresSubscription: true,
+      minimumTier: 'FREE' as const,
+      tags: ['pilates', 'core', 'strength', 'intermediate'],
+      level: 'INTERMEDIATE' as const,
+      equipment: ['yoga mat', 'pilates ring'],
+      agoraChannelName: 'pilates-core-intensive-channel',
+      chatEnabled: true,
+      handRaiseEnabled: true,
+      viewCount: 0,
+      likeCount: 0,
+    },
+    {
+      id: 'live-stream-breathwork-ended',
+      title: 'Breathwork Power Session',
+      description: 'Powerful breathing exercises for energy and focus. Recorded session.',
+      thumbnailUrl: 'https://images.unsplash.com/photo-1545389336-cf090694435e?w=800',
+      instructorId: instructorProfileAlex.id,
+      coHostIds: [],
+      type: 'YOGA_CLASS' as const,
+      status: 'ENDED' as const,
+      scheduledStartAt: new Date(Date.now() - 1000 * 60 * 60 * 3), // 3 hours ago
+      scheduledEndAt: new Date(Date.now() - 1000 * 60 * 60 * 2), // 2 hours ago
+      actualStartAt: new Date(Date.now() - 1000 * 60 * 60 * 3),
+      actualEndAt: new Date(Date.now() - 1000 * 60 * 60 * 2),
+      maxParticipants: 75,
+      currentParticipants: 68,
+      isRecorded: true,
+      recordingUrl: 'https://storage.example.com/recordings/breathwork-session.mp4',
+      recordingDuration: 3600, // 1 hour
+      requiresSubscription: false,
+      tags: ['breathwork', 'pranayama', 'energy', 'focus'],
+      level: 'BEGINNER' as const,
+      equipment: [],
+      agoraChannelName: 'breathwork-power-channel',
+      chatEnabled: true,
+      handRaiseEnabled: true,
+      viewCount: 245,
+      likeCount: 89,
+    },
+    {
+      id: 'live-stream-qa-session',
+      title: 'Ask Me Anything: Yoga Journey',
+      description: 'Live Q&A session with our senior yoga instructor. Ask your questions!',
+      thumbnailUrl: 'https://images.unsplash.com/photo-1575052814086-f385e2e2ad1b?w=800',
+      instructorId: instructorProfile.id,
+      coHostIds: [instructorProfileMaya.id],
+      type: 'Q_AND_A' as const,
+      status: 'ENDED' as const,
+      scheduledStartAt: new Date(Date.now() - 1000 * 60 * 60 * 24), // Yesterday
+      scheduledEndAt: new Date(Date.now() - 1000 * 60 * 60 * 23), // Yesterday + 1 hour
+      actualStartAt: new Date(Date.now() - 1000 * 60 * 60 * 24),
+      actualEndAt: new Date(Date.now() - 1000 * 60 * 60 * 22.5),
+      maxParticipants: 150,
+      currentParticipants: 127,
+      isRecorded: true,
+      recordingUrl: 'https://storage.example.com/recordings/qa-yoga-journey.mp4',
+      recordingDuration: 5400, // 1.5 hours
+      requiresSubscription: false,
+      tags: ['q&a', 'community', 'yoga', 'beginner'],
+      level: 'BEGINNER' as const,
+      equipment: [],
+      agoraChannelName: 'qa-yoga-journey-channel',
+      chatEnabled: true,
+      handRaiseEnabled: true,
+      viewCount: 412,
+      likeCount: 156,
+    },
+    {
+      id: 'live-stream-special-event',
+      title: 'New Year Wellness Workshop',
+      description: 'Special event: Full-day wellness workshop with multiple instructors.',
+      thumbnailUrl: 'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=800',
+      instructorId: instructorProfile.id,
+      coHostIds: [instructorProfileMaya.id, instructorProfileAlex.id],
+      type: 'SPECIAL_EVENT' as const,
+      status: 'CANCELLED' as const,
+      scheduledStartAt: new Date(Date.now() + 1000 * 60 * 60 * 168), // 1 week from now
+      scheduledEndAt: new Date(Date.now() + 1000 * 60 * 60 * 176), // 1 week + 8 hours
+      maxParticipants: 500,
+      currentParticipants: 0,
+      isRecorded: true,
+      requiresSubscription: true,
+      minimumTier: 'YOGA' as const,
+      price: 29.99,
+      tags: ['special-event', 'workshop', 'wellness', 'new-year'],
+      level: 'BEGINNER' as const,
+      equipment: ['yoga mat', 'blocks', 'strap'],
+      agoraChannelName: 'new-year-wellness-channel',
+      chatEnabled: true,
+      handRaiseEnabled: true,
+      viewCount: 0,
+      likeCount: 0,
+    },
+  ];
+
+  for (const stream of liveStreamsData) {
+    await prisma.live_streams.upsert({
+      where: { id: stream.id },
+      update: stream,
+      create: stream,
+    });
+  }
+  console.log('📺 Live streams seeded');
+
+  // ============================================
+  // CONTENT REPORTS (Moderation)
+  // ============================================
+  const contentReportsData = [
+    {
+      id: 'report-spam-comment',
+      reporterId: studentSam.id,
+      reason: 'SPAM' as const,
+      description: 'Bu yorum reklam içeriyor ve ders konusuyla alakası yok.',
+      targetType: 'COMMENT' as const,
+      status: 'PENDING' as const,
+    },
+    {
+      id: 'report-harassment-user',
+      reporterId: studentEmma.id,
+      reason: 'HARASSMENT' as const,
+      description: 'Bu kullanıcı forumda diğer üyelere hakaret ediyor.',
+      targetType: 'USER' as const,
+      userId: studentSam.id,
+      status: 'REVIEWING' as const,
+    },
+    {
+      id: 'report-inappropriate-post',
+      reporterId: teacherTaylor.id,
+      reason: 'INAPPROPRIATE_CONTENT' as const,
+      description: 'Paylaşım uygunsuz içerik barındırıyor.',
+      targetType: 'POST' as const,
+      status: 'PENDING' as const,
+    },
+    {
+      id: 'report-misinformation-topic',
+      reporterId: teacherMaya.id,
+      reason: 'MISINFORMATION' as const,
+      description: 'Bu konu başlığı yanlış sağlık bilgileri içeriyor.',
+      targetType: 'TOPIC' as const,
+      status: 'RESOLVED' as const,
+      reviewedById: admin.id,
+      reviewedAt: new Date(Date.now() - 1000 * 60 * 60 * 48), // 2 days ago
+      resolution: 'İçerik kaldırıldı ve kullanıcıya uyarı verildi.',
+    },
+    {
+      id: 'report-copyright-post',
+      reporterId: teacherAlex.id,
+      reason: 'COPYRIGHT' as const,
+      description: 'Bu paylaşımda telif hakkı ihlali var. Müzik izinsiz kullanılmış.',
+      targetType: 'POST' as const,
+      status: 'DISMISSED' as const,
+      reviewedById: admin.id,
+      reviewedAt: new Date(Date.now() - 1000 * 60 * 60 * 24), // 1 day ago
+      resolution: 'İncelendi, telif hakkı ihlali tespit edilmedi. Müzik lisanslı.',
+    },
+    {
+      id: 'report-spam-user',
+      reporterId: studentEmma.id,
+      reason: 'SPAM' as const,
+      description: 'Kullanıcı sürekli aynı linki paylaşıyor.',
+      targetType: 'USER' as const,
+      userId: studentSam.id,
+      status: 'PENDING' as const,
+    },
+    {
+      id: 'report-other-comment',
+      reporterId: studentSam.id,
+      reason: 'OTHER' as const,
+      description: 'Yorum konu dışı ve tartışmayı bozuyor.',
+      targetType: 'COMMENT' as const,
+      status: 'REVIEWING' as const,
+    },
+    {
+      id: 'report-harassment-comment',
+      reporterId: teacherTaylor.id,
+      reason: 'HARASSMENT' as const,
+      description: 'Yorumda küfür ve hakaret içeren ifadeler var.',
+      targetType: 'COMMENT' as const,
+      status: 'RESOLVED' as const,
+      reviewedById: admin.id,
+      reviewedAt: new Date(Date.now() - 1000 * 60 * 60 * 72), // 3 days ago
+      resolution: 'Yorum silindi, kullanıcı 7 gün süreyle yasaklandı.',
+    },
+  ];
+
+  for (const report of contentReportsData) {
+    await prisma.content_reports.upsert({
+      where: { id: report.id },
+      update: report,
+      create: report,
+    });
+  }
+  console.log('🚨 Content reports seeded');
+
+  // ============================================
+  // SUBSCRIPTIONS (User Subscriptions)
+  // ============================================
+  const subscriptionsData = [
+    {
+      id: 'sub-sam-premium',
+      userId: studentSam.id,
+      planId: 'plan-premium',
+      provider: 'STRIPE' as const,
+      status: 'ACTIVE' as const,
+      interval: 'MONTHLY' as const,
+      stripeCustomerId: 'cus_sample_sam',
+      stripeSubscriptionId: 'sub_sample_sam_premium',
+      currentPeriodStart: new Date(Date.now() - 1000 * 60 * 60 * 24 * 15), // 15 days ago
+      currentPeriodEnd: new Date(Date.now() + 1000 * 60 * 60 * 24 * 15), // 15 days from now
+      autoRenew: true,
+    },
+    {
+      id: 'sub-emma-yoga',
+      userId: studentEmma.id,
+      planId: 'plan-yoga',
+      provider: 'STRIPE' as const,
+      status: 'ACTIVE' as const,
+      interval: 'YEARLY' as const,
+      stripeCustomerId: 'cus_sample_emma',
+      stripeSubscriptionId: 'sub_sample_emma_yoga',
+      currentPeriodStart: new Date(Date.now() - 1000 * 60 * 60 * 24 * 60), // 60 days ago
+      currentPeriodEnd: new Date(Date.now() + 1000 * 60 * 60 * 24 * 305), // ~305 days from now
+      autoRenew: true,
+    },
+    {
+      id: 'sub-taylor-meditation',
+      userId: teacherTaylor.id,
+      planId: 'plan-meditation',
+      provider: 'APPLE' as const,
+      status: 'ACTIVE' as const,
+      interval: 'MONTHLY' as const,
+      appleOriginalTransactionId: 'apple_txn_taylor_123',
+      currentPeriodStart: new Date(Date.now() - 1000 * 60 * 60 * 24 * 10), // 10 days ago
+      currentPeriodEnd: new Date(Date.now() + 1000 * 60 * 60 * 24 * 20), // 20 days from now
+      autoRenew: true,
+    },
+    {
+      id: 'sub-maya-family',
+      userId: teacherMaya.id,
+      planId: 'plan-family',
+      provider: 'GOOGLE' as const,
+      status: 'ACTIVE' as const,
+      interval: 'YEARLY' as const,
+      googlePurchaseToken: 'google_token_maya_456',
+      googleOrderId: 'GPA.1234-5678-9012-3456',
+      currentPeriodStart: new Date(Date.now() - 1000 * 60 * 60 * 24 * 30), // 30 days ago
+      currentPeriodEnd: new Date(Date.now() + 1000 * 60 * 60 * 24 * 335), // ~335 days from now
+      autoRenew: true,
+    },
+    {
+      id: 'sub-cancelled-yoga',
+      userId: teacherAlex.id,
+      planId: 'plan-yoga',
+      provider: 'STRIPE' as const,
+      status: 'CANCELLED' as const,
+      interval: 'MONTHLY' as const,
+      stripeCustomerId: 'cus_sample_alex',
+      stripeSubscriptionId: 'sub_sample_alex_yoga',
+      currentPeriodStart: new Date(Date.now() - 1000 * 60 * 60 * 24 * 45), // 45 days ago
+      currentPeriodEnd: new Date(Date.now() - 1000 * 60 * 60 * 24 * 15), // ended 15 days ago
+      cancelledAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 20),
+      cancelReason: 'Kullanmıyorum, tatile çıkıyorum.',
+      autoRenew: false,
+    },
+    {
+      id: 'sub-expired-premium',
+      userId: admin.id,
+      planId: 'plan-premium',
+      provider: 'STRIPE' as const,
+      status: 'EXPIRED' as const,
+      interval: 'MONTHLY' as const,
+      stripeCustomerId: 'cus_sample_admin',
+      stripeSubscriptionId: 'sub_sample_admin_premium',
+      currentPeriodStart: new Date(Date.now() - 1000 * 60 * 60 * 24 * 60), // 60 days ago
+      currentPeriodEnd: new Date(Date.now() - 1000 * 60 * 60 * 24 * 30), // ended 30 days ago
+      autoRenew: false,
+    },
+  ];
+
+  for (const subscription of subscriptionsData) {
+    await prisma.subscriptions.upsert({
+      where: { id: subscription.id },
+      update: subscription,
+      create: subscription,
+    });
+  }
+  console.log('💳 Subscriptions seeded');
+
+  // ============================================
+  // PAYMENTS
+  // ============================================
+  const paymentsData = [
+    {
+      id: 'payment-sam-premium-1',
+      userId: studentSam.id,
+      subscriptionId: 'sub-sam-premium',
+      provider: 'STRIPE' as const,
+      transactionId: 'pi_sam_premium_seed_1',
+      amount: 149.99,
+      currency: 'TRY',
+      status: 'COMPLETED' as const,
+      paymentMethod: 'CARD' as const,
+      cardBrand: 'Visa',
+      cardLast4: '4242',
+      receiptUrl: 'https://pay.stripe.com/receipts/sample_sam_1',
+      paidAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 15),
+    },
+    {
+      id: 'payment-emma-yoga-1',
+      userId: studentEmma.id,
+      subscriptionId: 'sub-emma-yoga',
+      provider: 'STRIPE' as const,
+      transactionId: 'pi_emma_yoga_seed_1',
+      amount: 899.88,
+      currency: 'TRY',
+      status: 'COMPLETED' as const,
+      paymentMethod: 'CARD' as const,
+      cardBrand: 'Mastercard',
+      cardLast4: '5555',
+      receiptUrl: 'https://pay.stripe.com/receipts/sample_emma_1',
+      paidAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 60),
+    },
+    {
+      id: 'payment-taylor-meditation-1',
+      userId: teacherTaylor.id,
+      subscriptionId: 'sub-taylor-meditation',
+      provider: 'APPLE' as const,
+      transactionId: 'apple_receipt_taylor_seed',
+      amount: 79.99,
+      currency: 'TRY',
+      status: 'COMPLETED' as const,
+      paymentMethod: 'APPLE_PAY' as const,
+      paidAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 10),
+    },
+    {
+      id: 'payment-maya-family-1',
+      userId: teacherMaya.id,
+      subscriptionId: 'sub-maya-family',
+      provider: 'GOOGLE' as const,
+      transactionId: 'google_order_maya_seed',
+      amount: 2199.88,
+      currency: 'TRY',
+      status: 'COMPLETED' as const,
+      paymentMethod: 'GOOGLE_PAY' as const,
+      paidAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 30),
+    },
+    {
+      id: 'payment-alex-yoga-1',
+      userId: teacherAlex.id,
+      subscriptionId: 'sub-cancelled-yoga',
+      provider: 'STRIPE' as const,
+      transactionId: 'pi_alex_yoga_seed_1',
+      amount: 99.99,
+      currency: 'TRY',
+      status: 'COMPLETED' as const,
+      paymentMethod: 'CARD' as const,
+      cardBrand: 'Visa',
+      cardLast4: '1234',
+      paidAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 45),
+    },
+    {
+      id: 'payment-admin-premium-1',
+      userId: admin.id,
+      subscriptionId: 'sub-expired-premium',
+      provider: 'STRIPE' as const,
+      transactionId: 'pi_admin_premium_seed_1',
+      amount: 149.99,
+      currency: 'TRY',
+      status: 'COMPLETED' as const,
+      paymentMethod: 'CARD' as const,
+      cardBrand: 'Amex',
+      cardLast4: '0005',
+      paidAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 60),
+    },
+    {
+      id: 'payment-failed-example',
+      userId: studentSam.id,
+      provider: 'STRIPE' as const,
+      transactionId: 'pi_failed_seed_1',
+      amount: 149.99,
+      currency: 'TRY',
+      status: 'FAILED' as const,
+      paymentMethod: 'CARD' as const,
+      cardBrand: 'Visa',
+      cardLast4: '0002',
+      failureCode: 'card_declined',
+      failureMessage: 'Kartınız reddedildi. Lütfen bankanızla iletişime geçin.',
+    },
+    {
+      id: 'payment-pending-example',
+      userId: studentEmma.id,
+      provider: 'STRIPE' as const,
+      transactionId: 'pi_pending_seed_1',
+      amount: 99.99,
+      currency: 'TRY',
+      status: 'PENDING' as const,
+      paymentMethod: 'CARD' as const,
+      cardBrand: 'Mastercard',
+      cardLast4: '8888',
+    },
+    {
+      id: 'payment-refunded-example',
+      userId: teacherTaylor.id,
+      provider: 'STRIPE' as const,
+      transactionId: 'pi_refunded_seed_1',
+      amount: 79.99,
+      currency: 'TRY',
+      status: 'REFUNDED' as const,
+      paymentMethod: 'CARD' as const,
+      cardBrand: 'Visa',
+      cardLast4: '9999',
+      refundedAmount: 79.99,
+      paidAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 90),
+    },
+  ];
+
+  for (const payment of paymentsData) {
+    await prisma.payments.upsert({
+      where: { id: payment.id },
+      update: payment,
+      create: payment,
+    });
+  }
+  console.log('💰 Payments seeded');
+
+  // ============================================
+  // PLAYLISTS
+  // ============================================
+  const playlistsData = [
+    {
+      id: 'playlist-morning-meditation',
+      name: 'Sabah Meditasyonları',
+      nameEn: 'Morning Meditations',
+      description: 'Güne enerjik ve huzurlu başlamak için meditasyonlar',
+      descriptionEn: 'Meditations to start your day with energy and peace',
+      coverImage: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800',
+      color: '#8B5CF6',
+      type: 'SYSTEM' as const,
+      contentType: 'MEDITATION' as const,
+      isSystem: true,
+      isPublic: true,
+      isFeatured: true,
+      isPublished: true,
+      sortOrder: 1,
+      totalDuration: 1800,
+      itemCount: 5,
+      playCount: 1250,
+      saveCount: 340,
+    },
+    {
+      id: 'playlist-sleep-sounds',
+      name: 'Uyku Sesleri',
+      nameEn: 'Sleep Sounds',
+      description: 'Derin ve huzurlu bir uyku için rahatlatıcı sesler',
+      descriptionEn: 'Relaxing sounds for deep and peaceful sleep',
+      coverImage: 'https://images.unsplash.com/photo-1511295742362-92c96b1cf484?w=800',
+      color: '#1E3A5F',
+      type: 'CURATED' as const,
+      contentType: 'SOUNDSCAPE' as const,
+      isSystem: true,
+      isPublic: true,
+      isFeatured: true,
+      isPublished: true,
+      sortOrder: 2,
+      totalDuration: 7200,
+      itemCount: 10,
+      playCount: 2340,
+      saveCount: 890,
+    },
+    {
+      id: 'playlist-breathwork-basics',
+      name: 'Nefes Teknikleri Temelleri',
+      nameEn: 'Breathwork Basics',
+      description: 'Başlangıç seviyesi nefes egzersizleri',
+      descriptionEn: 'Beginner level breathing exercises',
+      coverImage: 'https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?w=800',
+      color: '#06B6D4',
+      type: 'SYSTEM' as const,
+      contentType: 'BREATHWORK' as const,
+      isSystem: true,
+      isPublic: true,
+      isFeatured: false,
+      isPublished: true,
+      sortOrder: 3,
+      totalDuration: 1200,
+      itemCount: 8,
+      playCount: 567,
+      saveCount: 123,
+    },
+    {
+      id: 'playlist-stress-relief',
+      name: 'Stres Yönetimi',
+      nameEn: 'Stress Relief',
+      description: 'Stresi azaltmak için meditasyon ve nefes egzersizleri',
+      descriptionEn: 'Meditation and breathing exercises to reduce stress',
+      coverImage: 'https://images.unsplash.com/photo-1545389336-cf090694435e?w=800',
+      color: '#10B981',
+      type: 'CURATED' as const,
+      contentType: 'MIXED' as const,
+      isSystem: true,
+      isPublic: true,
+      isFeatured: true,
+      isPublished: true,
+      sortOrder: 4,
+      totalDuration: 2400,
+      itemCount: 12,
+      playCount: 1890,
+      saveCount: 456,
+    },
+    {
+      id: 'playlist-focus-flow',
+      name: 'Odaklanma ve Akış',
+      nameEn: 'Focus & Flow',
+      description: 'Konsantrasyonu artırmak ve akış haline geçmek için',
+      descriptionEn: 'To increase concentration and enter flow state',
+      coverImage: 'https://images.unsplash.com/photo-1499750310107-5fef28a66643?w=800',
+      color: '#F59E0B',
+      type: 'GENERATED' as const,
+      contentType: 'MEDITATION' as const,
+      isSystem: false,
+      isPublic: true,
+      isFeatured: false,
+      isPublished: true,
+      sortOrder: 5,
+      totalDuration: 900,
+      itemCount: 4,
+      playCount: 234,
+      saveCount: 67,
+    },
+    {
+      id: 'playlist-evening-wind-down',
+      name: 'Akşam Gevşeme Rutini',
+      nameEn: 'Evening Wind Down',
+      description: 'Günü tamamlamak ve rahatlamak için akşam meditasyonları',
+      descriptionEn: 'Evening meditations to complete the day and relax',
+      coverImage: 'https://images.unsplash.com/photo-1519681393784-d120267933ba?w=800',
+      color: '#6366F1',
+      type: 'SYSTEM' as const,
+      contentType: 'MIXED' as const,
+      isSystem: true,
+      isPublic: true,
+      isFeatured: false,
+      isPublished: true,
+      sortOrder: 6,
+      totalDuration: 1500,
+      itemCount: 6,
+      playCount: 789,
+      saveCount: 234,
+    },
+    {
+      id: 'playlist-yoga-beginners',
+      name: 'Yeni Başlayanlar İçin Yoga',
+      nameEn: 'Yoga for Beginners',
+      description: 'Yogaya yeni başlayanlar için temel dersler',
+      descriptionEn: 'Basic classes for yoga beginners',
+      coverImage: 'https://images.unsplash.com/photo-1575052814086-f385e2e2ad1b?w=800',
+      color: '#EC4899',
+      type: 'COURSE' as const,
+      contentType: 'MIXED' as const,
+      isSystem: true,
+      isPublic: true,
+      isFeatured: true,
+      isPublished: true,
+      sortOrder: 7,
+      totalDuration: 5400,
+      itemCount: 15,
+      playCount: 3456,
+      saveCount: 1234,
+    },
+    {
+      id: 'playlist-nature-sounds',
+      name: 'Doğa Sesleri',
+      nameEn: 'Nature Sounds',
+      description: 'Yağmur, orman, deniz ve kuş sesleri',
+      descriptionEn: 'Rain, forest, ocean and bird sounds',
+      coverImage: 'https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=800',
+      color: '#22C55E',
+      type: 'CURATED' as const,
+      contentType: 'SOUNDSCAPE' as const,
+      isSystem: true,
+      isPublic: true,
+      isFeatured: false,
+      isPublished: true,
+      sortOrder: 8,
+      totalDuration: 10800,
+      itemCount: 20,
+      playCount: 4567,
+      saveCount: 2345,
+    },
+  ];
+
+  for (const playlist of playlistsData) {
+    await prisma.playlists.upsert({
+      where: { id: playlist.id },
+      update: playlist,
+      create: playlist,
+    });
+  }
+  console.log('🎵 Playlists seeded');
+
+  // ============================================
+  // STUDENT DATA - Favorites, Goals, Progress
+  // ============================================
+
+  // Get first class and program for student data
+  const firstClass = await prisma.classes.findFirst();
+  const firstProgram = await prisma.programs.findFirst();
+  const firstPose = await prisma.poses.findFirst();
+
+  // Add favorites for student Sam
+  if (firstClass && studentSam) {
+    await prisma.favorites.upsert({
+      where: {
+        userId_itemId_itemType: {
+          userId: studentSam.id,
+          itemId: firstClass.id,
+          itemType: 'CLASS',
+        },
+      },
+      update: {},
+      create: {
+        userId: studentSam.id,
+        itemType: 'CLASS',
+        itemId: firstClass.id,
+      },
+    });
+  }
+
+  if (firstProgram && studentSam) {
+    await prisma.favorites.upsert({
+      where: {
+        userId_itemId_itemType: {
+          userId: studentSam.id,
+          itemId: firstProgram.id,
+          itemType: 'PROGRAM',
+        },
+      },
+      update: {},
+      create: {
+        userId: studentSam.id,
+        itemType: 'PROGRAM',
+        itemId: firstProgram.id,
+      },
+    });
+  }
+
+  if (firstPose && studentSam) {
+    await prisma.favorites.upsert({
+      where: {
+        userId_itemId_itemType: {
+          userId: studentSam.id,
+          itemId: firstPose.id,
+          itemType: 'POSE',
+        },
+      },
+      update: {},
+      create: {
+        userId: studentSam.id,
+        itemType: 'POSE',
+        itemId: firstPose.id,
+      },
+    });
+  }
+
+  // Add video progress for student Sam
+  if (firstClass && studentSam) {
+    await prisma.video_progress.upsert({
+      where: {
+        userId_lessonId_lessonType: {
+          userId: studentSam.id,
+          lessonId: firstClass.id,
+          lessonType: 'CLASS',
+        },
+      },
+      update: {},
+      create: {
+        userId: studentSam.id,
+        lessonType: 'CLASS',
+        lessonId: firstClass.id,
+        currentTime: 600,
+        duration: 1800,
+        percentage: 33.33,
+        completed: false,
+        lastWatchedAt: new Date(),
+      },
+    });
+  }
+
+  // Add user goals for student Sam
+  if (studentSam) {
+    await prisma.user_goals.upsert({
+      where: {
+        id: 'goal-sam-weekly-yoga',
+      },
+      update: {},
+      create: {
+        id: 'goal-sam-weekly-yoga',
+        userId: studentSam.id,
+        title: 'Haftalik Yoga',
+        description: 'Haftada 3 gun yoga pratigi yap',
+        type: 'PRACTICE_DAYS',
+        targetValue: 3,
+        currentValue: 1,
+        unit: 'gun',
+        period: 'WEEKLY',
+        isActive: true,
+        startDate: new Date(),
+        endDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+      },
+    });
+
+    await prisma.user_goals.upsert({
+      where: {
+        id: 'goal-sam-daily-minutes',
+      },
+      update: {},
+      create: {
+        id: 'goal-sam-daily-minutes',
+        userId: studentSam.id,
+        title: 'Gunluk Pratik',
+        description: 'Her gun 20 dakika pratik yap',
+        type: 'PRACTICE_MINUTES',
+        targetValue: 20,
+        currentValue: 10,
+        unit: 'dakika',
+        period: 'DAILY',
+        isActive: true,
+        startDate: new Date(),
+        endDate: new Date(Date.now() + 24 * 60 * 60 * 1000),
+      },
+    });
+
+    await prisma.user_goals.upsert({
+      where: {
+        id: 'goal-sam-monthly-streak',
+      },
+      update: {},
+      create: {
+        id: 'goal-sam-monthly-streak',
+        userId: studentSam.id,
+        title: 'Aylik Seri',
+        description: 'Bu ay 10 gunluk seri yap',
+        type: 'STREAK',
+        targetValue: 10,
+        currentValue: 5,
+        unit: 'gun',
+        period: 'MONTHLY',
+        isActive: true,
+        startDate: new Date(),
+        endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+      },
+    });
+  }
+
+  // Add user wellness stats for student Sam
+  if (studentSam) {
+    await prisma.user_wellness_stats.upsert({
+      where: {
+        userId: studentSam.id,
+      },
+      update: {
+        totalSessionMinutes: 120,
+        totalSessionCount: 8,
+        totalMeditationMinutes: 30,
+        totalMeditationCount: 3,
+        currentStreak: 5,
+        longestStreak: 7,
+        lastActivityDate: new Date(),
+      },
+      create: {
+        userId: studentSam.id,
+        totalSessionMinutes: 120,
+        totalSessionCount: 8,
+        totalMeditationMinutes: 30,
+        totalMeditationCount: 3,
+        currentStreak: 5,
+        longestStreak: 7,
+        lastActivityDate: new Date(),
+      },
+    });
+  }
+
+  console.log('👨‍🎓 Student data seeded (favorites, goals, progress)');
+
+  // ============================================================
+  // VIDEO PROGRESS SEED DATA (for History Page)
+  // ============================================================
+  console.log('📹 Seeding video progress...');
+
+  // Get existing classes for video progress
+  const classesForProgress = await prisma.classes.findMany({
+    take: 8,
+    orderBy: { createdAt: 'asc' },
+  });
+
+  if (classesForProgress.length > 0 && student) {
+    const videoProgressData = [
+      // Completed videos
+      {
+        id: 'vp-student-class1',
+        userId: student.id,
+        lessonId: classesForProgress[0]?.id || 'class-morning-yoga',
+        lessonType: 'CLASS' as const,
+        currentTime: 1800, // 30 minutes
+        duration: 1800,
+        percentage: 100,
+        completed: true,
+        lastWatchedAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000), // 1 day ago
+      },
+      {
+        id: 'vp-student-class2',
+        userId: student.id,
+        lessonId: classesForProgress[1]?.id || 'class-power-vinyasa',
+        lessonType: 'CLASS' as const,
+        currentTime: 2700, // 45 minutes
+        duration: 2700,
+        percentage: 100,
+        completed: true,
+        lastWatchedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000), // 2 days ago
+      },
+      {
+        id: 'vp-student-class3',
+        userId: student.id,
+        lessonId: classesForProgress[2]?.id || 'class-gentle-stretch',
+        lessonType: 'CLASS' as const,
+        currentTime: 1500, // 25 minutes
+        duration: 1500,
+        percentage: 100,
+        completed: true,
+        lastWatchedAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000), // 3 days ago
+      },
+      // In-progress videos
+      {
+        id: 'vp-student-class4',
+        userId: student.id,
+        lessonId: classesForProgress[3]?.id || 'class-pilates-mat',
+        lessonType: 'CLASS' as const,
+        currentTime: 1200, // 20 minutes watched
+        duration: 2400, // 40 minutes total
+        percentage: 50,
+        completed: false,
+        lastWatchedAt: new Date(Date.now() - 4 * 60 * 60 * 1000), // 4 hours ago
+      },
+      {
+        id: 'vp-student-class5',
+        userId: student.id,
+        lessonId: classesForProgress[4]?.id || 'class-yin-yoga',
+        lessonType: 'CLASS' as const,
+        currentTime: 900, // 15 minutes watched
+        duration: 3000, // 50 minutes total
+        percentage: 30,
+        completed: false,
+        lastWatchedAt: new Date(Date.now() - 12 * 60 * 60 * 1000), // 12 hours ago
+      },
+      {
+        id: 'vp-student-class6',
+        userId: student.id,
+        lessonId: classesForProgress[5]?.id || 'class-breathwork',
+        lessonType: 'CLASS' as const,
+        currentTime: 300, // 5 minutes watched
+        duration: 1200, // 20 minutes total
+        percentage: 25,
+        completed: false,
+        lastWatchedAt: new Date(Date.now() - 6 * 24 * 60 * 60 * 1000), // 6 days ago
+      },
+    ];
+
+    for (const progress of videoProgressData) {
+      await prisma.video_progress.upsert({
+        where: {
+          userId_lessonId_lessonType: {
+            userId: progress.userId,
+            lessonId: progress.lessonId,
+            lessonType: progress.lessonType,
+          },
+        },
+        update: {
+          currentTime: progress.currentTime,
+          duration: progress.duration,
+          percentage: progress.percentage,
+          completed: progress.completed,
+          lastWatchedAt: progress.lastWatchedAt,
+        },
+        create: progress,
+      });
+    }
+
+    console.log(`  ✓ Created ${videoProgressData.length} video progress entries for student`);
+  }
+
+  // Also add video progress for studentSam
+  if (classesForProgress.length > 0 && studentSam) {
+    const samVideoProgressData = [
+      {
+        id: 'vp-sam-class1',
+        userId: studentSam.id,
+        lessonId: classesForProgress[0]?.id || 'class-morning-yoga',
+        lessonType: 'CLASS' as const,
+        currentTime: 1800,
+        duration: 1800,
+        percentage: 100,
+        completed: true,
+        lastWatchedAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000),
+      },
+      {
+        id: 'vp-sam-class2',
+        userId: studentSam.id,
+        lessonId: classesForProgress[6]?.id || 'class-evening-relax',
+        lessonType: 'CLASS' as const,
+        currentTime: 2100,
+        duration: 2100,
+        percentage: 100,
+        completed: true,
+        lastWatchedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
+      },
+      {
+        id: 'vp-sam-class3',
+        userId: studentSam.id,
+        lessonId: classesForProgress[7]?.id || 'class-hiit-yoga',
+        lessonType: 'CLASS' as const,
+        currentTime: 1000,
+        duration: 2400,
+        percentage: 42,
+        completed: false,
+        lastWatchedAt: new Date(Date.now() - 5 * 60 * 60 * 1000),
+      },
+    ];
+
+    for (const progress of samVideoProgressData) {
+      await prisma.video_progress.upsert({
+        where: {
+          userId_lessonId_lessonType: {
+            userId: progress.userId,
+            lessonId: progress.lessonId,
+            lessonType: progress.lessonType,
+          },
+        },
+        update: {
+          currentTime: progress.currentTime,
+          duration: progress.duration,
+          percentage: progress.percentage,
+          completed: progress.completed,
+          lastWatchedAt: progress.lastWatchedAt,
+        },
+        create: progress,
+      });
+    }
+
+    console.log(`  ✓ Created ${samVideoProgressData.length} video progress entries for studentSam`);
+  }
+
+  console.log('📹 Video progress seeded');
+
+  // ============================================================
+  // FAVORITES SEED DATA (for Favorites Page)
+  // ============================================================
+  console.log('❤️ Seeding favorites...');
+
+  // Get content for favorites
+  const classesForFavorites = await prisma.classes.findMany({ take: 4 });
+  const programsForFavorites = await prisma.programs.findMany({ take: 3 });
+  const posesForFavorites = await prisma.poses.findMany({ take: 3 });
+
+  if (student) {
+    const favoritesData: Array<{
+      id: string;
+      userId: string;
+      itemId: string;
+      itemType: 'CLASS' | 'PROGRAM' | 'POSE';
+      createdAt: Date;
+    }> = [];
+
+    // Add class favorites (2)
+    classesForFavorites.slice(0, 2).forEach((cls, idx) => {
+      favoritesData.push({
+        id: `fav-student-class-${idx + 1}`,
+        userId: student.id,
+        itemId: cls.id,
+        itemType: 'CLASS',
+        createdAt: new Date(Date.now() - (idx + 1) * 24 * 60 * 60 * 1000),
+      });
+    });
+
+    // Add program favorites (2)
+    programsForFavorites.slice(0, 2).forEach((prog, idx) => {
+      favoritesData.push({
+        id: `fav-student-program-${idx + 1}`,
+        userId: student.id,
+        itemId: prog.id,
+        itemType: 'PROGRAM',
+        createdAt: new Date(Date.now() - (idx + 3) * 24 * 60 * 60 * 1000),
+      });
+    });
+
+    // Add pose favorites (2)
+    posesForFavorites.slice(0, 2).forEach((pose, idx) => {
+      favoritesData.push({
+        id: `fav-student-pose-${idx + 1}`,
+        userId: student.id,
+        itemId: pose.id,
+        itemType: 'POSE',
+        createdAt: new Date(Date.now() - (idx + 5) * 24 * 60 * 60 * 1000),
+      });
+    });
+
+    for (const fav of favoritesData) {
+      // Delete existing and recreate to avoid id conflicts
+      await prisma.favorites.deleteMany({
+        where: {
+          userId: fav.userId,
+          itemId: fav.itemId,
+          itemType: fav.itemType,
+        },
+      });
+      await prisma.favorites.create({
+        data: fav,
+      });
+    }
+
+    console.log(`  ✓ Created ${favoritesData.length} favorites for student`);
+  }
+
+  // Also add favorites for studentSam
+  if (studentSam) {
+    const samFavoritesData: Array<{
+      id: string;
+      userId: string;
+      itemId: string;
+      itemType: 'CLASS' | 'PROGRAM' | 'POSE';
+      createdAt: Date;
+    }> = [];
+
+    // Different items for Sam
+    classesForFavorites.slice(2, 4).forEach((cls, idx) => {
+      samFavoritesData.push({
+        id: `fav-sam-class-${idx + 1}`,
+        userId: studentSam.id,
+        itemId: cls.id,
+        itemType: 'CLASS',
+        createdAt: new Date(Date.now() - (idx + 1) * 24 * 60 * 60 * 1000),
+      });
+    });
+
+    programsForFavorites.slice(1, 3).forEach((prog, idx) => {
+      samFavoritesData.push({
+        id: `fav-sam-program-${idx + 1}`,
+        userId: studentSam.id,
+        itemId: prog.id,
+        itemType: 'PROGRAM',
+        createdAt: new Date(Date.now() - (idx + 3) * 24 * 60 * 60 * 1000),
+      });
+    });
+
+    posesForFavorites.slice(1, 3).forEach((pose, idx) => {
+      samFavoritesData.push({
+        id: `fav-sam-pose-${idx + 1}`,
+        userId: studentSam.id,
+        itemId: pose.id,
+        itemType: 'POSE',
+        createdAt: new Date(Date.now() - (idx + 5) * 24 * 60 * 60 * 1000),
+      });
+    });
+
+    for (const fav of samFavoritesData) {
+      // Delete existing and recreate to avoid id conflicts
+      await prisma.favorites.deleteMany({
+        where: {
+          userId: fav.userId,
+          itemId: fav.itemId,
+          itemType: fav.itemType,
+        },
+      });
+      await prisma.favorites.create({
+        data: fav,
+      });
+    }
+
+    console.log(`  ✓ Created ${samFavoritesData.length} favorites for studentSam`);
+  }
+
+  console.log('❤️ Favorites seeded');
 
   console.log('✅ All seed data created successfully!');
 }

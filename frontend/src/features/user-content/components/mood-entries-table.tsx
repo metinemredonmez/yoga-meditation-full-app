@@ -42,18 +42,20 @@ interface MoodEntry {
   userId: string;
   user?: {
     id: string;
-    name: string;
+    firstName?: string;
+    lastName?: string;
     email: string;
     avatar?: string;
   };
   mood: string;
   moodScore: number;
-  note?: string;
+  notes?: string;
   tags?: string[];
   activities?: string[];
   sleepQuality?: number;
-  energyLevel?: number;
-  stressLevel?: number;
+  energy?: number;
+  stress?: number;
+  date?: string;
   createdAt: string;
 }
 
@@ -65,6 +67,13 @@ interface Stats {
 }
 
 const MOOD_OPTIONS: Record<string, { label: string; color: string; icon: any }> = {
+  // DB values
+  GREAT: { label: 'Harika', color: 'bg-emerald-500', icon: IconMoodHappy },
+  GOOD: { label: 'İyi', color: 'bg-green-500', icon: IconMoodSmile },
+  OKAY: { label: 'İdare Eder', color: 'bg-gray-500', icon: IconMoodNeutral },
+  BAD: { label: 'Kötü', color: 'bg-orange-500', icon: IconMoodSad },
+  TERRIBLE: { label: 'Berbat', color: 'bg-red-500', icon: IconMoodCry },
+  // Alternative values
   VERY_SAD: { label: 'Çok Üzgün', color: 'bg-red-500', icon: IconMoodCry },
   SAD: { label: 'Üzgün', color: 'bg-orange-500', icon: IconMoodSad },
   NEUTRAL: { label: 'Nötr', color: 'bg-gray-500', icon: IconMoodNeutral },
@@ -264,7 +273,9 @@ export function MoodEntriesTable() {
                         </div>
                         <div>
                           <p className="font-medium text-sm">
-                            {entry.user?.name || 'Anonim'}
+                            {entry.user?.firstName && entry.user?.lastName
+                              ? `${entry.user.firstName} ${entry.user.lastName}`
+                              : entry.user?.email || 'Anonim'}
                           </p>
                           <p className="text-xs text-muted-foreground">
                             {entry.user?.email || entry.userId.slice(0, 8)}
@@ -288,15 +299,15 @@ export function MoodEntriesTable() {
                       {renderLevelBar(entry.sleepQuality, 'bg-indigo-500')}
                     </TableCell>
                     <TableCell>
-                      {renderLevelBar(entry.energyLevel, 'bg-amber-500')}
+                      {renderLevelBar(entry.energy, 'bg-amber-500')}
                     </TableCell>
                     <TableCell>
-                      {renderLevelBar(entry.stressLevel, 'bg-red-500')}
+                      {renderLevelBar(entry.stress, 'bg-red-500')}
                     </TableCell>
                     <TableCell>
-                      {entry.note ? (
+                      {entry.notes ? (
                         <p className="text-sm text-muted-foreground truncate max-w-[150px]">
-                          {entry.note}
+                          {entry.notes}
                         </p>
                       ) : (
                         <span className="text-muted-foreground">-</span>

@@ -270,13 +270,13 @@ export default function UserDetailPage() {
   const loadHelperData = async () => {
     try {
       const [plansRes, badgesRes, titlesRes] = await Promise.all([
-        getSubscriptionPlans().catch(() => ({ data: { plans: [] } })),
-        getAchievements({ limit: 100 }).catch(() => ({ data: { achievements: [] } })),
-        getTitles({ limit: 100 }).catch(() => ({ data: { titles: [] } })),
+        getSubscriptionPlans().catch(() => ({ plans: [] })),
+        getAchievements({ limit: 100 }).catch(() => ({ achievements: [], total: 0 })),
+        getTitles({ limit: 100 }).catch(() => ({ titles: [], total: 0 })),
       ]);
-      setPlans(plansRes.data?.plans || plansRes.plans || []);
-      setBadges(badgesRes.data?.achievements || badgesRes.achievements || []);
-      setTitles(titlesRes.data?.titles || titlesRes.titles || []);
+      setPlans((plansRes as any).data?.plans || (plansRes as any).plans || []);
+      setBadges((badgesRes as any).data?.achievements || (badgesRes as any).achievements || []);
+      setTitles((titlesRes as any).data?.titles || (titlesRes as any).titles || []);
     } catch (error) {
       console.error('Failed to load helper data:', error);
     }

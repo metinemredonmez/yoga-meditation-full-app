@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { getSession } from '@/lib/auth';
-import { api } from '@/lib/api';
+import api from '@/lib/api';
 
 type UserRole = 'SUPER_ADMIN' | 'ADMIN' | 'TEACHER' | 'STUDENT';
 
@@ -54,7 +54,7 @@ const categoryLabels: Record<string, string> = {
   ai: 'Yapay Zeka',
 };
 
-const categoryIcons: Record<string, JSX.Element> = {
+const categoryIcons: Record<string, React.ReactNode> = {
   auth: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" /></svg>,
   notification: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" /></svg>,
   sms: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" /></svg>,
@@ -290,11 +290,10 @@ export default function IntegrationsPage() {
       <div className="flex flex-wrap gap-2 mb-6">
         <button
           onClick={() => setSelectedCategory('all')}
-          className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-            selectedCategory === 'all'
-              ? 'bg-indigo-600 text-white'
-              : 'bg-white border border-gray-200 text-gray-700 hover:bg-gray-50'
-          }`}
+          className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${selectedCategory === 'all'
+            ? 'bg-indigo-600 text-white'
+            : 'bg-white border border-gray-200 text-gray-700 hover:bg-gray-50'
+            }`}
         >
           Tumu ({stats.total})
         </button>
@@ -304,11 +303,10 @@ export default function IntegrationsPage() {
             <button
               key={category}
               onClick={() => setSelectedCategory(category)}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${
-                selectedCategory === category
-                  ? 'bg-indigo-600 text-white'
-                  : 'bg-white border border-gray-200 text-gray-700 hover:bg-gray-50'
-              }`}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${selectedCategory === category
+                ? 'bg-indigo-600 text-white'
+                : 'bg-white border border-gray-200 text-gray-700 hover:bg-gray-50'
+                }`}
             >
               {categoryIcons[category]}
               {categoryLabels[category] || category} ({count})
@@ -341,11 +339,10 @@ export default function IntegrationsPage() {
                   </div>
                   <div className="flex flex-col items-end gap-1">
                     {isConfigured ? (
-                      <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium border ${
-                        isActive
-                          ? 'bg-green-100 text-green-700 border-green-200'
-                          : 'bg-gray-100 text-gray-600 border-gray-200'
-                      }`}>
+                      <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium border ${isActive
+                        ? 'bg-green-100 text-green-700 border-green-200'
+                        : 'bg-gray-100 text-gray-600 border-gray-200'
+                        }`}>
                         <span className={`w-1.5 h-1.5 rounded-full ${isActive ? 'bg-green-500' : 'bg-gray-400'}`}></span>
                         {isActive ? 'Aktif' : 'Pasif'}
                       </span>
@@ -387,11 +384,10 @@ export default function IntegrationsPage() {
                     {isConfigured && (
                       <button
                         onClick={() => handleToggle(category, providerKey, isActive)}
-                        className={`p-2 rounded-lg transition-colors ${
-                          isActive
-                            ? 'text-green-600 hover:bg-green-50'
-                            : 'text-gray-400 hover:bg-gray-100'
-                        }`}
+                        className={`p-2 rounded-lg transition-colors ${isActive
+                          ? 'text-green-600 hover:bg-green-50'
+                          : 'text-gray-400 hover:bg-gray-100'
+                          }`}
                         title={isActive ? 'Deaktif Et' : 'Aktif Et'}
                       >
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -460,11 +456,10 @@ export default function IntegrationsPage() {
 
               {/* Test Result */}
               {testResult && (
-                <div className={`p-3 rounded-lg border ${
-                  testResult.success
-                    ? 'bg-green-50 border-green-200'
-                    : 'bg-red-50 border-red-200'
-                }`}>
+                <div className={`p-3 rounded-lg border ${testResult.success
+                  ? 'bg-green-50 border-green-200'
+                  : 'bg-red-50 border-red-200'
+                  }`}>
                   <div className="flex items-center gap-2">
                     {testResult.success ? (
                       <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">

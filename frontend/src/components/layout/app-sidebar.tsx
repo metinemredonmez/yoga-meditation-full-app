@@ -108,9 +108,8 @@ export default function AppSidebar() {
     // Tenant switching functionality would be implemented here
   };
 
-  const handleLogout = () => {
-    clearSession();
-    router.push('/auth/sign-in');
+  const handleLogout = async () => {
+    await clearSession();
   };
 
   const activeTenant = tenants[0];
@@ -191,68 +190,7 @@ export default function AppSidebar() {
         </SidebarGroup>
       </SidebarContent>
       <SidebarFooter>
-        <SidebarMenu>
-          <SidebarMenuItem>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <SidebarMenuButton
-                  size='lg'
-                  className='data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground'
-                >
-                  <Avatar className='h-8 w-8 rounded-lg'>
-                    <AvatarFallback className='rounded-lg'>{userInitials}</AvatarFallback>
-                  </Avatar>
-                  <div className='grid flex-1 text-left text-sm leading-tight'>
-                    <span className='truncate font-semibold'>{user?.email || 'User'}</span>
-                    <span className='truncate text-xs text-muted-foreground'>{user?.role || 'Admin'}</span>
-                  </div>
-                  <IconChevronsDown className='ml-auto size-4' />
-                </SidebarMenuButton>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent
-                className='w-(--radix-dropdown-menu-trigger-width) min-w-56 rounded-lg'
-                side='bottom'
-                align='end'
-                sideOffset={4}
-              >
-                <DropdownMenuLabel className='p-0 font-normal'>
-                  <div className='flex items-center gap-2 px-1 py-1.5 text-left text-sm'>
-                    <Avatar className='h-8 w-8 rounded-lg'>
-                      <AvatarFallback className='rounded-lg'>{userInitials}</AvatarFallback>
-                    </Avatar>
-                    <div className='grid flex-1 text-left text-sm leading-tight'>
-                      <span className='truncate font-semibold'>{user?.email || 'User'}</span>
-                      <span className='truncate text-xs text-muted-foreground'>{user?.role || 'Admin'}</span>
-                    </div>
-                  </div>
-                </DropdownMenuLabel>
-                <DropdownMenuSeparator />
-
-                <DropdownMenuGroup>
-                  <DropdownMenuItem
-                    onClick={() => router.push('/dashboard/profile')}
-                  >
-                    <IconUserCircle className='mr-2 h-4 w-4' />
-                    Profile
-                  </DropdownMenuItem>
-                  <DropdownMenuItem>
-                    <IconCreditCard className='mr-2 h-4 w-4' />
-                    Billing
-                  </DropdownMenuItem>
-                  <DropdownMenuItem>
-                    <IconBell className='mr-2 h-4 w-4' />
-                    Notifications
-                  </DropdownMenuItem>
-                </DropdownMenuGroup>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={handleLogout}>
-                  <IconLogout className='mr-2 h-4 w-4' />
-                  Log out
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </SidebarMenuItem>
-        </SidebarMenu>
+        {/* Profile moved to header */}
       </SidebarFooter>
       <SidebarRail />
     </Sidebar>

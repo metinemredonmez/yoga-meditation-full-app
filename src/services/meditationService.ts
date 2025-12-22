@@ -756,7 +756,7 @@ export async function getContinueMeditations(userId: string, limit: number = 10)
  * Get all meditations for admin (including inactive)
  */
 export async function getAdminMeditations(filters: MeditationFilters) {
-  const { page, limit, sortBy, sortOrder, search } = filters;
+  const { page, limit, sortBy, sortOrder, search, categoryId, difficulty, isFree, isFeatured, isPremium, isPublished } = filters;
   const skip = (page - 1) * limit;
 
   const where: Prisma.meditationsWhereInput = {
@@ -766,6 +766,12 @@ export async function getAdminMeditations(filters: MeditationFilters) {
         { titleEn: { contains: search, mode: 'insensitive' } },
       ],
     }),
+    ...(categoryId && { categoryId }),
+    ...(difficulty && { difficulty }),
+    ...(isFree !== undefined && { isPremium: !isFree }),
+    ...(isPremium !== undefined && { isPremium }),
+    ...(isFeatured !== undefined && { isFeatured }),
+    ...(isPublished !== undefined && { isPublished }),
   };
 
   const [meditations, total] = await Promise.all([
@@ -802,6 +808,30 @@ export async function getAdminMeditations(filters: MeditationFilters) {
       totalPages: Math.ceil(total / limit),
     },
   };
+}
+
+/**
+ * Get a single meditation by ID for admin (including inactive)
+ */
+export async function getAdminMeditationById(id: string) {
+  return prisma.meditations.findUnique({
+    where: { id },
+    include: {
+      category: {
+        select: { id: true, name: true, nameEn: true },
+      },
+      instructor: {
+        select: { id: true, displayName: true },
+      },
+      _count: {
+        select: {
+          sessions: true,
+          favorites: true,
+          ratings: true,
+        },
+      },
+    },
+  });
 }
 
 /**

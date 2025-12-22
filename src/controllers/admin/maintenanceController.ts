@@ -237,3 +237,31 @@ export async function triggerBackup(req: Request, res: Response, next: NextFunct
     next(error);
   }
 }
+
+export async function getBackups(req: Request, res: Response, next: NextFunction) {
+  try {
+    const backups = await maintenanceService.getBackups();
+    res.json(backups);
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function createBackup(req: Request, res: Response, next: NextFunction) {
+  try {
+    const adminId = req.user!.id;
+    const result = await maintenanceService.triggerBackup('full');
+
+    await auditService.logAdminAction(
+      adminId,
+      AdminAction.BULK_ACTION,
+      'backup',
+      result.jobId,
+      { type: 'full' }
+    );
+
+    res.json({ success: true, message: 'Backup started', jobId: result.jobId });
+  } catch (error) {
+    next(error);
+  }
+}

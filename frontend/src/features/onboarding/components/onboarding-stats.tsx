@@ -50,6 +50,50 @@ interface OnboardingStats {
   };
 }
 
+// Helper function to normalize popularAnswers from API
+const normalizePopularAnswers = (
+  apiData: Record<string, Record<string, number>> | undefined,
+  total: number
+): Record<string, PopularAnswer[]> => {
+  if (!apiData) return {};
+  const result: Record<string, PopularAnswer[]> = {};
+  const labelMap: Record<string, string> = {
+    BEGINNER: 'Yeni Başlıyorum',
+    SOME: 'Biraz Deneyimim Var',
+    INTERMEDIATE: 'Orta Seviye',
+    ADVANCED: 'İleri Seviye',
+    STRESS_RELIEF: 'Stres Azaltma',
+    BETTER_SLEEP: 'Daha İyi Uyku',
+    FOCUS: 'Odaklanma',
+    FLEXIBILITY: 'Esneklik',
+    ANXIETY: 'Kaygı Yönetimi',
+    ENERGY: 'Enerji',
+    MEDITATION: 'Meditasyon',
+    YOGA: 'Yoga',
+    BREATHWORK: 'Nefes',
+    SLEEP: 'Uyku',
+    SOUNDSCAPES: 'Doğa Sesleri',
+    JOURNALING: 'Günlük',
+    MORNING: 'Sabah',
+    AFTERNOON: 'Öğlen',
+    EVENING: 'Akşam',
+    NIGHT: 'Gece',
+    ANYTIME: 'Farketmez',
+  };
+
+  for (const [field, values] of Object.entries(apiData)) {
+    if (typeof values === 'object' && values !== null) {
+      result[field] = Object.entries(values).map(([key, count]) => ({
+        value: key,
+        label: labelMap[key] || key,
+        count: count as number,
+        percentage: total > 0 ? Math.round(((count as number) / total) * 100) : 0,
+      }));
+    }
+  }
+  return result;
+};
+
 export function OnboardingStatsView() {
   const [stats, setStats] = useState<OnboardingStats | null>(null);
   const [loading, setLoading] = useState(true);
@@ -59,49 +103,91 @@ export function OnboardingStatsView() {
     setLoading(true);
     try {
       const data = await getOnboardingStats({ period });
-      setStats(data);
+      // Normalize API response to match expected format
+      const totalStarted = data?.totalStarted || 0;
+      const normalizedStats: OnboardingStats = {
+        totalStarted,
+        totalCompleted: data?.totalCompleted || 0,
+        completionRate: data?.completionRate || 0,
+        avgDuration: data?.avgDuration || 0,
+        funnel: data?.stepDropoffs?.map((step: any) => ({
+          step: step.step,
+          label: step.label,
+          count: step.count,
+          percentage: totalStarted > 0 ? Math.round((step.count / totalStarted) * 100) : 0,
+        })) || data?.funnel || [],
+        popularAnswers: normalizePopularAnswers(data?.popularAnswers, totalStarted),
+        trends: data?.trends || {
+          startedChange: 0,
+          completedChange: 0,
+          rateChange: 0,
+        },
+      };
+      setStats(normalizedStats);
     } catch (error) {
       console.error('Failed to load stats:', error);
       // Set mock data for demo
       setStats({
-        totalStarted: 1250,
-        totalCompleted: 780,
-        completionRate: 62.4,
-        avgDuration: 185,
-        funnel: [
-          { step: 1, label: 'Başlangıç', count: 1250, percentage: 100 },
-          { step: 2, label: 'Deneyim', count: 1100, percentage: 88 },
-          { step: 3, label: 'Hedefler', count: 950, percentage: 76 },
-          { step: 4, label: 'İlgi Alanları', count: 870, percentage: 69.6 },
-          { step: 5, label: 'Tercihler', count: 820, percentage: 65.6 },
-          { step: 6, label: 'Tamamlama', count: 780, percentage: 62.4 },
-        ],
-        popularAnswers: {
-          experienceLevel: [
-            { value: 'BEGINNER', label: 'Yeni Başlıyorum', count: 562, percentage: 45 },
-            { value: 'SOME', label: 'Biraz Deneyimim Var', count: 375, percentage: 30 },
-            { value: 'INTERMEDIATE', label: 'Orta Seviye', count: 250, percentage: 20 },
-            { value: 'ADVANCED', label: 'İleri Seviye', count: 63, percentage: 5 },
-          ],
-          goals: [
-            { value: 'STRESS_RELIEF', label: 'Stres Azaltma', count: 975, percentage: 78 },
-            { value: 'BETTER_SLEEP', label: 'Daha İyi Uyku', count: 812, percentage: 65 },
-            { value: 'FOCUS', label: 'Odaklanma', count: 650, percentage: 52 },
-            { value: 'FLEXIBILITY', label: 'Esneklik', count: 500, percentage: 40 },
-            { value: 'ANXIETY', label: 'Kaygı Yönetimi', count: 437, percentage: 35 },
-            { value: 'ENERGY', label: 'Enerji', count: 375, percentage: 30 },
-          ],
-        },
+        totalStarted: 0,
+        totalCompleted: 0,
+        completionRate: 0,
+        avgDuration: 0,
+        funnel: [],
+        popularAnswers: {},
         trends: {
-          startedChange: 12.5,
-          completedChange: 8.3,
-          rateChange: -2.1,
+          startedChange: 0,
+          completedChange: 0,
+          rateChange: 0,
         },
       });
     } finally {
       setLoading(false);
     }
   }, [period]);
+
+  // Helper function to normalize popularAnswers from API
+  const normalizePopularAnswers = (
+    apiData: Record<string, Record<string, number>> | undefined,
+    total: number
+  ): Record<string, PopularAnswer[]> => {
+    if (!apiData) return {};
+    const result: Record<string, PopularAnswer[]> = {};
+    const labelMap: Record<string, string> = {
+      BEGINNER: 'Yeni Başlıyorum',
+      SOME: 'Biraz Deneyimim Var',
+      INTERMEDIATE: 'Orta Seviye',
+      ADVANCED: 'İleri Seviye',
+      STRESS_RELIEF: 'Stres Azaltma',
+      BETTER_SLEEP: 'Daha İyi Uyku',
+      FOCUS: 'Odaklanma',
+      FLEXIBILITY: 'Esneklik',
+      ANXIETY: 'Kaygı Yönetimi',
+      ENERGY: 'Enerji',
+      MEDITATION: 'Meditasyon',
+      YOGA: 'Yoga',
+      BREATHWORK: 'Nefes',
+      SLEEP: 'Uyku',
+      SOUNDSCAPES: 'Doğa Sesleri',
+      JOURNALING: 'Günlük',
+      MORNING: 'Sabah',
+      AFTERNOON: 'Öğlen',
+      EVENING: 'Akşam',
+      NIGHT: 'Gece',
+      ANYTIME: 'Farketmez',
+    };
+
+    for (const [field, values] of Object.entries(apiData)) {
+      if (typeof values === 'object' && values !== null) {
+        result[field] = Object.entries(values).map(([key, count]) => ({
+          value: key,
+          label: labelMap[key] || key,
+          count: count as number,
+          percentage: total > 0 ? Math.round(((count as number) / total) * 100) : 0,
+        }));
+      }
+    }
+    return result;
+  };
 
   useEffect(() => {
     loadStats();

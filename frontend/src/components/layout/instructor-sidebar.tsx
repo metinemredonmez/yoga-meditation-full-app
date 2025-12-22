@@ -34,13 +34,23 @@ import {
   IconChartBar,
   IconSettings,
   IconYoga,
+  IconCash,
+  IconHeadphones,
+  IconMicrophone,
+  IconWind,
+  IconMoon,
+  IconPlaylist,
+  IconBroadcast,
+  IconCalendarEvent,
+  IconUsers,
+  IconStar,
 } from '@tabler/icons-react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import * as React from 'react';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 
-const instructorNavItems = [
+const mainNavItems = [
   {
     title: 'Dashboard',
     url: '/instructor',
@@ -56,10 +66,69 @@ const instructorNavItems = [
     url: '/instructor/programs',
     icon: IconBook,
   },
+];
+
+const contentNavItems = [
+  {
+    title: 'Meditasyonlarım',
+    url: '/instructor/meditations',
+    icon: IconHeadphones,
+  },
+  {
+    title: 'Nefes Çalışmalarım',
+    url: '/instructor/breathwork',
+    icon: IconWind,
+  },
+  {
+    title: 'Uyku Hikayeleri',
+    url: '/instructor/sleep-stories',
+    icon: IconMoon,
+  },
+  {
+    title: 'Playlistlerim',
+    url: '/instructor/playlists',
+    icon: IconPlaylist,
+  },
+  {
+    title: 'Podcastlerim',
+    url: '/instructor/podcasts',
+    icon: IconMicrophone,
+  },
+];
+
+const liveNavItems = [
+  {
+    title: 'Canlı Yayınlarım',
+    url: '/instructor/live-streams',
+    icon: IconBroadcast,
+  },
+  {
+    title: 'Takvim',
+    url: '/instructor/calendar',
+    icon: IconCalendarEvent,
+  },
+];
+
+const statsNavItems = [
   {
     title: 'Analitik',
     url: '/instructor/analytics',
     icon: IconChartBar,
+  },
+  {
+    title: 'Öğrencilerim',
+    url: '/instructor/students',
+    icon: IconUsers,
+  },
+  {
+    title: 'Değerlendirmeler',
+    url: '/instructor/reviews',
+    icon: IconStar,
+  },
+  {
+    title: 'Kazançlarım',
+    url: '/instructor/billing',
+    icon: IconCash,
   },
 ];
 
@@ -74,9 +143,8 @@ export function InstructorSidebar() {
     setUser(currentUser);
   }, []);
 
-  const handleLogout = () => {
-    clearSession();
-    router.push('/auth/sign-in');
+  const handleLogout = async () => {
+    await clearSession();
   };
 
   React.useEffect(() => {
@@ -106,10 +174,11 @@ export function InstructorSidebar() {
       </SidebarHeader>
 
       <SidebarContent className='overflow-x-hidden'>
+        {/* Ana Menü */}
         <SidebarGroup>
-          <SidebarGroupLabel>Menü</SidebarGroupLabel>
+          <SidebarGroupLabel>Ana Menü</SidebarGroupLabel>
           <SidebarMenu>
-            {instructorNavItems.map((item) => {
+            {mainNavItems.map((item) => {
               const Icon = item.icon;
               return (
                 <SidebarMenuItem key={item.title}>
@@ -129,6 +198,79 @@ export function InstructorSidebar() {
           </SidebarMenu>
         </SidebarGroup>
 
+        {/* İçeriklerim */}
+        <SidebarGroup>
+          <SidebarGroupLabel>İçeriklerim</SidebarGroupLabel>
+          <SidebarMenu>
+            {contentNavItems.map((item) => {
+              const Icon = item.icon;
+              return (
+                <SidebarMenuItem key={item.title}>
+                  <SidebarMenuButton
+                    asChild
+                    tooltip={item.title}
+                    isActive={pathname === item.url}
+                  >
+                    <Link href={item.url}>
+                      <Icon className="h-4 w-4" />
+                      <span>{item.title}</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              );
+            })}
+          </SidebarMenu>
+        </SidebarGroup>
+
+        {/* Canlı Yayın */}
+        <SidebarGroup>
+          <SidebarGroupLabel>Canlı Yayın</SidebarGroupLabel>
+          <SidebarMenu>
+            {liveNavItems.map((item) => {
+              const Icon = item.icon;
+              return (
+                <SidebarMenuItem key={item.title}>
+                  <SidebarMenuButton
+                    asChild
+                    tooltip={item.title}
+                    isActive={pathname === item.url}
+                  >
+                    <Link href={item.url}>
+                      <Icon className="h-4 w-4" />
+                      <span>{item.title}</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              );
+            })}
+          </SidebarMenu>
+        </SidebarGroup>
+
+        {/* İstatistikler & Kazanç */}
+        <SidebarGroup>
+          <SidebarGroupLabel>İstatistikler</SidebarGroupLabel>
+          <SidebarMenu>
+            {statsNavItems.map((item) => {
+              const Icon = item.icon;
+              return (
+                <SidebarMenuItem key={item.title}>
+                  <SidebarMenuButton
+                    asChild
+                    tooltip={item.title}
+                    isActive={pathname === item.url}
+                  >
+                    <Link href={item.url}>
+                      <Icon className="h-4 w-4" />
+                      <span>{item.title}</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              );
+            })}
+          </SidebarMenu>
+        </SidebarGroup>
+
+        {/* Ayarlar */}
         <SidebarGroup>
           <SidebarGroupLabel>Ayarlar</SidebarGroupLabel>
           <SidebarMenu>
@@ -148,10 +290,23 @@ export function InstructorSidebar() {
               <SidebarMenuButton
                 asChild
                 tooltip="Bildirimler"
+                isActive={pathname === '/instructor/notifications'}
               >
                 <Link href="/instructor/notifications">
                   <IconBell className="h-4 w-4" />
                   <span>Bildirimler</span>
+                </Link>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+            <SidebarMenuItem>
+              <SidebarMenuButton
+                asChild
+                tooltip="Ayarlar"
+                isActive={pathname === '/instructor/settings'}
+              >
+                <Link href="/instructor/settings">
+                  <IconSettings className="h-4 w-4" />
+                  <span>Ayarlar</span>
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>

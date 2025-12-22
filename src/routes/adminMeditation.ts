@@ -345,6 +345,33 @@ router.post('/', authenticatedRateLimiter, meditationController.createMeditation
 /**
  * @openapi
  * /api/admin/meditations/{id}:
+ *   get:
+ *     tags:
+ *       - Admin - Meditations
+ *     summary: Get a meditation by ID (admin)
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Meditation details
+ *       401:
+ *         description: Authentication required
+ *       403:
+ *         description: Admin access required
+ *       404:
+ *         description: Meditation not found
+ */
+router.get('/:id', authenticatedRateLimiter, meditationController.getAdminMeditationById);
+
+/**
+ * @openapi
+ * /api/admin/meditations/{id}:
  *   put:
  *     tags:
  *       - Admin - Meditations

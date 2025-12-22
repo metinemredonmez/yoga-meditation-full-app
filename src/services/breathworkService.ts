@@ -448,7 +448,7 @@ async function calculateStreak(userId: string): Promise<number> {
  * Get all breathworks for admin (including unpublished)
  */
 export async function getAdminBreathworks(filters: BreathworkFilters) {
-  const { page, limit, sortBy, sortOrder, search } = filters;
+  const { page, limit, sortBy, sortOrder, search, category, pattern, difficulty, isFree, isPremium, isFeatured, isActive } = filters;
   const skip = (page - 1) * limit;
 
   // Map sortBy to actual field names
@@ -467,6 +467,13 @@ export async function getAdminBreathworks(filters: BreathworkFilters) {
         { titleEn: { contains: search, mode: 'insensitive' } },
       ],
     }),
+    ...(category && { category }),
+    ...(pattern && { pattern }),
+    ...(difficulty && { difficulty }),
+    ...(isFree !== undefined && { isPremium: !isFree }),
+    ...(isPremium !== undefined && { isPremium }),
+    ...(isFeatured !== undefined && { isFeatured }),
+    ...(isActive !== undefined && { isActive }),
   };
 
   const [breathworks, total] = await Promise.all([

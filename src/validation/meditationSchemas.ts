@@ -5,11 +5,13 @@ export const meditationDifficultyEnum = z.enum(['BEGINNER', 'INTERMEDIATE', 'ADV
 
 // Query parameter schemas
 export const meditationFiltersSchema = z.object({
-  categoryId: z.string().uuid().optional(),
-  instructorId: z.string().uuid().optional(),
+  categoryId: z.string().min(1).optional(),
+  instructorId: z.string().min(1).optional(),
   difficulty: meditationDifficultyEnum.optional(),
   isFree: z.coerce.boolean().optional(),
   isFeatured: z.coerce.boolean().optional(),
+  isPremium: z.coerce.boolean().optional(),
+  isPublished: z.coerce.boolean().optional(),
   minDuration: z.coerce.number().int().positive().optional(),
   maxDuration: z.coerce.number().int().positive().optional(),
   search: z.string().min(1).optional(),
@@ -20,11 +22,11 @@ export const meditationFiltersSchema = z.object({
 });
 
 export const meditationIdParamSchema = z.object({
-  id: z.string().uuid(),
+  id: z.string().min(1),
 });
 
 export const categoryIdParamSchema = z.object({
-  categoryId: z.string().uuid(),
+  categoryId: z.string().min(1),
 });
 
 // Progress update schema
@@ -51,8 +53,8 @@ export const ratingSchema = z.object({
 
 // Admin schemas
 export const createMeditationSchema = z.object({
-  categoryId: z.string().uuid(),
-  instructorId: z.string().uuid().optional(),
+  categoryId: z.string().min(1),
+  instructorId: z.string().min(1).optional(),
   title: z.string().min(1).max(200),
   titleEn: z.string().min(1).max(200).optional(),
   slug: z.string().min(1).max(200),
@@ -63,7 +65,7 @@ export const createMeditationSchema = z.object({
   audioUrl: z.string().url(),
   audioUrlEn: z.string().url().optional(),
   coverImage: z.string().url().optional(),
-  backgroundSoundId: z.string().uuid().optional(),
+  backgroundSoundId: z.string().min(1).optional(),
   isPremium: z.boolean().default(false),
   isFeatured: z.boolean().default(false),
   isPublished: z.boolean().default(false),

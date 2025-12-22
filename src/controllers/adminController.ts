@@ -13,22 +13,96 @@ const updateRoleSchema = z.object({
 
 export async function listUsers(req: Request, res: Response) {
   try {
-    const users = await prisma.users.findMany({
-      orderBy: { createdAt: 'desc' },
-      select: {
-        id: true,
-        email: true,
-        firstName: true,
-        lastName: true,
-        role: true,
-        phoneNumber: true,
-        bio: true,
-        createdAt: true,
-        updatedAt: true,
+    const { page = 1, limit = 20, tier, status, role, search } = req.query;
+    const skip = (Number(page) - 1) * Number(limit);
+
+    const where: any = {};
+
+    // Filter by subscription tier
+    if (tier && tier !== 'all') {
+      where.subscriptionTier = tier;
+    }
+
+    // Filter by status (based on isActive field)
+    if (status === 'ACTIVE') {
+      where.isActive = true;
+    } else if (status === 'INACTIVE') {
+      where.isActive = false;
+    }
+
+    // Filter by role
+    if (role && role !== 'all') {
+      where.role = role;
+    }
+
+    // Search by name or email
+    if (search) {
+      where.OR = [
+        { email: { contains: search as string, mode: 'insensitive' } },
+        { firstName: { contains: search as string, mode: 'insensitive' } },
+        { lastName: { contains: search as string, mode: 'insensitive' } },
+      ];
+    }
+
+    const [users, total] = await Promise.all([
+      prisma.users.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: Number(limit),
+        select: {
+          id: true,
+          email: true,
+          firstName: true,
+          lastName: true,
+          role: true,
+          phoneNumber: true,
+          bio: true,
+          isActive: true,
+          subscriptionTier: true,
+          subscriptionExpiresAt: true,
+          createdAt: true,
+          updatedAt: true,
+          lastLoginAt: true,
+          subscriptions: {
+            where: { status: 'ACTIVE' },
+            select: {
+              id: true,
+              provider: true,
+              isManual: true,
+              grantedAt: true,
+              grantReason: true,
+              currentPeriodEnd: true,
+              plan: {
+                select: {
+                  tier: true,
+                  name: true,
+                },
+              },
+            },
+            take: 1,
+          },
+        },
+      }),
+      prisma.users.count({ where }),
+    ]);
+
+    const formattedUsers = users.map(user => ({
+      ...user,
+      activeSubscription: user.subscriptions[0] || null,
+      subscriptions: undefined,
+    }));
+
+    return res.json({
+      success: true,
+      users: formattedUsers,
+      pagination: {
+        page: Number(page),
+        limit: Number(limit),
+        total,
+        totalPages: Math.ceil(total / Number(limit)),
       },
     });
-
-    return res.json({ users });
   } catch (error) {
     logger.error({ err: error }, 'List users failed');
     return res.status(500).json({ error: 'Internal server error' });

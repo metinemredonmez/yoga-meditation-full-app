@@ -4,7 +4,6 @@ import {
   IconCheck,
   IconChevronLeft,
   IconChevronRight,
-  IconCommand,
   IconCreditCard,
   IconFile,
   IconFileText,
@@ -87,7 +86,7 @@ export type Icon = React.ComponentType<IconProps>;
 
 export const Icons = {
   dashboard: IconLayoutDashboard,
-  logo: IconCommand,
+  logo: IconYoga,
   login: IconLogin,
   logout: IconLogout,
   close: IconX,

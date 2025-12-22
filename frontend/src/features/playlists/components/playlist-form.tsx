@@ -10,7 +10,7 @@ import {
   removePlaylistItem,
   reorderPlaylistItems,
   getAdminMeditations,
-  getAdminBreathworkSessions,
+  getAdminBreathwork,
   getAdminSoundscapes,
   getAdminSleepStories,
 } from '@/lib/api';
@@ -169,7 +169,7 @@ export function PlaylistForm({ playlistId }: PlaylistFormProps) {
       const [meditationsData, breathworksData, soundscapesData, sleepStoriesData] =
         await Promise.all([
           getAdminMeditations({ isPublished: true, limit: 100 }),
-          getAdminBreathworkSessions({ isPublished: true, limit: 100 }),
+          getAdminBreathwork({ isPublished: true, limit: 100 }),
           getAdminSoundscapes({ isPublished: true, limit: 100 }),
           getAdminSleepStories({ isPublished: true, limit: 100 }),
         ]);

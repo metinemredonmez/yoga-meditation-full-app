@@ -6,15 +6,31 @@ import {
 } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { randomUUID } from 'crypto';
+import { existsSync, mkdirSync, writeFileSync, readFileSync, unlinkSync } from 'fs';
+import { join } from 'path';
 import { config } from '../utils/config';
 import { logger } from '../utils/logger';
+
+// Check if S3 is configured
+const isS3Configured = !!(config.S3_ACCESS_KEY_ID && config.S3_SECRET_ACCESS_KEY && config.S3_BUCKET_NAME);
+
+// Local upload directory for development
+const LOCAL_UPLOAD_DIR = join(process.cwd(), 'uploads');
+
+// Ensure local upload directory exists
+if (!isS3Configured) {
+  if (!existsSync(LOCAL_UPLOAD_DIR)) {
+    mkdirSync(LOCAL_UPLOAD_DIR, { recursive: true });
+  }
+  logger.info('S3 not configured, using local file storage at: ' + LOCAL_UPLOAD_DIR);
+}
 
 // S3 Client - lazy initialization
 let s3Client: S3Client | null = null;
 
 function getS3Client(): S3Client {
   if (!s3Client) {
-    if (!config.S3_ACCESS_KEY_ID || !config.S3_SECRET_ACCESS_KEY || !config.S3_BUCKET_NAME) {
+    if (!isS3Configured) {
       throw new Error(
         'S3 configuration is missing. Please set S3_ACCESS_KEY_ID, S3_SECRET_ACCESS_KEY, and S3_BUCKET_NAME',
       );
@@ -23,8 +39,8 @@ function getS3Client(): S3Client {
     s3Client = new S3Client({
       region: config.S3_REGION ?? 'eu-central-1',
       credentials: {
-        accessKeyId: config.S3_ACCESS_KEY_ID,
-        secretAccessKey: config.S3_SECRET_ACCESS_KEY,
+        accessKeyId: config.S3_ACCESS_KEY_ID!,
+        secretAccessKey: config.S3_SECRET_ACCESS_KEY!,
       },
     });
   }
@@ -77,6 +93,7 @@ export function buildCdnUrl(key: string): string {
 
 /**
  * Create a presigned URL for direct client upload to S3
+ * Falls back to local file upload endpoint in development when S3 is not configured
  */
 export async function createSignedUploadUrl({
   filename,
@@ -84,10 +101,48 @@ export async function createSignedUploadUrl({
   userId,
   folder = 'videos',
 }: SignedUrlInput): Promise<UploadUrlResponse> {
-  const client = getS3Client();
   const id = randomUUID();
   const extension = filename.split('.').pop() || '';
   const key = `${folder}/${userId}/${id}${extension ? '.' + extension : ''}`;
+  const expiresIn = config.STORAGE_SIGNED_URL_TTL_SECONDS ?? 600;
+  const expiresAt = new Date(Date.now() + expiresIn * 1000);
+
+  // Use local file storage in development when S3 is not configured
+  if (!isS3Configured) {
+    // Create folder structure
+    const folderPath = join(LOCAL_UPLOAD_DIR, folder, userId);
+    if (!existsSync(folderPath)) {
+      mkdirSync(folderPath, { recursive: true });
+    }
+
+    // Return local upload URL
+    const uploadUrl = `http://localhost:${config.PORT || 4000}/api/upload/local/${key}`;
+    const fileUrl = `http://localhost:${config.PORT || 4000}/uploads/${key}`;
+
+    logger.info(
+      {
+        id,
+        userId,
+        filename,
+        contentType,
+        key,
+        folder,
+        mode: 'local',
+      },
+      'Generated local upload URL (S3 not configured)',
+    );
+
+    return {
+      id,
+      uploadUrl,
+      fileUrl,
+      expiresAt,
+      key,
+    };
+  }
+
+  // Use S3 for production
+  const client = getS3Client();
 
   const command = new PutObjectCommand({
     Bucket: config.S3_BUCKET_NAME,
@@ -100,9 +155,7 @@ export async function createSignedUploadUrl({
     },
   });
 
-  const expiresIn = config.STORAGE_SIGNED_URL_TTL_SECONDS ?? 600;
   const uploadUrl = await getSignedUrl(client, command, { expiresIn });
-  const expiresAt = new Date(Date.now() + expiresIn * 1000);
   const fileUrl = buildCdnUrl(key);
 
   logger.info(
@@ -113,6 +166,7 @@ export async function createSignedUploadUrl({
       contentType,
       key,
       folder,
+      mode: 's3',
     },
     'Generated presigned upload URL',
   );

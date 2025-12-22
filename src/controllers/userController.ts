@@ -24,6 +24,8 @@ import {
   addPasswordToHistory,
   initializePasswordHistory,
 } from '../services/passwordHistoryService';
+import { sendOtp, verifyOtp } from '../services/smsService';
+import { maskPhoneNumber } from '../utils/otp';
 
 // Strong password schema with complexity requirements
 const passwordSchema = z.string()
@@ -40,6 +42,12 @@ const signupSchema = z.object({
   lastName: z.string().min(1).optional(),
   phoneNumber: z.string().optional(),
   bio: z.string().optional(),
+  // Role selection for signup
+  role: z.enum(['STUDENT', 'TEACHER']).optional().default('STUDENT'),
+  // Instructor application fields
+  experience: z.string().optional(),
+  certifications: z.string().optional(),
+  specializations: z.string().optional(),
 });
 
 const loginSchema = z.object({
@@ -136,22 +144,56 @@ export async function signup(req: Request, res: Response) {
 
     const passwordHash = await hashPassword(payload.password);
 
+    // Determine role - only allow STUDENT or TEACHER from signup
+    const requestedRole = payload.role === 'TEACHER' ? 'TEACHER' : 'STUDENT';
+    const isInstructorApplication = requestedRole === 'TEACHER';
+
     const user = await prisma.users.create({
       data: {
         email: payload.email,
         passwordHash,
         firstName: payload.firstName ?? null,
         lastName: payload.lastName ?? null,
-        phoneNumber: payload.phoneNumber ?? null,
+        phoneNumber: isInstructorApplication ? (payload.phoneNumber ?? null) : null,
         bio: payload.bio ?? null,
-        role: 'STUDENT',
+        role: requestedRole,
       },
     });
 
+    // If instructor application, create instructor profile with PENDING status
+    if (isInstructorApplication) {
+      // Generate slug from name or email
+      const emailPart = payload.email ? payload.email.split('@')[0] : null;
+      const baseSlug = payload.firstName && payload.lastName
+        ? `${payload.firstName}-${payload.lastName}`.toLowerCase().replace(/\s+/g, '-')
+        : (emailPart ?? 'instructor').toLowerCase().replace(/[^a-z0-9-]/g, '-');
+
+      // Ensure unique slug
+      let slug = baseSlug;
+      let slugCounter = 1;
+      while (await prisma.instructor_profiles.findUnique({ where: { slug } })) {
+        slug = `${baseSlug}-${slugCounter}`;
+        slugCounter++;
+      }
+
+      await prisma.instructor_profiles.create({
+        data: {
+          userId: user.id,
+          displayName: `${payload.firstName || ''} ${payload.lastName || ''}`.trim() || payload.email?.split('@')[0] || 'Instructor',
+          slug,
+          bio: payload.bio ?? null,
+          specializations: payload.specializations ? payload.specializations.split(',').map((s: string) => s.trim()) : [],
+          certifications: payload.certifications ? { list: payload.certifications.split(',').map((c: string) => c.trim()) } : undefined,
+          yearsOfExperience: payload.experience ? parseInt(payload.experience) || 0 : 0,
+          status: 'PENDING', // Requires admin approval
+        },
+      });
+    }
+
     await recordAuditLog({
       userId: user.id,
-      actorRole: 'STUDENT',
-      action: 'user.signup',
+      actorRole: requestedRole,
+      action: isInstructorApplication ? 'instructor.application' : 'user.signup',
     });
 
     // Initialize password history
@@ -171,6 +213,16 @@ export async function signup(req: Request, res: Response) {
       role: user.role,
       createdAt: user.createdAt,
     });
+
+    // For instructor applications, return pending status without tokens
+    if (isInstructorApplication) {
+      return res.status(201).json({
+        message: 'Instructor application submitted',
+        status: 'pending',
+        users: buildUserResponse(user),
+        pendingApproval: true,
+      });
+    }
 
     // Get request metadata for token tracking
     const userAgent = req.headers['user-agent'];
@@ -263,9 +315,84 @@ export async function login(req: Request, res: Response) {
       });
     }
 
+    // Check if instructor account is pending approval
+    if (user.role === 'TEACHER') {
+      const instructorProfile = await prisma.instructor_profiles.findUnique({
+        where: { userId: user.id },
+      });
+
+      if (instructorProfile && instructorProfile.status === 'PENDING') {
+        return res.status(403).json({
+          error: 'Account pending approval',
+          message: 'Egitmen hesabiniz henuz onaylanmadi. Lutfen onay sureci tamamlanana kadar bekleyiniz.',
+          pendingApproval: true,
+        });
+      }
+
+      if (instructorProfile && instructorProfile.status === 'REJECTED') {
+        return res.status(403).json({
+          error: 'Account rejected',
+          message: 'Egitmen basvurunuz reddedilmistir. Detayli bilgi icin bizimle iletisime gecebilirsiniz.',
+          rejectionReason: instructorProfile.rejectionReason,
+        });
+      }
+
+      if (instructorProfile && instructorProfile.status === 'SUSPENDED') {
+        return res.status(403).json({
+          error: 'Account suspended',
+          message: 'Hesabiniz askiya alinmistir. Detayli bilgi icin bizimle iletisime gecebilirsiniz.',
+          suspensionReason: instructorProfile.suspensionReason,
+        });
+      }
+
+      // Note: For APPROVED instructors, OTP verification will be required AFTER login
+      // The requiresPhoneVerification flag will be returned with the login response
+      // Frontend should redirect to OTP verification page after successful login
+    }
+
     // Clear failed attempts on successful login
     await clearLoginAttempts(payload.email);
 
+    // Check if APPROVED instructor needs phone verification BEFORE issuing tokens
+    let needsPhoneVerification = false;
+    if (user.role === 'TEACHER' && user.phoneNumber) {
+      const teacherProfile = await prisma.instructor_profiles.findUnique({
+        where: { userId: user.id },
+      });
+      needsPhoneVerification = teacherProfile?.status === 'APPROVED';
+    }
+
+    // If OTP verification is required, send OTP and DON'T issue tokens yet
+    if (needsPhoneVerification) {
+      try {
+        // Send OTP to user's phone - params: phoneNumber, purpose, userId
+        const otpResult = await sendOtp(user.phoneNumber!, 'LOGIN', user.id);
+
+        await recordAuditLog({
+          userId: user.id,
+          actorRole: user.role,
+          action: 'user.login.otp_required',
+        });
+
+        // Return without tokens - user must verify OTP first
+        return res.json({
+          message: 'OTP verification required',
+          success: true,
+          requiresOtpVerification: true,
+          userId: user.id,
+          phoneNumber: maskPhoneNumber(user.phoneNumber!),
+          expiresAt: otpResult.expiresAt,
+        });
+      } catch (otpError) {
+        logger.error({ err: otpError }, 'Failed to send login OTP');
+        return res.status(500).json({
+          error: 'Failed to send verification code',
+          message: 'SMS gönderilemedi. Lütfen tekrar deneyin.',
+        });
+      }
+    }
+
+    // For non-OTP users, proceed with normal login
     await recordAuditLog({
       userId: user.id,
       actorRole: user.role,
@@ -292,8 +419,9 @@ export async function login(req: Request, res: Response) {
 
     return res.json({
       message: 'Login successful',
-      users: buildUserResponse(user),
-      // Still include tokens in response for mobile/API clients
+      success: true,
+      user: buildUserResponse(user),
+      // Include tokens in response for mobile/API clients
       tokens: {
         accessToken: tokens.accessToken,
         refreshToken: tokens.refreshToken,
@@ -307,6 +435,169 @@ export async function login(req: Request, res: Response) {
     }
 
     logger.error({ err: error }, 'Login failed');
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+}
+
+// OTP verification schema
+const verifyOtpSchema = z.object({
+  userId: z.string().cuid('Invalid user id'),
+  code: z.string().length(6, 'OTP must be 6 digits'),
+});
+
+// Resend OTP schema
+const resendOtpSchema = z.object({
+  userId: z.string().cuid('Invalid user id'),
+});
+
+/**
+ * Verify login OTP for instructor 2FA
+ */
+export async function verifyLoginOtp(req: Request, res: Response) {
+  try {
+    const payload = verifyOtpSchema.parse(req.body);
+
+    // Find the user
+    const user = await prisma.users.findUnique({
+      where: { id: payload.userId },
+    });
+
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    // Verify this is an instructor
+    if (user.role !== 'TEACHER') {
+      return res.status(400).json({ error: 'OTP verification not required for this account' });
+    }
+
+    // Verify phone number exists
+    if (!user.phoneNumber) {
+      return res.status(400).json({ error: 'Phone number not found' });
+    }
+
+    // Verify OTP
+    const otpResult = await verifyOtp(user.phoneNumber, payload.code, 'LOGIN');
+
+    if (!otpResult.success) {
+      return res.status(400).json({
+        error: 'Invalid OTP',
+        message: otpResult.message,
+        attemptsRemaining: otpResult.attemptsRemaining,
+      });
+    }
+
+    // OTP verified - now create tokens and complete login
+    await recordAuditLog({
+      userId: user.id,
+      actorRole: user.role,
+      action: 'user.login.2fa',
+    });
+
+    // Update phone verified status if not already
+    if (!user.phoneVerified) {
+      await prisma.users.update({
+        where: { id: user.id },
+        data: {
+          phoneVerified: true,
+          phoneVerifiedAt: new Date(),
+        },
+      });
+    }
+
+    // Get request metadata for token tracking
+    const userAgent = req.headers['user-agent'];
+    const ipAddress =
+      (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() ||
+      req.ip ||
+      req.socket.remoteAddress ||
+      'unknown';
+
+    // Create token pair
+    const tokens = await createTokenPair(
+      {
+        id: user.id,
+        userId: user.id,
+        email: user.email,
+        role: user.role,
+      },
+      userAgent,
+      ipAddress,
+    );
+
+    // Set HttpOnly cookies for web clients
+    setAuthCookies(res, tokens.accessToken, tokens.refreshToken);
+
+    return res.json({
+      message: 'Login successful',
+      user: buildUserResponse(user),
+      tokens: {
+        accessToken: tokens.accessToken,
+        refreshToken: tokens.refreshToken,
+        expiresIn: tokens.expiresIn,
+        tokenType: 'Bearer',
+      },
+    });
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ error: 'Validation failed', details: error.flatten() });
+    }
+
+    logger.error({ err: error }, 'OTP verification failed');
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+}
+
+/**
+ * Resend login OTP for instructor 2FA
+ */
+export async function resendLoginOtp(req: Request, res: Response) {
+  try {
+    const payload = resendOtpSchema.parse(req.body);
+
+    // Find the user
+    const user = await prisma.users.findUnique({
+      where: { id: payload.userId },
+    });
+
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    // Verify this is an instructor
+    if (user.role !== 'TEACHER') {
+      return res.status(400).json({ error: 'OTP not required for this account' });
+    }
+
+    // Verify phone number exists
+    if (!user.phoneNumber) {
+      return res.status(400).json({ error: 'Phone number not found' });
+    }
+
+    // Import resendOtp from smsService
+    const { resendOtp: resendOtpSms } = await import('../services/smsService');
+
+    // Resend OTP
+    const otpResult = await resendOtpSms(user.phoneNumber, 'LOGIN', user.id);
+
+    if (!otpResult.success) {
+      return res.status(429).json({
+        error: 'Cannot resend OTP',
+        message: otpResult.message,
+      });
+    }
+
+    return res.json({
+      message: 'Dogrulama kodu tekrar gonderildi',
+      phoneNumber: maskPhoneNumber(user.phoneNumber),
+      expiresAt: otpResult.expiresAt,
+    });
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ error: 'Validation failed', details: error.flatten() });
+    }
+
+    logger.error({ err: error }, 'Resend OTP failed');
     return res.status(500).json({ error: 'Internal server error' });
   }
 }

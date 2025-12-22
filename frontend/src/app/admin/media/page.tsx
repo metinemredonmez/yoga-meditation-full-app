@@ -256,35 +256,31 @@ export default function MediaPage() {
         <div className="flex items-center gap-2">
           <button
             onClick={() => setFilterType('all')}
-            className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-              filterType === 'all' ? 'bg-indigo-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-            }`}
+            className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${filterType === 'all' ? 'bg-indigo-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
           >
             All
           </button>
           <button
             onClick={() => setFilterType('image')}
-            className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-1 ${
-              filterType === 'image' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-            }`}
+            className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-1 ${filterType === 'image' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
           >
             {typeIcons.image}
             Images
           </button>
           <button
             onClick={() => setFilterType('video')}
-            className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-1 ${
-              filterType === 'video' ? 'bg-purple-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-            }`}
+            className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-1 ${filterType === 'video' ? 'bg-purple-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
           >
             {typeIcons.video}
             Videos
           </button>
           <button
             onClick={() => setFilterType('audio')}
-            className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-1 ${
-              filterType === 'audio' ? 'bg-green-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-            }`}
+            className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-1 ${filterType === 'audio' ? 'bg-green-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
           >
             {typeIcons.audio}
             Audio
@@ -511,27 +507,24 @@ export default function MediaPage() {
               <div className="flex gap-2 mb-6">
                 <button
                   onClick={() => setUploadType('image')}
-                  className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-lg border-2 transition-colors ${
-                    uploadType === 'image' ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-gray-200 hover:border-gray-300'
-                  }`}
+                  className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-lg border-2 transition-colors ${uploadType === 'image' ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-gray-200 hover:border-gray-300'
+                    }`}
                 >
                   {typeIcons.image}
                   Image
                 </button>
                 <button
                   onClick={() => setUploadType('video')}
-                  className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-lg border-2 transition-colors ${
-                    uploadType === 'video' ? 'border-purple-500 bg-purple-50 text-purple-700' : 'border-gray-200 hover:border-gray-300'
-                  }`}
+                  className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-lg border-2 transition-colors ${uploadType === 'video' ? 'border-purple-500 bg-purple-50 text-purple-700' : 'border-gray-200 hover:border-gray-300'
+                    }`}
                 >
                   {typeIcons.video}
                   Video
                 </button>
                 <button
                   onClick={() => setUploadType('audio')}
-                  className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-lg border-2 transition-colors ${
-                    uploadType === 'audio' ? 'border-green-500 bg-green-50 text-green-700' : 'border-gray-200 hover:border-gray-300'
-                  }`}
+                  className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-lg border-2 transition-colors ${uploadType === 'audio' ? 'border-green-500 bg-green-50 text-green-700' : 'border-gray-200 hover:border-gray-300'
+                    }`}
                 >
                   {typeIcons.audio}
                   Audio
@@ -544,11 +537,10 @@ export default function MediaPage() {
                 onDragLeave={handleDragLeave}
                 onDrop={handleDrop}
                 onClick={() => fileInputRef.current?.click()}
-                className={`relative border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-colors ${
-                  dragOver
+                className={`relative border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-colors ${dragOver
                     ? 'border-indigo-500 bg-indigo-50'
                     : 'border-gray-300 hover:border-indigo-400 hover:bg-gray-50'
-                }`}
+                  }`}
               >
                 {uploading ? (
                   <div className="space-y-4">
@@ -568,7 +560,7 @@ export default function MediaPage() {
                   </div>
                 ) : (
                   <>
-                    <UploadPlaceholder type={uploadType} size="lg" className="mx-auto mb-4 w-24 h-24" />
+                    <UploadPlaceholder type={uploadType} className="mx-auto mb-4 w-24 h-24" />
                     <p className="text-gray-600">
                       <span className="font-medium text-indigo-600">Click to upload</span> or drag and drop
                     </p>

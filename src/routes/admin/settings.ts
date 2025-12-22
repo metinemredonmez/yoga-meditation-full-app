@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import * as settingsController from '../../controllers/admin/settingsController';
+import * as smtpController from '../../controllers/admin/smtpController';
 
 const router = Router();
 
@@ -22,5 +23,10 @@ router.delete('/features/:key', settingsController.deleteFeatureFlag);
 // Seed
 router.post('/seed/settings', settingsController.seedDefaultSettings);
 router.post('/seed/features', settingsController.seedDefaultFeatureFlags);
+
+// SMTP Settings
+router.get('/smtp/status', smtpController.getSmtpStatus);
+router.post('/smtp/test', smtpController.sendTestEmail);
+router.post('/smtp/verify', smtpController.verifySmtpConnection);
 
 export default router;

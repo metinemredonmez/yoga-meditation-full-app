@@ -3,6 +3,22 @@
 
 export type UserRole = 'STUDENT' | 'TEACHER' | 'INSTRUCTOR' | 'ADMIN' | 'SUPER_ADMIN';
 
+// Role hierarchy with numeric levels (must match backend)
+export const ROLE_LEVELS: Record<UserRole, number> = {
+  STUDENT: 10,
+  INSTRUCTOR: 50,
+  TEACHER: 50,
+  ADMIN: 80,
+  SUPER_ADMIN: 100,
+};
+
+/**
+ * Get role level for a given role
+ */
+export function getRoleLevel(role: UserRole | string): number {
+  return ROLE_LEVELS[role as UserRole] ?? 0;
+}
+
 export type Permission =
   // Users
   | 'users.view'

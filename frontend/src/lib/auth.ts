@@ -7,6 +7,8 @@ interface UserSession {
   role: 'STUDENT' | 'TEACHER' | 'INSTRUCTOR' | 'ADMIN' | 'SUPER_ADMIN';
   firstName?: string;
   lastName?: string;
+  subscriptionTier?: 'FREE' | 'PREMIUM' | 'FAMILY' | null;
+  subscriptionExpiresAt?: string | null;
 }
 
 let currentSession: UserSession | null = null;
@@ -39,12 +41,24 @@ export function getSession(): UserSession | null {
 /**
  * Clear session and redirect to login
  */
-export function clearSession() {
+export async function clearSession() {
   currentSession = null;
   // Clear the indicator cookie
   if (typeof document !== 'undefined') {
     document.cookie = `${SESSION_INDICATOR_KEY}=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT`;
   }
+
+  // Call logout API to clear HttpOnly cookies on server
+  const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:4000';
+  try {
+    await fetch(`${apiBaseUrl}/api/users/logout`, {
+      method: 'POST',
+      credentials: 'include',
+    });
+  } catch (error) {
+    console.error('Logout API error:', error);
+  }
+
   if (typeof window !== 'undefined') {
     window.location.href = '/auth/sign-in';
   }
@@ -85,6 +99,32 @@ export function isAdmin(): boolean {
  */
 export function isInstructor(): boolean {
   return currentSession?.role === 'TEACHER' || currentSession?.role === 'ADMIN' || currentSession?.role === 'SUPER_ADMIN';
+}
+
+/**
+ * Check if user has premium subscription
+ */
+export function isPremium(): boolean {
+  // Admins and instructors always have premium access
+  if (currentSession?.role === 'ADMIN' || currentSession?.role === 'SUPER_ADMIN' || currentSession?.role === 'INSTRUCTOR' || currentSession?.role === 'TEACHER') {
+    return true;
+  }
+  return currentSession?.subscriptionTier === 'PREMIUM' || currentSession?.subscriptionTier === 'FAMILY';
+}
+
+/**
+ * Get user's subscription tier
+ */
+export function getSubscriptionTier(): 'FREE' | 'PREMIUM' | 'FAMILY' | null {
+  return currentSession?.subscriptionTier || 'FREE';
+}
+
+/**
+ * Check if user can access premium content
+ * Returns true if user is premium or admin/instructor
+ */
+export function canAccessPremiumContent(): boolean {
+  return isPremium();
 }
 
 // Legacy exports for backwards compatibility during migration

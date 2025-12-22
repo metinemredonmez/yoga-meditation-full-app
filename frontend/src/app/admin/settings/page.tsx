@@ -1,12 +1,97 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import api from '@/lib/api';
+
+interface SmtpSettings {
+  host: string;
+  port: number;
+  secure: boolean;
+  user: string;
+  password: string;
+  from: string;
+}
+
+interface SmtpStatus {
+  configured: boolean;
+  host?: string;
+  port?: number;
+  hasAuth?: boolean;
+}
 
 export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState('general');
+  const [smtpStatus, setSmtpStatus] = useState<SmtpStatus | null>(null);
+  const [smtpSettings, setSmtpSettings] = useState<SmtpSettings>({
+    host: '',
+    port: 587,
+    secure: false,
+    user: '',
+    password: '',
+    from: 'Yoga App <noreply@yogaapp.com>',
+  });
+  const [testEmail, setTestEmail] = useState('');
+  const [smtpLoading, setSmtpLoading] = useState(false);
+  const [smtpMessage, setSmtpMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
+  useEffect(() => {
+    if (activeTab === 'email') {
+      fetchSmtpStatus();
+    }
+  }, [activeTab]);
+
+  const fetchSmtpStatus = async () => {
+    try {
+      const response = await api.get('/admin/settings/smtp/status');
+      setSmtpStatus(response.data);
+    } catch (error) {
+      console.error('SMTP status fetch error:', error);
+      setSmtpStatus({ configured: false });
+    }
+  };
+
+  const handleTestEmail = async () => {
+    if (!testEmail) {
+      setSmtpMessage({ type: 'error', text: 'Lütfen test e-posta adresi girin' });
+      return;
+    }
+
+    setSmtpLoading(true);
+    setSmtpMessage(null);
+
+    try {
+      const response = await api.post('/admin/settings/smtp/test', { email: testEmail });
+      setSmtpMessage({ type: 'success', text: response.data.message || 'Test e-postası gönderildi!' });
+    } catch (error: unknown) {
+      const err = error as { response?: { data?: { error?: string } } };
+      setSmtpMessage({ type: 'error', text: err.response?.data?.error || 'E-posta gönderilemedi' });
+    } finally {
+      setSmtpLoading(false);
+    }
+  };
+
+  const handleVerifyConnection = async () => {
+    setSmtpLoading(true);
+    setSmtpMessage(null);
+
+    try {
+      const response = await api.post('/admin/settings/smtp/verify');
+      if (response.data.success) {
+        setSmtpMessage({ type: 'success', text: 'SMTP bağlantısı doğrulandı!' });
+      } else {
+        setSmtpMessage({ type: 'error', text: 'SMTP bağlantısı doğrulanamadı' });
+      }
+    } catch (error: unknown) {
+      const err = error as { response?: { data?: { error?: string } } };
+      setSmtpMessage({ type: 'error', text: err.response?.data?.error || 'Bağlantı doğrulanamadı' });
+    } finally {
+      setSmtpLoading(false);
+    }
+  };
 
   const tabs = [
     { id: 'general', name: 'Genel', icon: '⚙️' },
+    { id: 'email', name: 'E-posta/SMTP', icon: '📧' },
     { id: 'notifications', name: 'Bildirimler', icon: '🔔' },
     { id: 'payments', name: 'Ödeme', icon: '💳' },
     { id: 'integrations', name: 'Entegrasyonlar', icon: '🔗' },
@@ -91,6 +176,117 @@ export default function SettingsPage() {
                   </button>
                 </div>
               </form>
+            </div>
+          )}
+
+          {activeTab === 'email' && (
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+              <h2 className="text-lg font-semibold text-gray-900 mb-6">E-posta / SMTP Ayarları</h2>
+
+              {/* SMTP Status */}
+              <div className="mb-6 p-4 rounded-lg border border-gray-200">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center">
+                    <span className="text-2xl mr-3">📧</span>
+                    <div>
+                      <p className="font-medium text-gray-900">SMTP Durumu</p>
+                      {smtpStatus ? (
+                        smtpStatus.configured ? (
+                          <p className="text-sm text-green-600">
+                            Yapılandırıldı - {smtpStatus.host}:{smtpStatus.port}
+                          </p>
+                        ) : (
+                          <p className="text-sm text-amber-600">
+                            Yapılandırılmadı - E-postalar konsola yazılıyor (dev mode)
+                          </p>
+                        )
+                      ) : (
+                        <p className="text-sm text-gray-500">Yükleniyor...</p>
+                      )}
+                    </div>
+                  </div>
+                  <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                    smtpStatus?.configured
+                      ? 'bg-green-100 text-green-700'
+                      : 'bg-amber-100 text-amber-700'
+                  }`}>
+                    {smtpStatus?.configured ? 'Aktif' : 'Dev Mode'}
+                  </span>
+                </div>
+              </div>
+
+              {/* Message Display */}
+              {smtpMessage && (
+                <div className={`mb-6 p-4 rounded-lg ${
+                  smtpMessage.type === 'success'
+                    ? 'bg-green-50 border border-green-200 text-green-700'
+                    : 'bg-red-50 border border-red-200 text-red-700'
+                }`}>
+                  {smtpMessage.text}
+                </div>
+              )}
+
+              {/* Test Email Section */}
+              <div className="space-y-6">
+                <div>
+                  <h3 className="font-medium text-gray-900 mb-4">Test E-postası Gönder</h3>
+                  <div className="flex gap-4">
+                    <input
+                      type="email"
+                      value={testEmail}
+                      onChange={(e) => setTestEmail(e.target.value)}
+                      placeholder="test@example.com"
+                      className="flex-1 px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                    />
+                    <button
+                      onClick={handleTestEmail}
+                      disabled={smtpLoading}
+                      className="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {smtpLoading ? 'Gönderiliyor...' : 'Test Gönder'}
+                    </button>
+                  </div>
+                  <p className="mt-2 text-sm text-gray-500">
+                    SMTP yapılandırılmamışsa, e-posta içeriği backend konsolunda görüntülenir.
+                  </p>
+                </div>
+
+                <div className="border-t border-gray-100 pt-6">
+                  <h3 className="font-medium text-gray-900 mb-4">Bağlantı Doğrulama</h3>
+                  <button
+                    onClick={handleVerifyConnection}
+                    disabled={smtpLoading || !smtpStatus?.configured}
+                    className="px-6 py-2 border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {smtpLoading ? 'Doğrulanıyor...' : 'SMTP Bağlantısını Doğrula'}
+                  </button>
+                  {!smtpStatus?.configured && (
+                    <p className="mt-2 text-sm text-amber-600">
+                      SMTP yapılandırılmadan bağlantı doğrulanamaz.
+                    </p>
+                  )}
+                </div>
+
+                <div className="border-t border-gray-100 pt-6">
+                  <h3 className="font-medium text-gray-900 mb-4">SMTP Yapılandırması</h3>
+                  <div className="p-4 bg-gray-50 rounded-lg">
+                    <p className="text-sm text-gray-600 mb-3">
+                      SMTP ayarlarını değiştirmek için sunucudaki <code className="bg-gray-200 px-1 rounded">.env</code> dosyasını düzenleyin:
+                    </p>
+                    <pre className="text-xs bg-gray-800 text-green-400 p-4 rounded-lg overflow-x-auto">
+{`# .env dosyası örneği
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USER=your-email@gmail.com
+SMTP_PASSWORD=your-app-password
+SMTP_FROM=Yoga App <noreply@yogaapp.com>`}
+                    </pre>
+                    <p className="mt-3 text-sm text-gray-500">
+                      Değişiklikler sonrası backend&apos;i yeniden başlatmanız gerekir.
+                    </p>
+                  </div>
+                </div>
+              </div>
             </div>
           )}
 

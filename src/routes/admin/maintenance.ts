@@ -22,5 +22,7 @@ router.get('/metrics', maintenanceController.getSystemMetrics);
 router.get('/health', maintenanceController.runHealthCheck);
 router.get('/backup/status', maintenanceController.getBackupStatus);
 router.post('/backup/trigger', maintenanceController.triggerBackup);
+router.get('/backups', maintenanceController.getBackups);
+router.post('/backups', maintenanceController.createBackup);
 
 export default router;

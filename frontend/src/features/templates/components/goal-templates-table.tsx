@@ -107,7 +107,7 @@ export function GoalTemplatesTable() {
       if (periodFilter && periodFilter !== 'all') params.period = periodFilter;
 
       const data = await getAdminGoalTemplates(params);
-      setTemplates(data.templates || data.goalTemplates || []);
+      setTemplates(data.data || data.templates || data.goalTemplates || []);
     } catch (error) {
       console.error('Failed to load templates:', error);
       toast.error('Şablonlar yüklenemedi');

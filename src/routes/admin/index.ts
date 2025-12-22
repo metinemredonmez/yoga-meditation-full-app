@@ -34,6 +34,12 @@ import integrationsRoutes from './integrations';
 // AI Agent System
 import aiAgentsRoutes from './aiAgents';
 
+// Playlists
+import playlistRoutes from './playlist';
+
+// Billing
+import billingRoutes from './billing';
+
 const router = Router();
 
 // All admin routes require authentication and admin role
@@ -72,5 +78,11 @@ router.use('/integrations', integrationsRoutes);
 
 // AI Agent System
 router.use('/ai-agents', aiAgentsRoutes);
+
+// Playlists
+router.use('/playlists', playlistRoutes);
+
+// Billing
+router.use('/billing', billingRoutes);
 
 export default router;

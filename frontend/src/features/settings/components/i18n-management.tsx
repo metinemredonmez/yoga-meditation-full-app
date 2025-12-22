@@ -49,14 +49,23 @@ export function I18nManagement() {
 
   const loadData = async () => {
     try {
-      const [langsData, transData] = await Promise.all([
-        getLanguages(),
-        getTranslations(),
+      const [langsResponse, transResponse] = await Promise.all([
+        getLanguages().catch(() => []),
+        getTranslations().catch(() => []),
       ]);
+      // Handle both array and { data: [...] } response formats
+      const langsData = Array.isArray(langsResponse)
+        ? langsResponse
+        : (langsResponse?.data || langsResponse?.languages || []);
+      const transData = Array.isArray(transResponse)
+        ? transResponse
+        : (transResponse?.data || transResponse?.keys || transResponse?.translations || []);
       setLanguages(langsData);
       setTranslations(transData);
     } catch (error) {
       console.error('Failed to load i18n data:', error);
+      setLanguages([]);
+      setTranslations([]);
     } finally {
       setLoading(false);
     }

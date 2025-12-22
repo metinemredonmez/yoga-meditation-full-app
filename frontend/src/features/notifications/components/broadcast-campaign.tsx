@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -26,13 +26,6 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -48,19 +41,15 @@ import {
   IconMail,
   IconBell,
   IconDeviceMobile,
-  IconCalendar,
-  IconClock,
-  IconCheck,
-  IconX,
   IconPlayerPlay,
   IconPlayerPause,
-  IconTrash,
+  IconX,
   IconChartBar,
-  IconEye,
 } from '@tabler/icons-react';
 import { format, formatDistanceToNow } from 'date-fns';
 import { tr } from 'date-fns/locale';
 import { toast } from 'sonner';
+import { getBroadcastCampaigns, createBroadcastCampaign, updateBroadcastCampaign } from '@/lib/api';
 
 interface Campaign {
   id: string;
@@ -91,76 +80,10 @@ interface Campaign {
   createdAt: string;
 }
 
-const mockCampaigns: Campaign[] = [
-  {
-    id: '1',
-    name: 'Yeni Yıl Kampanyası',
-    status: 'SENT',
-    channels: ['push', 'email'],
-    targetAudience: { type: 'ALL' },
-    content: {
-      title: 'Yeni Yıla Yoga ile Girin!',
-      body: '2024\'te yoga yolculuğunuza başlayın. %20 indirim!',
-      subject: 'Yeni Yıla Yoga ile Merhaba!'
-    },
-    sentAt: '2024-01-01T10:00:00Z',
-    stats: {
-      total: 5000,
-      sent: 5000,
-      delivered: 4850,
-      opened: 2100,
-      clicked: 450,
-      failed: 150,
-    },
-    createdAt: '2023-12-28T00:00:00Z',
-  },
-  {
-    id: '2',
-    name: 'Premium Kullanıcı Duyurusu',
-    status: 'SCHEDULED',
-    channels: ['push', 'inApp'],
-    targetAudience: { type: 'ROLES', roles: ['PREMIUM'] },
-    content: {
-      title: 'Yeni Özellik: Canlı Dersler',
-      body: 'Premium üyeliğinize özel canlı yoga dersleri başlıyor!',
-    },
-    scheduledAt: '2024-02-01T09:00:00Z',
-    stats: {
-      total: 1200,
-      sent: 0,
-      delivered: 0,
-      opened: 0,
-      clicked: 0,
-      failed: 0,
-    },
-    createdAt: '2024-01-15T00:00:00Z',
-  },
-  {
-    id: '3',
-    name: 'Haftalık Özet',
-    status: 'SENDING',
-    channels: ['email'],
-    targetAudience: { type: 'ALL' },
-    content: {
-      title: 'Bu Haftanız Nasıl Geçti?',
-      body: 'Haftalık yoga ilerlemenizi görüntüleyin.',
-      subject: 'Haftalık Yoga Özetiniz'
-    },
-    stats: {
-      total: 3500,
-      sent: 2100,
-      delivered: 2050,
-      opened: 0,
-      clicked: 0,
-      failed: 50,
-    },
-    createdAt: '2024-01-20T00:00:00Z',
-  },
-];
-
 export function BroadcastCampaign() {
-  const [campaigns, setCampaigns] = useState<Campaign[]>(mockCampaigns);
-  const [loading, setLoading] = useState(false);
+  const [mounted, setMounted] = useState(false);
+  const [campaigns, setCampaigns] = useState<Campaign[]>([]);
+  const [loading, setLoading] = useState(true);
   const [createDialog, setCreateDialog] = useState(false);
   const [detailDialog, setDetailDialog] = useState(false);
   const [selectedCampaign, setSelectedCampaign] = useState<Campaign | null>(null);
@@ -177,6 +100,28 @@ export function BroadcastCampaign() {
     scheduleType: 'NOW',
     scheduledAt: '',
   });
+
+  useEffect(() => {
+    setMounted(true);
+    loadCampaigns();
+  }, []);
+
+  const loadCampaigns = async () => {
+    setLoading(true);
+    try {
+      const data = await getBroadcastCampaigns();
+      setCampaigns(data.campaigns || []);
+    } catch (error) {
+      toast.error('Kampanyalar yüklenemedi');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // SSR hydration fix - render nothing until mounted
+  if (!mounted) {
+    return null;
+  }
 
   const handleChannelToggle = (channel: string) => {
     setFormData(prev => ({
@@ -204,15 +149,12 @@ export function BroadcastCampaign() {
 
     setSending(true);
     try {
-      await new Promise(resolve => setTimeout(resolve, 1000));
-
-      const newCampaign: Campaign = {
-        id: Date.now().toString(),
+      const newCampaign = {
         name: formData.name,
         status: formData.scheduleType === 'NOW' ? 'SENDING' : 'SCHEDULED',
-        channels: formData.channels as any,
+        channels: formData.channels,
         targetAudience: {
-          type: formData.audienceType as any,
+          type: formData.audienceType,
           roles: formData.audienceType === 'ROLES' ? formData.roles : undefined,
         },
         content: {
@@ -229,10 +171,10 @@ export function BroadcastCampaign() {
           clicked: 0,
           failed: 0,
         },
-        createdAt: new Date().toISOString(),
       };
 
-      setCampaigns(prev => [newCampaign, ...prev]);
+      await createBroadcastCampaign(newCampaign);
+      await loadCampaigns();
       toast.success(
         formData.scheduleType === 'NOW'
           ? 'Kampanya gönderiliyor...'
@@ -303,6 +245,14 @@ export function BroadcastCampaign() {
     }
   };
 
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <IconLoader2 className="h-8 w-8 animate-spin" />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -362,101 +312,108 @@ export function BroadcastCampaign() {
       {/* Campaigns Table */}
       <Card>
         <CardContent className="p-0">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Kampanya</TableHead>
-                <TableHead>Kanallar</TableHead>
-                <TableHead>Hedef Kitle</TableHead>
-                <TableHead>Durum</TableHead>
-                <TableHead>İstatistikler</TableHead>
-                <TableHead className="w-[70px]"></TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {campaigns.map((campaign) => (
-                <TableRow key={campaign.id}>
-                  <TableCell>
-                    <div>
-                      <p className="font-medium">{campaign.name}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {campaign.sentAt
-                          ? `Gönderildi: ${formatDistanceToNow(new Date(campaign.sentAt), { addSuffix: true, locale: tr })}`
-                          : campaign.scheduledAt
-                            ? `Planlanan: ${format(new Date(campaign.scheduledAt), 'dd MMM yyyy HH:mm', { locale: tr })}`
-                            : `Oluşturuldu: ${formatDistanceToNow(new Date(campaign.createdAt), { addSuffix: true, locale: tr })}`
-                        }
-                      </p>
-                    </div>
-                  </TableCell>
-                  <TableCell>{getChannelIcons(campaign.channels)}</TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-1">
-                      <IconUsers className="h-4 w-4 text-muted-foreground" />
-                      <span className="text-sm">{getAudienceLabel(campaign.targetAudience)}</span>
-                    </div>
-                  </TableCell>
-                  <TableCell>{getStatusBadge(campaign.status)}</TableCell>
-                  <TableCell>
-                    {campaign.status === 'SENDING' ? (
-                      <div className="w-32">
-                        <Progress
-                          value={(campaign.stats.sent / campaign.stats.total) * 100}
-                          className="h-2"
-                        />
-                        <p className="text-xs text-muted-foreground mt-1">
-                          {campaign.stats.sent} / {campaign.stats.total}
+          {campaigns.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              <IconSend className="h-8 w-8 mx-auto mb-2 opacity-50" />
+              <p>Henüz kampanya yok</p>
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Kampanya</TableHead>
+                  <TableHead>Kanallar</TableHead>
+                  <TableHead>Hedef Kitle</TableHead>
+                  <TableHead>Durum</TableHead>
+                  <TableHead>İstatistikler</TableHead>
+                  <TableHead className="w-[70px]"></TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {campaigns.map((campaign) => (
+                  <TableRow key={campaign.id}>
+                    <TableCell>
+                      <div>
+                        <p className="font-medium">{campaign.name}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {campaign.sentAt
+                            ? `Gönderildi: ${formatDistanceToNow(new Date(campaign.sentAt), { addSuffix: true, locale: tr })}`
+                            : campaign.scheduledAt
+                              ? `Planlanan: ${format(new Date(campaign.scheduledAt), 'dd MMM yyyy HH:mm', { locale: tr })}`
+                              : `Oluşturuldu: ${formatDistanceToNow(new Date(campaign.createdAt), { addSuffix: true, locale: tr })}`
+                          }
                         </p>
                       </div>
-                    ) : campaign.stats.total > 0 ? (
-                      <div className="text-sm">
-                        <span className="text-green-600">{campaign.stats.delivered}</span>
-                        <span className="text-muted-foreground"> / {campaign.stats.total}</span>
+                    </TableCell>
+                    <TableCell>{getChannelIcons(campaign.channels)}</TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-1">
+                        <IconUsers className="h-4 w-4 text-muted-foreground" />
+                        <span className="text-sm">{getAudienceLabel(campaign.targetAudience)}</span>
                       </div>
-                    ) : (
-                      <span className="text-muted-foreground text-sm">-</span>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-8 w-8">
-                          <IconDots className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => {
-                          setSelectedCampaign(campaign);
-                          setDetailDialog(true);
-                        }}>
-                          <IconChartBar className="mr-2 h-4 w-4" />
-                          Detaylar
-                        </DropdownMenuItem>
-                        {campaign.status === 'SENDING' && (
-                          <DropdownMenuItem>
-                            <IconPlayerPause className="mr-2 h-4 w-4" />
-                            Duraklat
+                    </TableCell>
+                    <TableCell>{getStatusBadge(campaign.status)}</TableCell>
+                    <TableCell>
+                      {campaign.status === 'SENDING' ? (
+                        <div className="w-32">
+                          <Progress
+                            value={(campaign.stats.sent / campaign.stats.total) * 100}
+                            className="h-2"
+                          />
+                          <p className="text-xs text-muted-foreground mt-1">
+                            {campaign.stats.sent} / {campaign.stats.total}
+                          </p>
+                        </div>
+                      ) : campaign.stats.total > 0 ? (
+                        <div className="text-sm">
+                          <span className="text-green-600">{campaign.stats.delivered}</span>
+                          <span className="text-muted-foreground"> / {campaign.stats.total}</span>
+                        </div>
+                      ) : (
+                        <span className="text-muted-foreground text-sm">-</span>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-8 w-8">
+                            <IconDots className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => {
+                            setSelectedCampaign(campaign);
+                            setDetailDialog(true);
+                          }}>
+                            <IconChartBar className="mr-2 h-4 w-4" />
+                            Detaylar
                           </DropdownMenuItem>
-                        )}
-                        {campaign.status === 'PAUSED' && (
-                          <DropdownMenuItem>
-                            <IconPlayerPlay className="mr-2 h-4 w-4" />
-                            Devam Et
-                          </DropdownMenuItem>
-                        )}
-                        {campaign.status === 'SCHEDULED' && (
-                          <DropdownMenuItem className="text-destructive">
-                            <IconX className="mr-2 h-4 w-4" />
-                            İptal Et
-                          </DropdownMenuItem>
-                        )}
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+                          {campaign.status === 'SENDING' && (
+                            <DropdownMenuItem>
+                              <IconPlayerPause className="mr-2 h-4 w-4" />
+                              Duraklat
+                            </DropdownMenuItem>
+                          )}
+                          {campaign.status === 'PAUSED' && (
+                            <DropdownMenuItem>
+                              <IconPlayerPlay className="mr-2 h-4 w-4" />
+                              Devam Et
+                            </DropdownMenuItem>
+                          )}
+                          {campaign.status === 'SCHEDULED' && (
+                            <DropdownMenuItem className="text-destructive">
+                              <IconX className="mr-2 h-4 w-4" />
+                              İptal Et
+                            </DropdownMenuItem>
+                          )}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
         </CardContent>
       </Card>
 

@@ -1,6 +1,5 @@
 import { Router } from 'express';
 import type { Request, Response } from 'express';
-import { authenticate, requireAdmin } from '../../middleware/auth';
 import * as playlistService from '../../services/playlistService';
 import {
   adminCreatePlaylistSchema,
@@ -13,11 +12,19 @@ type AuthenticatedRequest = Request;
 
 const router = Router();
 
-// All routes require authentication and admin role
-router.use(authenticate);
-router.use(requireAdmin);
+// Note: Authentication and admin check is done in parent router (admin/index.ts)
 
 // ==================== PLAYLIST MANAGEMENT ====================
+
+// GET /api/admin/playlists/stats - Get playlist stats (MUST be before /:id)
+router.get('/stats', async (_req: AuthenticatedRequest, res: Response) => {
+  try {
+    const stats = await playlistService.getPlaylistStats();
+    res.json(stats);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
 
 // GET /api/admin/playlists - Get all playlists
 router.get('/', async (req: AuthenticatedRequest, res: Response) => {

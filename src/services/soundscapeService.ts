@@ -309,13 +309,16 @@ export async function incrementMixPlayCount(mixId: string) {
 // ==================== ADMIN SERVICES ====================
 
 export async function getAdminSoundscapes(filters: SoundscapeFilters) {
-  const { category, isPremium, isMixable, search, page, limit, sortBy, sortOrder } = filters;
+  const { category, isPremium, isFree, isMixable, isLoop, isPublished, search, page, limit, sortBy, sortOrder } = filters;
 
   const where: any = {};
 
   if (category) where.category = category;
   if (isPremium !== undefined) where.isPremium = isPremium;
+  if (isFree !== undefined) where.isPremium = !isFree; // isFree = not premium
   if (isMixable !== undefined) where.isMixable = isMixable;
+  if (isLoop !== undefined) where.isLoop = isLoop;
+  if (isPublished !== undefined) where.isPublished = isPublished;
   if (search) {
     where.OR = [
       { title: { contains: search, mode: 'insensitive' } },
@@ -340,8 +343,11 @@ export async function getAdminSoundscapes(filters: SoundscapeFilters) {
 }
 
 export async function getSoundscapeStats() {
-  const [total, byCategory, totalPlays] = await Promise.all([
+  const [total, active, premium, free, byCategory, totalPlays] = await Promise.all([
     prisma.soundscapes.count(),
+    prisma.soundscapes.count({ where: { isPublished: true } }),
+    prisma.soundscapes.count({ where: { isPremium: true } }),
+    prisma.soundscapes.count({ where: { isPremium: false } }),
     prisma.soundscapes.groupBy({
       by: ['category'],
       _count: { category: true },
@@ -353,6 +359,9 @@ export async function getSoundscapeStats() {
 
   return {
     total,
+    active,
+    premium,
+    free,
     byCategory: byCategory.map((c: { category: SoundscapeCategory; _count: { category: number } }) => ({ category: c.category, count: c._count.category })),
     totalPlays: totalPlays._sum.playCount || 0,
   };

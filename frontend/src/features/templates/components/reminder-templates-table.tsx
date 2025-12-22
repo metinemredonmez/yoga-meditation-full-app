@@ -97,7 +97,7 @@ export function ReminderTemplatesTable() {
       if (typeFilter && typeFilter !== 'all') params.type = typeFilter;
 
       const data = await getAdminReminderTemplates(params);
-      setTemplates(data.templates || data.reminderTemplates || []);
+      setTemplates(data.data || data.templates || data.reminderTemplates || []);
     } catch (error) {
       console.error('Failed to load templates:', error);
       toast.error('Şablonlar yüklenemedi');

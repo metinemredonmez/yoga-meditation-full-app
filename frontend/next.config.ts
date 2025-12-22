@@ -9,10 +9,16 @@ const baseConfig: NextConfig = {
         protocol: 'https',
         hostname: 'api.slingacademy.com',
         port: ''
+      },
+      {
+        protocol: 'https',
+        hostname: 'images.unsplash.com',
+        port: ''
       }
     ]
   },
-  transpilePackages: ['geist']
+  transpilePackages: ['geist'],
+  devIndicators: false
 };
 
 let configWithPlugins = baseConfig;

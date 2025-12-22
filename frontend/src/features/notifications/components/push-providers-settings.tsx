@@ -40,6 +40,7 @@ import {
   IconRefresh,
 } from '@tabler/icons-react';
 import { toast } from 'sonner';
+import { getNotificationProviderSettings, updateNotificationProviderSettings } from '@/lib/api';
 
 interface ProviderConfig {
   id: string;
@@ -61,64 +62,69 @@ interface EmailConfig {
   config: Record<string, string>;
 }
 
+const DEFAULT_PROVIDERS: ProviderConfig[] = [
+  {
+    id: 'firebase',
+    name: 'Firebase Cloud Messaging',
+    provider: 'FIREBASE',
+    isEnabled: false,
+    isConfigured: false,
+    config: {
+      projectId: '',
+      privateKey: '',
+      clientEmail: '',
+    }
+  },
+  {
+    id: 'onesignal',
+    name: 'OneSignal',
+    provider: 'ONESIGNAL',
+    isEnabled: false,
+    isConfigured: false,
+    config: {
+      appId: '',
+      apiKey: '',
+    }
+  },
+  {
+    id: 'expo',
+    name: 'Expo Push Notifications',
+    provider: 'EXPO',
+    isEnabled: false,
+    isConfigured: false,
+    config: {
+      accessToken: '',
+    }
+  }
+];
+
+const DEFAULT_EMAIL_CONFIG: EmailConfig = {
+  provider: 'SMTP',
+  isEnabled: false,
+  isConfigured: false,
+  fromEmail: '',
+  fromName: '',
+  config: {
+    host: '',
+    port: '587',
+    username: '',
+    password: '',
+    secure: 'true',
+  }
+};
+
 export function PushProvidersSettings() {
+  const [mounted, setMounted] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [testing, setTesting] = useState(false);
   const [activeTab, setActiveTab] = useState('push');
 
   // Push providers state
-  const [pushProviders, setPushProviders] = useState<ProviderConfig[]>([
-    {
-      id: 'firebase',
-      name: 'Firebase Cloud Messaging',
-      provider: 'FIREBASE',
-      isEnabled: false,
-      isConfigured: false,
-      config: {
-        projectId: '',
-        privateKey: '',
-        clientEmail: '',
-      }
-    },
-    {
-      id: 'onesignal',
-      name: 'OneSignal',
-      provider: 'ONESIGNAL',
-      isEnabled: false,
-      isConfigured: false,
-      config: {
-        appId: '',
-        apiKey: '',
-      }
-    },
-    {
-      id: 'expo',
-      name: 'Expo Push Notifications',
-      provider: 'EXPO',
-      isEnabled: false,
-      isConfigured: false,
-      config: {
-        accessToken: '',
-      }
-    }
-  ]);
+  const [pushProviders, setPushProviders] = useState<ProviderConfig[]>([]);
 
   // Email config state
-  const [emailConfig, setEmailConfig] = useState<EmailConfig>({
-    provider: 'SMTP',
-    isEnabled: false,
-    isConfigured: false,
-    fromEmail: '',
-    fromName: '',
-    config: {
-      host: '',
-      port: '587',
-      username: '',
-      password: '',
-      secure: 'true',
-    }
-  });
+  const [emailConfig, setEmailConfig] = useState<EmailConfig>(DEFAULT_EMAIL_CONFIG);
 
   // Test notification dialog
   const [testDialog, setTestDialog] = useState(false);
@@ -134,20 +140,31 @@ export function PushProvidersSettings() {
   const [selectedProvider, setSelectedProvider] = useState<ProviderConfig | null>(null);
 
   useEffect(() => {
+    setMounted(true);
     loadSettings();
   }, []);
 
   const loadSettings = async () => {
     setLoading(true);
     try {
-      // In real app, fetch from API
-      // const { data } = await getNotificationProviderSettings();
-      // setPushProviders(data.pushProviders);
-      // setEmailConfig(data.emailConfig);
+      const data = await getNotificationProviderSettings();
+      // Merge with defaults to ensure all fields exist
+      const providers = (data.providers || []).map((p: any, idx: number) => ({
+        ...DEFAULT_PROVIDERS[idx],
+        ...p,
+        config: { ...(DEFAULT_PROVIDERS[idx]?.config || {}), ...(p.config || {}) },
+      }));
+      setPushProviders(providers.length > 0 ? providers : DEFAULT_PROVIDERS);
 
-      // Simulated delay
-      await new Promise(resolve => setTimeout(resolve, 500));
+      const email = data.emailConfig || {};
+      setEmailConfig({
+        ...DEFAULT_EMAIL_CONFIG,
+        ...email,
+        config: { ...DEFAULT_EMAIL_CONFIG.config, ...(email.config || {}) },
+      });
     } catch (error) {
+      setPushProviders(DEFAULT_PROVIDERS);
+      setEmailConfig(DEFAULT_EMAIL_CONFIG);
       toast.error('Ayarlar yüklenemedi');
     } finally {
       setLoading(false);
@@ -155,25 +172,29 @@ export function PushProvidersSettings() {
   };
 
   const handleToggleProvider = async (providerId: string, enabled: boolean) => {
-    setPushProviders(prev => prev.map(p =>
-      p.id === providerId ? { ...p, isEnabled: enabled } : p
-    ));
-    toast.success(enabled ? 'Sağlayıcı aktifleştirildi' : 'Sağlayıcı devre dışı bırakıldı');
+    try {
+      const updatedProviders = pushProviders.map(p =>
+        p.id === providerId ? { ...p, isEnabled: enabled } : p
+      );
+      await updateNotificationProviderSettings({ providers: updatedProviders, emailConfig });
+      setPushProviders(updatedProviders);
+      toast.success(enabled ? 'Sağlayıcı aktifleştirildi' : 'Sağlayıcı devre dışı bırakıldı');
+    } catch (error) {
+      toast.error('Ayar güncellenemedi');
+    }
   };
 
   const handleSaveProviderConfig = async () => {
     if (!selectedProvider) return;
     setSaving(true);
     try {
-      // In real app, save to API
-      await new Promise(resolve => setTimeout(resolve, 1000));
-
-      setPushProviders(prev => prev.map(p =>
+      const updatedProviders = pushProviders.map(p =>
         p.id === selectedProvider.id
           ? { ...p, config: selectedProvider.config, isConfigured: true }
           : p
-      ));
-
+      );
+      await updateNotificationProviderSettings({ providers: updatedProviders, emailConfig });
+      setPushProviders(updatedProviders);
       toast.success('Yapılandırma kaydedildi');
       setConfigDialog(false);
     } catch (error) {
@@ -186,9 +207,9 @@ export function PushProvidersSettings() {
   const handleSaveEmailConfig = async () => {
     setSaving(true);
     try {
-      // In real app, save to API
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      setEmailConfig(prev => ({ ...prev, isConfigured: true }));
+      const updatedEmailConfig = { ...emailConfig, isConfigured: true };
+      await updateNotificationProviderSettings({ providers: pushProviders, emailConfig: updatedEmailConfig });
+      setEmailConfig(updatedEmailConfig);
       toast.success('E-posta yapılandırması kaydedildi');
     } catch (error) {
       toast.error('Yapılandırma kaydedilemedi');
@@ -333,6 +354,11 @@ export function PushProvidersSettings() {
         return null;
     }
   };
+
+  // SSR hydration fix - render nothing until mounted
+  if (!mounted) {
+    return null;
+  }
 
   if (loading) {
     return (

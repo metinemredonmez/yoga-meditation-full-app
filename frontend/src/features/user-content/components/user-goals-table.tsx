@@ -41,7 +41,8 @@ interface UserGoal {
   userId: string;
   user?: {
     id: string;
-    name: string;
+    firstName?: string;
+    lastName?: string;
     email: string;
     avatar?: string;
   };
@@ -51,10 +52,11 @@ interface UserGoal {
   targetValue: number;
   currentValue: number;
   unit?: string;
-  frequency?: string;
+  period?: string;
+  isActive?: boolean;
+  isCompleted?: boolean;
   startDate: string;
   endDate?: string;
-  status: string;
   streak?: number;
   createdAt: string;
 }
@@ -67,6 +69,15 @@ interface Stats {
 }
 
 const GOAL_TYPE_OPTIONS: Record<string, { label: string; color: string }> = {
+  // DB values
+  PRACTICE_DAYS: { label: 'Pratik Günleri', color: 'bg-violet-500' },
+  PRACTICE_MINUTES: { label: 'Pratik Dakikaları', color: 'bg-indigo-500' },
+  MEDITATION_COUNT: { label: 'Meditasyon', color: 'bg-cyan-500' },
+  BREATHWORK_COUNT: { label: 'Nefes', color: 'bg-teal-500' },
+  SLEEP_TRACKING: { label: 'Uyku', color: 'bg-blue-500' },
+  MOOD_LOG: { label: 'Mood Kaydı', color: 'bg-pink-500' },
+  STREAK: { label: 'Seri', color: 'bg-red-500' },
+  // Legacy values
   PRACTICE: { label: 'Pratik', color: 'bg-violet-500' },
   MEDITATION: { label: 'Meditasyon', color: 'bg-indigo-500' },
   BREATHWORK: { label: 'Nefes', color: 'bg-cyan-500' },
@@ -74,7 +85,6 @@ const GOAL_TYPE_OPTIONS: Record<string, { label: string; color: string }> = {
   FITNESS: { label: 'Fitness', color: 'bg-orange-500' },
   WELLNESS: { label: 'Sağlık', color: 'bg-pink-500' },
   LEARNING: { label: 'Öğrenme', color: 'bg-amber-500' },
-  STREAK: { label: 'Seri', color: 'bg-red-500' },
   CUSTOM: { label: 'Özel', color: 'bg-gray-500' },
 };
 
@@ -272,7 +282,9 @@ export function UserGoalsTable() {
                 {goals.map((goal) => {
                   const progress = getProgress(goal);
                   const daysRemaining = getDaysRemaining(goal);
-                  const StatusIcon = STATUS_OPTIONS[goal.status]?.icon || IconClock;
+                  // Derive status from isActive/isCompleted
+                  const derivedStatus = goal.isCompleted ? 'COMPLETED' : goal.isActive ? 'ACTIVE' : 'PAUSED';
+                  const StatusIcon = STATUS_OPTIONS[derivedStatus]?.icon || IconClock;
 
                   return (
                     <TableRow key={goal.id}>
@@ -283,7 +295,9 @@ export function UserGoalsTable() {
                           </div>
                           <div>
                             <p className="font-medium text-sm">
-                              {goal.user?.name || 'Anonim'}
+                              {goal.user?.firstName && goal.user?.lastName
+                                ? `${goal.user.firstName} ${goal.user.lastName}`
+                                : goal.user?.email || 'Anonim'}
                             </p>
                             <p className="text-xs text-muted-foreground">
                               {goal.user?.email || goal.userId.slice(0, 8)}
@@ -323,7 +337,7 @@ export function UserGoalsTable() {
                       </TableCell>
                       <TableCell>
                         <span className="text-sm">
-                          {FREQUENCY_OPTIONS[goal.frequency || ''] || goal.frequency || '-'}
+                          {FREQUENCY_OPTIONS[goal.period || ''] || goal.period || '-'}
                         </span>
                       </TableCell>
                       <TableCell>
@@ -360,10 +374,10 @@ export function UserGoalsTable() {
                       <TableCell>
                         <Badge
                           variant="outline"
-                          className={`${STATUS_OPTIONS[goal.status]?.color || 'bg-gray-500'} text-white border-0`}
+                          className={`${STATUS_OPTIONS[derivedStatus]?.color || 'bg-gray-500'} text-white border-0`}
                         >
                           <StatusIcon className="h-3 w-3 mr-1" />
-                          {STATUS_OPTIONS[goal.status]?.label || goal.status}
+                          {STATUS_OPTIONS[derivedStatus]?.label || derivedStatus}
                         </Badge>
                       </TableCell>
                       <TableCell>

@@ -8,7 +8,6 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { IconLoader2, IconPlus, IconTrash } from '@tabler/icons-react';
 import { toast } from 'sonner';
@@ -18,8 +17,8 @@ interface FeatureFlag {
   key: string;
   name: string;
   description: string;
-  enabled: boolean;
-  environment: 'development' | 'staging' | 'production';
+  isEnabled: boolean;
+  rolloutPercentage?: number;
   createdAt: string;
 }
 
@@ -32,7 +31,7 @@ export function FeatureFlagsTable() {
     key: '',
     name: '',
     description: '',
-    environment: 'development' as const,
+    environment: 'production',
   });
 
   useEffect(() => {
@@ -62,7 +61,7 @@ export function FeatureFlagsTable() {
       await createFeatureFlag(newFlag);
       toast.success('Feature flag created');
       setDialogOpen(false);
-      setNewFlag({ key: '', name: '', description: '', environment: 'development' });
+      setNewFlag({ key: '', name: '', description: '', environment: 'production' });
       loadFlags();
     } catch (error) {
       console.error('Failed to create feature flag:', error);
@@ -72,10 +71,10 @@ export function FeatureFlagsTable() {
     }
   };
 
-  const handleToggle = async (id: string, currentValue: boolean) => {
+  const handleToggle = async (key: string, currentValue: boolean) => {
     try {
-      await toggleFeatureFlag(id);
-      setFlags(flags.map(f => f.id === id ? { ...f, enabled: !currentValue } : f));
+      await toggleFeatureFlag(key);
+      setFlags(flags.map(f => f.key === key ? { ...f, isEnabled: !currentValue } : f));
       toast.success(`Feature flag ${!currentValue ? 'enabled' : 'disabled'}`);
     } catch (error) {
       console.error('Failed to toggle feature flag:', error);
@@ -83,23 +82,15 @@ export function FeatureFlagsTable() {
     }
   };
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = async (key: string) => {
     if (!confirm('Are you sure you want to delete this feature flag?')) return;
     try {
-      await deleteFeatureFlag(id);
+      await deleteFeatureFlag(key);
       toast.success('Feature flag deleted');
       loadFlags();
     } catch (error) {
       console.error('Failed to delete feature flag:', error);
       toast.error('Failed to delete feature flag');
-    }
-  };
-
-  const getEnvColor = (env: string) => {
-    switch (env) {
-      case 'production': return 'destructive';
-      case 'staging': return 'secondary';
-      default: return 'outline';
     }
   };
 
@@ -155,19 +146,6 @@ export function FeatureFlagsTable() {
                   onChange={(e) => setNewFlag({ ...newFlag, description: e.target.value })}
                 />
               </div>
-              <div className='space-y-2'>
-                <Label>Environment</Label>
-                <Select value={newFlag.environment} onValueChange={(v: any) => setNewFlag({ ...newFlag, environment: v })}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value='development'>Development</SelectItem>
-                    <SelectItem value='staging'>Staging</SelectItem>
-                    <SelectItem value='production'>Production</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
             </div>
             <DialogFooter>
               <Button variant='outline' onClick={() => setDialogOpen(false)}>Cancel</Button>
@@ -189,19 +167,24 @@ export function FeatureFlagsTable() {
                 <div className='flex-1'>
                   <div className='flex items-center gap-2'>
                     <span className='font-medium'>{flag.name}</span>
-                    <Badge variant={getEnvColor(flag.environment) as any}>{flag.environment}</Badge>
-                    <code className='text-xs bg-muted px-1 py-0.5 rounded'>{flag.key}</code>
+                    <Badge variant={flag.isEnabled ? 'default' : 'outline'}>
+                      {flag.isEnabled ? 'Enabled' : 'Disabled'}
+                    </Badge>
+                    {flag.rolloutPercentage !== undefined && flag.rolloutPercentage > 0 && flag.rolloutPercentage < 100 && (
+                      <Badge variant='secondary'>{flag.rolloutPercentage}% rollout</Badge>
+                    )}
                   </div>
+                  <code className='text-xs bg-muted px-1 py-0.5 rounded mt-1 inline-block'>{flag.key}</code>
                   {flag.description && (
                     <p className='text-sm text-muted-foreground mt-1'>{flag.description}</p>
                   )}
                 </div>
                 <div className='flex items-center gap-4'>
                   <Switch
-                    checked={flag.enabled}
-                    onCheckedChange={() => handleToggle(flag.id, flag.enabled)}
+                    checked={flag.isEnabled}
+                    onCheckedChange={() => handleToggle(flag.key, flag.isEnabled)}
                   />
-                  <Button variant='ghost' size='icon' onClick={() => handleDelete(flag.id)}>
+                  <Button variant='ghost' size='icon' onClick={() => handleDelete(flag.key)}>
                     <IconTrash className='h-4 w-4 text-destructive' />
                   </Button>
                 </div>

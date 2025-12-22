@@ -61,19 +61,17 @@ import { toast } from 'sonner';
 interface Soundscape {
   id: string;
   title: string;
-  titleTr?: string;
+  titleEn?: string;
   slug: string;
   category: string;
-  durationSeconds: number;
+  duration: number | null;
   audioUrl?: string;
-  imageUrl?: string;
+  coverImage?: string;
   isLoop: boolean;
   isMixable: boolean;
   isPremium: boolean;
-  isFree: boolean;
-  isFeatured: boolean;
-  isActive: boolean;
-  sortOrder: number;
+  isPublished: boolean;
+  defaultVolume: number;
   playCount?: number;
   createdAt: string;
 }
@@ -86,18 +84,23 @@ interface Stats {
 }
 
 const CATEGORY_OPTIONS = [
-  { value: '', label: 'Tümü' },
-  { value: 'NATURE', label: 'Doğa', color: 'bg-green-100 text-green-700' },
+  { value: 'all', label: 'Tümü' },
   { value: 'RAIN', label: 'Yağmur', color: 'bg-blue-100 text-blue-700' },
+  { value: 'THUNDER', label: 'Gök Gürültüsü', color: 'bg-purple-100 text-purple-700' },
   { value: 'OCEAN', label: 'Okyanus', color: 'bg-cyan-100 text-cyan-700' },
   { value: 'FOREST', label: 'Orman', color: 'bg-emerald-100 text-emerald-700' },
+  { value: 'BIRDS', label: 'Kuşlar', color: 'bg-green-100 text-green-700' },
   { value: 'FIRE', label: 'Ateş', color: 'bg-orange-100 text-orange-700' },
-  { value: 'WIND', label: 'Rüzgar', color: 'bg-slate-100 text-slate-700' },
-  { value: 'NIGHT', label: 'Gece', color: 'bg-indigo-100 text-indigo-700' },
-  { value: 'CITY', label: 'Şehir', color: 'bg-gray-100 text-gray-700' },
-  { value: 'MUSIC', label: 'Müzik', color: 'bg-purple-100 text-purple-700' },
   { value: 'WHITE_NOISE', label: 'Beyaz Gürültü', color: 'bg-zinc-100 text-zinc-700' },
-  { value: 'AMBIENT', label: 'Ambient', color: 'bg-violet-100 text-violet-700' },
+  { value: 'PINK_NOISE', label: 'Pembe Gürültü', color: 'bg-pink-100 text-pink-700' },
+  { value: 'BROWN_NOISE', label: 'Kahverengi Gürültü', color: 'bg-amber-100 text-amber-700' },
+  { value: 'CAFE', label: 'Kafe', color: 'bg-yellow-100 text-yellow-700' },
+  { value: 'CITY', label: 'Şehir', color: 'bg-gray-100 text-gray-700' },
+  { value: 'WIND', label: 'Rüzgar', color: 'bg-slate-100 text-slate-700' },
+  { value: 'WATER', label: 'Su', color: 'bg-sky-100 text-sky-700' },
+  { value: 'TIBETAN_BOWLS', label: 'Tibet Kasesi', color: 'bg-indigo-100 text-indigo-700' },
+  { value: 'MUSIC', label: 'Müzik', color: 'bg-violet-100 text-violet-700' },
+  { value: 'OTHER', label: 'Diğer', color: 'bg-neutral-100 text-neutral-700' },
 ];
 
 export function SoundscapesTable() {
@@ -130,20 +133,20 @@ export function SoundscapesTable() {
         includeInactive: true,
       };
       if (search) params.search = search;
-      if (category) params.category = category;
-      if (loopFilter) params.isLoop = loopFilter === 'true';
-      if (mixableFilter) params.isMixable = mixableFilter === 'true';
+      if (category && category !== 'all') params.category = category;
+      if (loopFilter && loopFilter !== 'all') params.isLoop = loopFilter === 'true';
+      if (mixableFilter && mixableFilter !== 'all') params.isMixable = mixableFilter === 'true';
       if (premiumFilter === 'premium') params.isPremium = true;
       if (premiumFilter === 'free') params.isFree = true;
-      if (publishedFilter) params.isActive = publishedFilter === 'true';
+      if (publishedFilter && publishedFilter !== 'all') params.isPublished = publishedFilter === 'true';
 
       const data = await getAdminSoundscapes(params);
       setSoundscapes(data.soundscapes || []);
-      setTotalPages(Math.ceil((data.total || 0) / limit));
+      setTotalPages(Math.ceil((data.pagination?.total || data.total || 0) / limit));
 
       // Load stats
       const statsData = await getSoundscapeStats();
-      setStats(statsData);
+      setStats(statsData.stats || statsData);
     } catch (error) {
       console.error('Failed to load soundscapes:', error);
       toast.error('Soundscapelar yüklenemedi');
@@ -260,7 +263,7 @@ export function SoundscapesTable() {
               </SelectTrigger>
               <SelectContent>
                 {CATEGORY_OPTIONS.map((cat) => (
-                  <SelectItem key={cat.value} value={cat.value || 'all'}>
+                  <SelectItem key={cat.value} value={cat.value}>
                     {cat.label}
                   </SelectItem>
                 ))}
@@ -343,9 +346,9 @@ export function SoundscapesTable() {
                 {soundscapes.map((soundscape) => (
                   <TableRow key={soundscape.id}>
                     <TableCell>
-                      {soundscape.imageUrl ? (
+                      {soundscape.coverImage ? (
                         <img
-                          src={soundscape.imageUrl}
+                          src={soundscape.coverImage}
                           alt={soundscape.title}
                           className="h-10 w-10 rounded object-cover"
                         />
@@ -358,9 +361,9 @@ export function SoundscapesTable() {
                     <TableCell>
                       <div>
                         <p className="font-medium">{soundscape.title}</p>
-                        {soundscape.titleTr && (
+                        {soundscape.titleEn && (
                           <p className="text-xs text-muted-foreground">
-                            {soundscape.titleTr}
+                            {soundscape.titleEn}
                           </p>
                         )}
                       </div>
@@ -376,7 +379,7 @@ export function SoundscapesTable() {
                     </TableCell>
                     <TableCell>
                       <span className="font-mono text-sm">
-                        {formatDuration(soundscape.durationSeconds)}
+                        {soundscape.duration ? formatDuration(soundscape.duration) : '∞ Loop'}
                       </span>
                     </TableCell>
                     <TableCell>
@@ -407,16 +410,14 @@ export function SoundscapesTable() {
                           <IconCrown className="h-3 w-3 mr-1" />
                           Premium
                         </span>
-                      ) : soundscape.isFree ? (
+                      ) : (
                         <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700 dark:bg-green-400/20 dark:text-green-400">
                           Ücretsiz
                         </span>
-                      ) : (
-                        <span className="text-muted-foreground text-xs">-</span>
                       )}
                     </TableCell>
                     <TableCell>
-                      {soundscape.isActive ? (
+                      {soundscape.isPublished ? (
                         <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700 dark:bg-green-400/20 dark:text-green-400">
                           Yayında
                         </span>

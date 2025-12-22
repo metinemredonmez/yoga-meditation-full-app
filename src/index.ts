@@ -101,6 +101,9 @@ import cmsRoutes from './routes/cms/index';
 import podcastRoutes from './routes/podcast';
 import adminPodcastRoutes from './routes/adminPodcast';
 
+// Admin Subscription Management Routes
+import adminSubscriptionRoutes from './routes/adminSubscription';
+
 // Sprint 26: Mobile API Routes
 import mobileRoutes from './routes/mobile';
 
@@ -112,6 +115,9 @@ import paymentIntegrationsRoutes from './routes/paymentIntegrations';
 
 // External Webhooks (Iyzico, Twilio, SendGrid)
 import externalWebhookRoutes from './webhooks/index';
+
+// RevenueCat Webhook (Apple/Google In-App Purchases)
+import revenuecatWebhookRoutes from './routes/revenuecatWebhook';
 
 // Sprint 27: Meditation & Breathwork Module Routes
 import meditationRoutes from './routes/meditation';
@@ -139,6 +145,34 @@ import onboardingRoutes from './routes/onboarding';
 import goalRoutes from './routes/goal';
 import userReminderRoutes from './routes/userReminder';
 
+// Admin routes for Journal, Goals, Reminders
+import adminJournalRoutes from './routes/admin/journal';
+import adminGoalTemplatesRoutes from './routes/admin/goalTemplates';
+import adminReminderTemplatesRoutes from './routes/admin/reminderTemplates';
+import adminOnboardingRoutes from './routes/admin/onboarding';
+import adminMoodTagsRoutes from './routes/admin/moodTags';
+import adminFinancialRoutes from './routes/admin/financial';
+import adminAnalyticsRoutes from './routes/admin/analytics';
+import adminSettingsRoutes from './routes/admin/settings';
+import adminAuditRoutes from './routes/admin/audit';
+
+// Sprint 2-4: Missing Admin Routes
+import adminDailyQuotesRoutes from './routes/admin/dailyQuotes';
+import adminMoodEntriesRoutes from './routes/admin/moodEntries';
+import adminUserGoalsRoutes from './routes/admin/userGoals';
+import adminClassesRoutes from './routes/admin/classes';
+import adminAchievementsRoutes from './routes/admin/achievements';
+import adminGamificationRoutes from './routes/admin/gamification';
+
+// Sprint 5: System Routes (Audit, Notifications, Moderation)
+import adminAuditLogsRoutes from './routes/admin/auditLogs';
+import adminNotificationsRoutes from './routes/admin/notifications';
+import adminModerationRoutes from './routes/admin/moderation';
+
+// Sprint 6: Journal Prompts & Subscription Plans
+import adminJournalPromptsRoutes from './routes/admin/journalPrompts';
+import adminSubscriptionPlansRoutes from './routes/admin/subscriptionPlans';
+
 // Sprint 5: Playlists + Wellness Stats
 import playlistRoutes from './routes/playlist';
 import adminPlaylistRoutes from './routes/admin/playlist';
@@ -146,6 +180,9 @@ import wellnessRoutes from './routes/wellness';
 
 // AI Services
 import aiRoutes from './routes/ai';
+
+// Local upload routes (for development when S3 is not configured)
+import uploadRoutes from './routes/upload';
 
 import swaggerUi from 'swagger-ui-express';
 import { createServer } from 'http';
@@ -246,6 +283,7 @@ app.use('/api/plans', subscriptionPlanRoutes);
 app.use('/api/payment-webhooks', paymentWebhookRoutes);
 app.use('/api/invoices', invoiceRoutes);
 app.use('/api/payments-v2', payment2Routes);
+app.use('/api/payments', payment2Routes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/admin/communication', adminCommunicationRoutes);
 app.use('/api/instructor', instructorRoutes);
@@ -294,6 +332,9 @@ app.use('/api/offline', offlineSyncRoutes);
 // Payment Integrations (Super Admin only)
 app.use('/api/admin/payment-integrations', paymentIntegrationsRoutes);
 
+// Admin Subscription Management
+app.use('/api/admin/subscriptions', adminSubscriptionRoutes);
+
 // Sprint 27: Meditation & Breathwork Module
 app.use('/api/meditations', meditationRoutes);
 app.use('/api/admin/meditations', adminMeditationRoutes);
@@ -320,6 +361,34 @@ app.use('/api/onboarding', onboardingRoutes);
 app.use('/api/goals', goalRoutes);
 app.use('/api/user-reminders', userReminderRoutes);
 
+// Admin routes for Sprint 4 modules
+app.use('/api/admin/journal', adminJournalRoutes);
+app.use('/api/admin/goal-templates', adminGoalTemplatesRoutes);
+app.use('/api/admin/reminder-templates', adminReminderTemplatesRoutes);
+app.use('/api/admin/onboarding', adminOnboardingRoutes);
+app.use('/api/admin/mood-tags', adminMoodTagsRoutes);
+app.use('/api/admin/financial', adminFinancialRoutes);
+app.use('/api/admin/analytics', adminAnalyticsRoutes);
+app.use('/api/admin/settings', adminSettingsRoutes);
+app.use('/api/admin/audit', adminAuditRoutes);
+
+// Sprint 2-4: Missing Admin Routes
+app.use('/api/admin/daily-quotes', adminDailyQuotesRoutes);
+app.use('/api/admin/mood-entries', adminMoodEntriesRoutes);
+app.use('/api/admin/user-goals', adminUserGoalsRoutes);
+app.use('/api/admin/classes', adminClassesRoutes);
+app.use('/api/admin/achievements', adminAchievementsRoutes);
+app.use('/api/admin/gamification', adminGamificationRoutes);
+
+// Sprint 5: System Routes (Audit, Notifications, Moderation)
+app.use('/api/admin/audit-logs', adminAuditLogsRoutes);
+app.use('/api/admin/notifications', adminNotificationsRoutes);
+app.use('/api/admin/moderation', adminModerationRoutes);
+
+// Sprint 6: Journal Prompts & Subscription Plans
+app.use('/api/admin/journal-prompts', adminJournalPromptsRoutes);
+app.use('/api/admin/subscription-plans', adminSubscriptionPlansRoutes);
+
 // Sprint 5: Playlists + Wellness Stats
 app.use('/api/playlists', playlistRoutes);
 app.use('/api/admin/playlists', adminPlaylistRoutes);
@@ -328,8 +397,14 @@ app.use('/api/wellness', wellnessRoutes);
 // AI Services
 app.use('/api/ai', aiRoutes);
 
+// Local upload routes (for development when S3 is not configured)
+app.use('/api/upload', uploadRoutes);
+
 // External Webhooks (Iyzico, Twilio, SendGrid) - No auth required
 app.use('/webhooks', externalWebhookRoutes);
+
+// RevenueCat Webhook (Apple/Google In-App Purchases) - No auth required
+app.use('/api/webhooks/revenuecat', revenuecatWebhookRoutes);
 
 // Create HTTP server for Socket.IO
 const httpServer: Server = createServer(app);

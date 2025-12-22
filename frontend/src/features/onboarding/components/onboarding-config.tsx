@@ -137,14 +137,26 @@ export function OnboardingConfigManager() {
     setLoading(true);
     try {
       const data = await getOnboardingConfig();
-      setConfig(data || {
-        steps: [],
-        settings: {
-          skipEnabled: true,
+      // Normalize API response to match expected format
+      const normalizedConfig = {
+        steps: data?.steps?.map((step: any, index: number) => ({
+          id: step.id || `step_${index}`,
+          order: step.order || index + 1,
+          title: step.title || '',
+          question: step.question || '',
+          field: step.field || 'custom',
+          type: step.type || 'single-select',
+          options: step.options || [],
+          required: step.required ?? true,
+          isActive: step.isActive ?? true,
+        })) || [],
+        settings: data?.settings || {
+          skipEnabled: data?.isActive ?? true,
           showProgress: true,
           allowBack: true,
         },
-      });
+      };
+      setConfig(normalizedConfig);
     } catch (error) {
       console.error('Failed to load config:', error);
       // Set default config if API fails

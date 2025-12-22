@@ -129,8 +129,8 @@ export function AchievementsTable() {
         }),
         getAchievementCategories(),
       ]);
-      setAchievements(achievementsData?.achievements || achievementsData?.data || achievementsData || []);
-      setTotalItems(achievementsData?.total || achievementsData?.pagination?.total || achievements.length);
+      setAchievements((achievementsData as any)?.achievements || (achievementsData as any)?.data || achievementsData || []);
+      setTotalItems((achievementsData as any)?.total || (achievementsData as any)?.pagination?.total || achievements.length);
       setCategories(categoriesData?.categories || categoriesData || []);
     } catch {
       // Mock data

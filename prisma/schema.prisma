@@ -1450,6 +1450,7 @@ model instructor_profiles {
   verificationDocs           Json?
   rejectionReason            String?
   suspensionReason           String?
+  classPreferences           Json?
   createdAt                  DateTime                    @default(now())
   updatedAt                  DateTime                    @updatedAt
   instructor_analytics       instructor_analytics[]
@@ -2828,12 +2829,22 @@ model subscriptions {
   gracePeriodEnd             DateTime?
   autoRenew                  Boolean              @default(true)
   lastVerifiedAt             DateTime?
+  // Manual subscription fields (for admin-granted subscriptions)
+  isManual                   Boolean              @default(false)
+  grantedBy                  String?              // Admin user ID who granted the subscription
+  grantedAt                  DateTime?            // When the subscription was manually granted
+  grantReason                String?              // Reason for manual grant (e.g., "VIP user", "Test account")
+  revokedBy                  String?              // Admin user ID who revoked the subscription
+  revokedAt                  DateTime?            // When the subscription was revoked
+  revokeReason               String?              // Reason for revocation
   createdAt                  DateTime             @default(now())
   updatedAt                  DateTime             @updatedAt
   invoices                   invoices[]
   payments                   payments[]
   plan                       subscription_plans   @relation(fields: [planId], references: [id])
   users                      users                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  grantedByUser              users?               @relation("GrantedSubscriptions", fields: [grantedBy], references: [id])
+  revokedByUser              users?               @relation("RevokedSubscriptions", fields: [revokedBy], references: [id])
 
   @@index([appleOriginalTransactionId])
   @@index([googlePurchaseToken])
@@ -3329,6 +3340,25 @@ model users {
   lastLoginIp                                                     String?
   location                                                        String?
   timezone                                                        String                        @default("Europe/Istanbul")
+  language                                                        String                        @default("tr")
+  preferences                                                     Json?
+  integrations                                                    Json?
+  isActive                                                        Boolean                       @default(true)
+  deactivatedAt                                                   DateTime?
+  deactivationReason                                              String?
+  deletionScheduledAt                                             DateTime?
+  password                                                        String?
+  lastLogin                                                       DateTime?
+  // Notification settings
+  emailNotifications                                              Boolean                       @default(true)
+  pushNotifications                                               Boolean                       @default(true)
+  newStudentAlert                                                 Boolean                       @default(true)
+  reviewAlert                                                     Boolean                       @default(true)
+  earningsAlert                                                   Boolean                       @default(true)
+  // Privacy settings
+  profilePublic                                                   Boolean                       @default(true)
+  showEarnings                                                    Boolean                       @default(false)
+  showStudentCount                                                Boolean                       @default(true)
   admin_audit_logs                                                admin_audit_logs[]
   admin_dashboard_preferences                                     admin_dashboard_preferences?
   admin_notes                                                     admin_notes[]
@@ -3475,13 +3505,34 @@ model users {
   user_agent_preferences user_agent_preferences?
   user_engagement_scores user_engagement_scores?
 
-  // Active status for agent targeting
-  isActive Boolean @default(true)
+  // User Notifications
+  user_notifications user_notifications[]
+
+  // Manual Subscription Relations (admin-granted subscriptions)
+  grantedSubscriptions subscriptions[] @relation("GrantedSubscriptions")
+  revokedSubscriptions subscriptions[] @relation("RevokedSubscriptions")
 
   @@index([stripeCustomerId])
   @@index([googleId])
   @@index([appleId])
   @@index([isActive])
+}
+
+model user_notifications {
+  id        String    @id @default(cuid())
+  userId    String
+  type      String    // NEW_CONTENT, ACHIEVEMENT, SYSTEM, REMINDER, CHALLENGE, etc.
+  title     String
+  message   String
+  isRead    Boolean   @default(false)
+  readAt    DateTime?
+  metadata  Json?     // For additional data like links, icons, etc.
+  createdAt DateTime  @default(now())
+  user      users     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([isRead])
+  @@index([createdAt])
 }
 
 model video_progress {
@@ -4224,6 +4275,7 @@ enum PaymentProvider {
   APPLE
   GOOGLE
   IYZICO
+  MANUAL
 }
 
 enum PaymentStatus {
@@ -5635,7 +5687,9 @@ enum MoodLevel {
 }
 
 enum MoodTagCategory {
+  EMOTION
   ACTIVITY
+  LOCATION
   SOCIAL
   HEALTH
   WEATHER

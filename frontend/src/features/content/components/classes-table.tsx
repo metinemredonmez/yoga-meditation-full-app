@@ -864,7 +864,7 @@ export function ClassesTable() {
                     onClick={() => setFormData(prev => ({ ...prev, thumbnailUrl: videoPreview.thumbnail! }))}
                   >
                     <IconPhoto className="h-4 w-4 mr-1" />
-                    YouTube'dan Al
+                    YouTube&apos;dan Al
                   </Button>
                 )}
               </div>

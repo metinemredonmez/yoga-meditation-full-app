@@ -12,10 +12,10 @@ import { toast } from 'sonner';
 interface SystemSetting {
   key: string;
   value: string | boolean | number;
-  type: 'string' | 'boolean' | 'number';
-  label: string;
-  description: string;
+  type: 'STRING' | 'BOOLEAN' | 'NUMBER' | 'JSON';
+  description: string | null;
   category: string;
+  isPublic: boolean;
 }
 
 export function SystemSettings() {
@@ -30,15 +30,20 @@ export function SystemSettings() {
 
   const loadSettings = async () => {
     try {
-      const data = await getSystemSettings();
+      const response = await getSystemSettings();
+      // Handle both array and { data: [...] } response formats
+      const data = Array.isArray(response) ? response : (response?.data || response?.settings || []);
       setSettings(data);
       const initialValues: Record<string, any> = {};
-      data.forEach((s: SystemSetting) => {
-        initialValues[s.key] = s.value;
-      });
+      if (Array.isArray(data)) {
+        data.forEach((s: SystemSetting) => {
+          initialValues[s.key] = s.value;
+        });
+      }
       setEditedValues(initialValues);
     } catch (error) {
       console.error('Failed to load system settings:', error);
+      setSettings([]);
     } finally {
       setLoading(false);
     }
@@ -84,11 +89,13 @@ export function SystemSettings() {
             {categorySettings.map((setting) => (
               <div key={setting.key} className='flex items-start justify-between gap-4 pb-4 border-b last:border-0 last:pb-0'>
                 <div className='flex-1'>
-                  <Label className='font-medium'>{setting.label}</Label>
-                  <p className='text-sm text-muted-foreground mt-1'>{setting.description}</p>
+                  <Label className='font-medium'>{setting.key.replace(/\./g, ' ').replace(/_/g, ' ')}</Label>
+                  {setting.description && (
+                    <p className='text-sm text-muted-foreground mt-1'>{setting.description}</p>
+                  )}
                 </div>
                 <div className='flex items-center gap-2'>
-                  {setting.type === 'boolean' ? (
+                  {setting.type === 'BOOLEAN' ? (
                     <Switch
                       checked={editedValues[setting.key] as boolean}
                       onCheckedChange={(checked) => {
@@ -97,7 +104,7 @@ export function SystemSettings() {
                       }}
                       disabled={saving === setting.key}
                     />
-                  ) : setting.type === 'number' ? (
+                  ) : setting.type === 'NUMBER' ? (
                     <>
                       <Input
                         type='number'
@@ -117,7 +124,7 @@ export function SystemSettings() {
                     <>
                       <Input
                         className='w-64'
-                        value={editedValues[setting.key]}
+                        value={editedValues[setting.key] as string}
                         onChange={(e) => setEditedValues({ ...editedValues, [setting.key]: e.target.value })}
                       />
                       <Button

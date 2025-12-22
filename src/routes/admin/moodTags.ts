@@ -9,7 +9,7 @@ const prisma = new PrismaClient();
 const moodTagSchema = z.object({
   name: z.string().min(1).max(50),
   nameEn: z.string().min(1).max(50).optional(),
-  category: z.enum(['ACTIVITY', 'SOCIAL', 'HEALTH', 'WEATHER', 'OTHER']),
+  category: z.enum(['EMOTION', 'ACTIVITY', 'LOCATION', 'SOCIAL', 'HEALTH', 'WEATHER', 'OTHER']),
   icon: z.string().optional(),
   color: z.string().optional(),
   isActive: z.boolean().optional(),
@@ -84,6 +84,103 @@ router.get('/', async (req: Request, res: Response) => {
     });
   } catch (error) {
     console.error('Error fetching mood tags:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+/**
+ * @swagger
+ * /api/admin/mood-tags/stats:
+ *   get:
+ *     summary: Get mood tags statistics
+ *     tags: [Admin - Mood Tags]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Statistics
+ */
+router.get('/stats', async (_req: Request, res: Response) => {
+  try {
+    const [total, active, byCategory] = await Promise.all([
+      prisma.mood_tags.count(),
+      prisma.mood_tags.count({ where: { isActive: true } }),
+      prisma.mood_tags.groupBy({
+        by: ['category'],
+        _count: true,
+      }),
+    ]);
+
+    res.json({
+      total,
+      active,
+      inactive: total - active,
+      byCategory: byCategory.reduce((acc, item) => ({
+        ...acc,
+        [item.category || 'UNCATEGORIZED']: item._count,
+      }), {}),
+    });
+  } catch (error) {
+    console.error('Error fetching mood tag stats:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+/**
+ * @swagger
+ * /api/admin/mood-tags/bulk:
+ *   post:
+ *     summary: Create multiple mood tags
+ *     tags: [Admin - Mood Tags]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               tags:
+ *                 type: array
+ *     responses:
+ *       201:
+ *         description: Mood tags created
+ */
+router.post('/bulk', async (req: Request, res: Response) => {
+  try {
+    const { tags } = req.body;
+
+    if (!Array.isArray(tags) || tags.length === 0) {
+      return res.status(400).json({ error: 'Tags array is required' });
+    }
+
+    const validatedTags = tags.map((tag, index) => {
+      try {
+        return moodTagSchema.parse(tag);
+      } catch (error) {
+        throw new Error(`Invalid tag at index ${index}`);
+      }
+    });
+
+    const created = await prisma.mood_tags.createMany({
+      data: validatedTags.map((tag) => ({
+        name: tag.name,
+        nameEn: tag.nameEn,
+        category: tag.category,
+        icon: tag.icon,
+        color: tag.color,
+        isActive: tag.isActive ?? true,
+      })),
+      skipDuplicates: true,
+    });
+
+    res.status(201).json({
+      message: `Created ${created.count} mood tags`,
+      count: created.count,
+    });
+  } catch (error) {
+    console.error('Error creating mood tags:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -265,103 +362,6 @@ router.delete('/:id', async (req: Request, res: Response) => {
     res.json({ message: 'Mood tag deleted successfully' });
   } catch (error) {
     console.error('Error deleting mood tag:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
-
-/**
- * @swagger
- * /api/admin/mood-tags/stats:
- *   get:
- *     summary: Get mood tags statistics
- *     tags: [Admin - Mood Tags]
- *     security:
- *       - bearerAuth: []
- *     responses:
- *       200:
- *         description: Statistics
- */
-router.get('/stats', async (_req: Request, res: Response) => {
-  try {
-    const [total, active, byCategory] = await Promise.all([
-      prisma.mood_tags.count(),
-      prisma.mood_tags.count({ where: { isActive: true } }),
-      prisma.mood_tags.groupBy({
-        by: ['category'],
-        _count: true,
-      }),
-    ]);
-
-    res.json({
-      total,
-      active,
-      inactive: total - active,
-      byCategory: byCategory.reduce((acc, item) => ({
-        ...acc,
-        [item.category || 'UNCATEGORIZED']: item._count,
-      }), {}),
-    });
-  } catch (error) {
-    console.error('Error fetching mood tag stats:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
-
-/**
- * @swagger
- * /api/admin/mood-tags/bulk:
- *   post:
- *     summary: Create multiple mood tags
- *     tags: [Admin - Mood Tags]
- *     security:
- *       - bearerAuth: []
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               tags:
- *                 type: array
- *     responses:
- *       201:
- *         description: Mood tags created
- */
-router.post('/bulk', async (req: Request, res: Response) => {
-  try {
-    const { tags } = req.body;
-
-    if (!Array.isArray(tags) || tags.length === 0) {
-      return res.status(400).json({ error: 'Tags array is required' });
-    }
-
-    const validatedTags = tags.map((tag, index) => {
-      try {
-        return moodTagSchema.parse(tag);
-      } catch (error) {
-        throw new Error(`Invalid tag at index ${index}`);
-      }
-    });
-
-    const created = await prisma.mood_tags.createMany({
-      data: validatedTags.map((tag) => ({
-        name: tag.name,
-        nameEn: tag.nameEn,
-        category: tag.category,
-        icon: tag.icon,
-        color: tag.color,
-        isActive: tag.isActive ?? true,
-      })),
-      skipDuplicates: true,
-    });
-
-    res.status(201).json({
-      message: `Created ${created.count} mood tags`,
-      count: created.count,
-    });
-  } catch (error) {
-    console.error('Error creating mood tags:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });

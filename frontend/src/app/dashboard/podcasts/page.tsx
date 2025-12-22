@@ -13,9 +13,9 @@ export default function PodcastsPage() {
       <div className="flex flex-1 flex-col space-y-4">
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-2xl font-bold tracking-tight">Podcast'ler</h2>
+            <h2 className="text-2xl font-bold tracking-tight">Podcast&apos;ler</h2>
             <p className="text-muted-foreground">
-              Yoga, meditasyon ve wellness podcast'lerini yönetin
+              Yoga, meditasyon ve wellness podcast&apos;lerini yönetin
             </p>
           </div>
         </div>

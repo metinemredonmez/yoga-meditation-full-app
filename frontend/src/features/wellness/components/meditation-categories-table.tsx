@@ -59,12 +59,11 @@ import { toast } from 'sonner';
 interface Category {
   id: string;
   name: string;
-  nameTr?: string;
+  nameEn?: string;
   slug: string;
   description?: string;
-  descriptionTr?: string;
-  iconUrl?: string;
-  imageUrl?: string;
+  icon?: string;
+  coverImage?: string;
   color?: string;
   sortOrder: number;
   isActive: boolean;
@@ -94,12 +93,11 @@ export function MeditationCategoriesTable() {
 
   const [formData, setFormData] = useState({
     name: '',
-    nameTr: '',
+    nameEn: '',
     slug: '',
     description: '',
-    descriptionTr: '',
-    iconUrl: '',
-    imageUrl: '',
+    icon: '',
+    coverImage: '',
     color: '#8B5CF6',
     sortOrder: 0,
     isActive: true,
@@ -140,12 +138,11 @@ export function MeditationCategoriesTable() {
       setSelectedCategory(category);
       setFormData({
         name: category.name,
-        nameTr: category.nameTr || '',
+        nameEn: category.nameEn || '',
         slug: category.slug,
         description: category.description || '',
-        descriptionTr: category.descriptionTr || '',
-        iconUrl: category.iconUrl || '',
-        imageUrl: category.imageUrl || '',
+        icon: category.icon || '',
+        coverImage: category.coverImage || '',
         color: category.color || '#8B5CF6',
         sortOrder: category.sortOrder,
         isActive: category.isActive,
@@ -154,12 +151,11 @@ export function MeditationCategoriesTable() {
       setSelectedCategory(null);
       setFormData({
         name: '',
-        nameTr: '',
+        nameEn: '',
         slug: '',
         description: '',
-        descriptionTr: '',
-        iconUrl: '',
-        imageUrl: '',
+        icon: '',
+        coverImage: '',
         color: DEFAULT_COLORS[categories.length % DEFAULT_COLORS.length],
         sortOrder: categories.length,
         isActive: true,
@@ -182,13 +178,26 @@ export function MeditationCategoriesTable() {
       return;
     }
 
+    // Filter out empty strings for optional URL fields
+    const payload = {
+      name: formData.name,
+      slug: formData.slug,
+      sortOrder: formData.sortOrder,
+      isActive: formData.isActive,
+      ...(formData.nameEn && { nameEn: formData.nameEn }),
+      ...(formData.description && { description: formData.description }),
+      ...(formData.icon && { icon: formData.icon }),
+      ...(formData.coverImage && { coverImage: formData.coverImage }),
+      ...(formData.color && { color: formData.color }),
+    };
+
     setSaving(true);
     try {
       if (selectedCategory) {
-        await updateMeditationCategory(selectedCategory.id, formData);
+        await updateMeditationCategory(selectedCategory.id, payload);
         toast.success('Kategori güncellendi');
       } else {
-        await createMeditationCategory(formData);
+        await createMeditationCategory(payload);
         toast.success('Kategori oluşturuldu');
       }
       setEditDialog(false);
@@ -269,9 +278,9 @@ export function MeditationCategoriesTable() {
                       <TableCell>
                         <div>
                           <p className="font-medium">{category.name}</p>
-                          {category.nameTr && (
+                          {category.nameEn && (
                             <p className="text-xs text-muted-foreground">
-                              {category.nameTr}
+                              {category.nameEn}
                             </p>
                           )}
                         </div>
@@ -357,9 +366,9 @@ export function MeditationCategoriesTable() {
               <div className="space-y-2">
                 <Label>Kategori Adı (EN)</Label>
                 <Input
-                  value={formData.nameTr}
+                  value={formData.nameEn}
                   onChange={(e) =>
-                    setFormData((prev) => ({ ...prev, nameTr: e.target.value }))
+                    setFormData((prev) => ({ ...prev, nameEn: e.target.value }))
                   }
                   placeholder="Stress Relief"
                 />
@@ -419,13 +428,13 @@ export function MeditationCategoriesTable() {
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>İkon URL</Label>
+                <Label>İkon (emoji/icon)</Label>
                 <Input
-                  value={formData.iconUrl}
+                  value={formData.icon}
                   onChange={(e) =>
-                    setFormData((prev) => ({ ...prev, iconUrl: e.target.value }))
+                    setFormData((prev) => ({ ...prev, icon: e.target.value }))
                   }
-                  placeholder="https://..."
+                  placeholder="🧘"
                 />
               </div>
               <div className="space-y-2">

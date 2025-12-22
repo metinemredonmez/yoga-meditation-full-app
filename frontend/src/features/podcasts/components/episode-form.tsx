@@ -43,11 +43,18 @@ const episodeSchema = z.object({
   description: z.string().min(10, 'Açıklama en az 10 karakter olmalı'),
   episodeNumber: z.number().min(1, 'Bölüm numarası gerekli'),
   seasonNumber: z.number().optional(),
-  isExplicit: z.boolean().default(false),
+  isExplicit: z.boolean().optional(),
   publishAt: z.string().optional()
 });
 
-type EpisodeFormData = z.infer<typeof episodeSchema>;
+type EpisodeFormData = {
+  title: string;
+  description: string;
+  episodeNumber: number;
+  seasonNumber?: number;
+  isExplicit: boolean;
+  publishAt?: string;
+};
 
 interface EpisodeFormProps {
   podcastId: string;
@@ -80,7 +87,7 @@ export function EpisodeForm({ podcastId, episodeId }: EpisodeFormProps) {
     watch,
     formState: { errors }
   } = useForm<EpisodeFormData>({
-    resolver: zodResolver(episodeSchema),
+    resolver: zodResolver(episodeSchema) as any,
     defaultValues: {
       episodeNumber: 1,
       isExplicit: false
@@ -167,10 +174,11 @@ export function EpisodeForm({ podcastId, episodeId }: EpisodeFormProps) {
     setUploadProgress(0);
 
     try {
-      const { uploadUrl, fileUrl } = await getPodcastAudioUploadUrl(
+      const response = await getPodcastAudioUploadUrl(
         audioFile.name,
         audioFile.type
       );
+      const { uploadUrl, fileUrl } = response.upload;
 
       // Upload with progress tracking
       await new Promise<void>((resolve, reject) => {
@@ -218,10 +226,10 @@ export function EpisodeForm({ podcastId, episodeId }: EpisodeFormProps) {
 
       const payload = {
         ...data,
-        audioUrl: finalAudioUrl || audioUrl,
+        audioUrl: finalAudioUrl || audioUrl || undefined,
         audioFormat,
-        audioSize,
-        duration,
+        audioSize: audioSize || undefined,
+        duration: duration || undefined,
         publishAt: data.publishAt || undefined,
         seasonNumber: data.seasonNumber || undefined
       };
